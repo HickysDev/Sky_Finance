@@ -2,6 +2,9 @@
 
 Este projeto é um sistema de controle de gastos pessoais, desenvolvido com foco em simplicidade e usabilidade. Ele permite o gerenciamento de despesas mensais, tanto no **débito/dinheiro** quanto no **crédito parcelado**, organizando as informações por mês, categoria e forma de pagamento.
 
+![image](https://github.com/user-attachments/assets/4d369eb1-9da5-43fe-a57b-a6e76b50e6be)
+
+
 ## ✅ Funcionalidades já implementadas
 
 - 📅 **Visualização mensal** das despesas, com filtro por mês.
@@ -13,6 +16,13 @@ Este projeto é um sistema de controle de gastos pessoais, desenvolvido com foco
 - 🔁 Navegação entre meses (anterior/próximo) via botões com setas.
 - 🇧🇷 Interface adaptada para o idioma português.
 - 📁 Arquitetura separada por pastas (`php/views`, `conn`, etc) para melhor organização.
+
+## ⏳ Funcionalidades futuras
+
+- 📊 Visualização em dashboard
+- 💰 Renda mensal
+- 🔐 Criação de login 
+- 🏠 Tela inicial mais intuitiva
 
 ## 🔧 Tecnologias utilizadas
 
