@@ -217,19 +217,39 @@ table.dataTable td.dt-type-date {
   --bs-table-hover-bg: #494949;
 }
 
-.border-parcelado{
+.border-parcelado {
   padding-top: 10px;
   border-top: 2px solid #ecdfcc;
   display: none;
 }
 
-.botao{
+.botao {
   font-size: 30px;
   cursor: pointer;
   opacity: 0.85;
   transition: 0.4s;
 }
 
-.botao:hover{
+.botao:hover {
   opacity: 1;
+}
+
+@media (max-width: 1600px) {
+  .responsivo1600 .col-lg-6 {
+    float: none;
+    width: 100%;
+  }
+
+  /* Só aplica o border-bottom na primeira .col-lg-6 */
+  .responsivo1600 .col-lg-6:first-of-type {
+    float: none;
+    width: 100%;
+    border-bottom: 2px solid #ecdfcc; 
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+  }
+
+  .col-esquerda {
+    border-right: none;
+  }
 }

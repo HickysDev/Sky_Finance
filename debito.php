@@ -209,7 +209,7 @@ $mesAtual = date('n');
             var ids = [];
 
             $('.marcagasto:checked').each(function() {
-                ids.push($(this).data("id")); // Usa $(this) para pegar o ID correto
+                ids.push($(this).data("id"));
             });
 
             if (ids.length > 0) {

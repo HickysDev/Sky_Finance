@@ -20,7 +20,7 @@ class GastosModel
 
         $stmt = $conn->prepare(
             "SELECT 
-        g.id, g.descricao, g.valor, c.nome, g.metodo_pagamento, g.data_gasto 
+        g.id, g.descricao, g.valor, c.nome, g.metodo_pagamento, g.data_gasto, g.parcelado
         FROM gastos g
         INNER JOIN categorias c ON c.id = g.categoria_id 
         WHERE MONTH(data_gasto) = ? $condicao AND YEAR(data_gasto) = $ano_atual"
@@ -53,7 +53,10 @@ class GastosModel
 
         if ($tipo == 'credito' && $parcelado == "") {
             $parcelado = "N";
+        } else {
+            $parcelado = "S";
         }
+
         $adicionar = $conn->prepare("
         INSERT INTO gastos (usuario_id, categoria_id, descricao, valor, data_gasto, metodo_pagamento, cartao_id, parcelado) 
             VALUES ( '1', :categoria, :desc, :valor, :data, :pagamento, :cartao, :parcelado);
@@ -117,14 +120,19 @@ class GastosModel
         return $queryAdicionar ? 1 : 2;
     }
 
-    public static function excluirGastos($ids)
+    public static function excluirGastos($ids, $tipo)
     {
         $conn = Database::getConnection();
 
         foreach ($ids as $id) {
+
             $remover = $conn->prepare("DELETE FROM gastos WHERE id = ?");
 
             $queryRemover = $remover->execute([$id]);
+
+            if ($tipo == 'credito') {
+                
+            }
         }
 
 

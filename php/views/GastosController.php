@@ -29,7 +29,7 @@ switch ($acao) {
         break;
 
     case 'remover':
-        $retorno = GastosModel::excluirGastos($ids);
+        $retorno = GastosModel::excluirGastos($ids, $tipo);
         break;
 
     case 'buscarRecorrente':

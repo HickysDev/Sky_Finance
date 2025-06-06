@@ -51,16 +51,16 @@ $mesAtual = date('n');
 
         <i class="bi bi-arrow-right-square-fill botao botaoDireita"></i>
     </div>
-    
-    <button class="btn btn-danger">Remover Despesa <i class="bi bi-bag-x-fill"></i></button>
+
+    <button class="btn btn-danger" id="removerDespesa">Remover Despesa <i class="bi bi-bag-x-fill"></i></button>
 </div>
 
 <div class="painel mt-2">
-    <div class="row">
-        <div class="col-md-6 col-esquerda">
+    <div class="row responsivo1600">
+        <div class="col-lg-6 col-esquerda">
             <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS DESSE MÊS - R$ <span class="cor-am titulo text-center" id="gastoTotalMes"></span></h2>
 
-            <div>
+            <div class="table-responsive">
                 <table id="gastosMes" class="table table-condensed table-centro">
                     <thead class="bg-secundary">
                         <tr>
@@ -69,7 +69,7 @@ $mesAtual = date('n');
                             <th>Categoria</th>
                             <th>Tipo</th>
                             <th>Data</th>
-                            <th><input type="checkbox" name="marcaTodosMes" class="dark-checkbox" id="marcaTodosMes"></th>
+                            <th><input type="checkbox" name="marcaTodosMesNormal" class="dark-checkbox" id="marcaTodosMesNormal"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -84,10 +84,10 @@ $mesAtual = date('n');
             </div>
 
         </div>
-        <div class="col-md-6">
+        <div class="col-lg-6">
             <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS RECORRENTES - R$ <span class="cor-am titulo text-center" id="gastoRecorrenteTotalMes"></span></h2>
 
-            <div>
+            <div class="table-responsive">
                 <table id="gastosRecorrentes" class="table table-hover table-condensed table-centro">
                     <thead class="bg-secundary">
                         <tr>
@@ -97,6 +97,7 @@ $mesAtual = date('n');
                             <th>Parcela</th>
                             <th>Valor Parcela</th>
                             <th>Data Compra</th>
+                            <th><input type="checkbox" name="marcaTodosMesRecorrente" class="dark-checkbox" id="marcaTodosMesRecorrente"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -221,9 +222,6 @@ $mesAtual = date('n');
             let parcelado = $('#parcelado').val();
             let num_parcelas = $('#num_parcelas').val();
 
-            console.log(parcelado)
-
-
             $.ajax({
                 type: "POST",
                 url: "php/views/GastosController.php",
@@ -241,8 +239,6 @@ $mesAtual = date('n');
                 },
                 dataType: "json",
                 success: function(data) {
-                    console.log(data)
-
                     buscaTabelaMes($('#mes').val())
                     buscaTabelaRecorrente($('#mes').val())
                 },
@@ -251,6 +247,59 @@ $mesAtual = date('n');
                 }
             });
         })
+
+        //Quando selecionar o input que marca todos
+        $(document).on("change", "#marcaTodosMesNormal", function() {
+            if ($(this).prop("checked")) {
+                $(".marcagastoNormal").each(function() {
+                    $(this).prop("checked", true)
+                })
+            } else {
+                $(".marcagastoNormal").each(function() {
+                    $(this).prop("checked", false)
+                })
+            }
+        })
+
+        //Quando selecionar o input que marca todos
+        $(document).on("change", "#marcaTodosMesRecorrente", function() {
+            if ($(this).prop("checked")) {
+                $(".marcagastoRecorrente").each(function() {
+                    $(this).prop("checked", true)
+                })
+            } else {
+                $(".marcagastoRecorrente").each(function() {
+                    $(this).prop("checked", false)
+                })
+            }
+        })
+
+        $(document).on("click", "#removerDespesa", function() {
+            var ids = [];
+
+            $('.marcagasto:checked').each(function() {
+                ids.push($(this).data("id"));
+            });
+
+            if (ids.length > 0) {
+                $.ajax({
+                    type: "POST",
+                    url: "php/views/GastosController.php",
+                    data: {
+                        acao: "remover",
+                        ids: ids,
+                        tipo: 'credito'
+                    },
+                    dataType: "json",
+                    success: function(data) {
+                        buscaTabelaMes($('#mes').val())
+                    },
+                    error: function() {
+                        alert("Erro ao buscar dados.");
+                    }
+                });
+            }
+        });
 
         function buscaTabelaMes(mes) {
             $.ajax({
@@ -271,6 +320,7 @@ $mesAtual = date('n');
                     let tbody = $("#gastosMes tbody");
                     tbody.empty(); // Limpa a tabela antes de adicionar novos dados
 
+                    console.log(data)
                     $.each(data, function(index, gasto) {
                         if (index != "valortotal") {
                             let linha = `<tr>
@@ -279,7 +329,7 @@ $mesAtual = date('n');
                             <td>${gasto.nome}</td>
                             <td>${gasto.metodo_pagamento}</td>
                             <td>${moment(gasto.data_gasto).format("DD/MM/YYYY")}</td>
-                            <td><input type="checkbox" name="gasto" class="marcagasto" data-id="${gasto.id}"></td>
+                            <td><input type="checkbox" name="gasto" class="marcagasto marcagastoNormal" data-parcelado="${gasto.parcelado}" data-id="${gasto.id}"></td>
                         </tr>`;
                             tbody.append(linha);
                         } else if (index == "valortotal") {
@@ -343,6 +393,7 @@ $mesAtual = date('n');
                             <td>${gasto.numero_parcela}/${gasto.parcelas_total}</td>
                             <td>R$ ${gasto.valor_parcela}</td>
                             <td>${moment(gasto.data_gasto).format("DD/MM/YYYY")}</td>
+                            <td><input type="checkbox" name="gasto" class="marcagasto marcagastoRecorrente" data-parcelado="${gasto.parcelado}" data-id="${gasto.id}"></td>
                         </tr>`;
                             tbody.append(linha);
                         } else if (index == "valortotal") {
