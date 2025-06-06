@@ -1,0 +1,235 @@
+* {
+  font-family: "Roboto", serif;
+}
+
+/* Remover as setinhas nos campos input type="number" */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield; /* Para Firefox */
+  appearance: textfield; /* Para outros navegadores */
+}
+
+body {
+  background-color: #181c14;
+  color: #ecdfcc;
+}
+
+.corpo-site {
+  margin: 20px 50px;
+}
+
+.bg-primary {
+  background-color: #8e1616 !important;
+  color: #ecdfcc !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  color: #8e1616;
+}
+
+.titulo {
+  font-family: "Bebas Neue", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.cor-am {
+  color: #ecdfcc !important;
+}
+
+.col-esquerda {
+  border-right: 2px solid #ecdfcc;
+}
+
+.underline {
+  text-decoration: underline;
+}
+
+.titulo-pagina {
+  border-bottom: 2px solid #8e1616;
+  margin-bottom: 3vh;
+}
+
+.table tr td {
+  background-color: #333333 !important;
+  color: #ffff;
+}
+
+.table tr th {
+  text-transform: uppercase;
+}
+
+.bg-primary a {
+  color: #ecdfcc !important;
+}
+
+.table-centro tr td,
+.table-centro tr th {
+  vertical-align: middle !important;
+  text-align: center;
+}
+
+.bg-secundary {
+  background-color: #ecdfcc !important;
+}
+
+.tituloNav {
+  font-size: 27px;
+}
+
+.nav-item {
+  transform: scale(1);
+  transition: 0.3s;
+}
+
+.nav-item:hover {
+  transform: scale(1.1);
+}
+
+.painel {
+  background-color: #3c3d37;
+  border-radius: 5px;
+  padding: 10px;
+  border: 0.5px solid #756f65;
+}
+
+/* MODO ESCURO */
+
+/* Estilizando o form-select no modo escuro */
+.form-select {
+  background-color: #3c3d37;
+  color: #ecdfcc;
+  border-color: #ecdfcc;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='currentColor' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+
+.form-select:focus {
+  background-color: #3c3d37;
+  border-color: #ecdfcc;
+  box-shadow: none;
+}
+
+/* Estilizando a opção do select */
+.form-select option {
+  background-color: #333;
+  color: #fff;
+}
+
+.form-select option:focus {
+  background-color: #444;
+  color: #fff;
+}
+
+/* Estilizando o placeholder (se houver) */
+.form-select::placeholder {
+  color: #aaa;
+}
+
+.conteiner-login {
+  width: 80%;
+  margin: 0 auto;
+}
+
+.btn-primary {
+  background-color: #8e1616 !important;
+  color: #ecdfcc !important;
+  border: none;
+}
+
+/*deixar botão maior no hover*/
+.btn-expansivo {
+  transition: all 0.3s ease;
+}
+
+.btn-expansivo:hover {
+  transform: scale(1.1);
+}
+
+table.dataTable thead th,
+table.dataTable thead td,
+table.dataTable tfoot th,
+table.dataTable tfoot td {
+  text-align: center;
+}
+
+table.dataTable th.dt-type-numeric,
+table.dataTable th.dt-type-date,
+table.dataTable td.dt-type-numeric,
+table.dataTable td.dt-type-date {
+  text-align: center;
+}
+
+/* MODAL */
+
+/* Estilos personalizados para a modal */
+.modal-content,
+.modal-body {
+  background-color: #181c14 !important; /* Cor de fundo */
+  color: #ecdfcc !important; /* Cor do texto */
+}
+
+.modal-header {
+  border-bottom: 1px solid #444; /* Cor da borda do cabeçalho */
+}
+
+.modal-footer {
+  border-top: 1px solid #444; /* Cor da borda do rodapé */
+}
+.modal-header .btn-close {
+  background-color: #ecdfcc;
+  opacity: 1;
+}
+
+.modal-header .btn-close:hover {
+  background-color: #ccc; /* Cor ao passar o mouse */
+}
+
+.modal-title {
+  color: #ecdfcc;
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  color: #ecdfcc;
+  border-color: #ecdfcc;
+  background-color: #3c3d37;
+}
+
+.form-control:focus {
+  color: #ecdfcc;
+  background-color: #3c3d37;
+  border-color: #ecdfcc;
+  box-shadow: none !important;
+}
+
+.table {
+  --bs-table-hover-color: #ecdfcc;
+  --bs-table-hover-bg: #494949;
+}
+
+.border-parcelado{
+  padding-top: 10px;
+  border-top: 2px solid #ecdfcc;
+  display: none;
+}
+
+.botao{
+  font-size: 30px;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: 0.4s;
+}
+
+.botao:hover{
+  opacity: 1;
+}
