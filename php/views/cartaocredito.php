@@ -448,12 +448,10 @@ $mesAtual = date('n');
                             let valorFormatado = gasto.valor_parcela.replace(/\./g, '').replace(',', '.');
                             let valorNumerico = parseFloat(valorFormatado);
 
-                            console.log(window.valorTotal)
-
                             window.valorTotal += valorNumerico;
 
                             $('#gastoTotal').html(formatarNumeroBrasileiro(window.valorTotal));
-                        } else if (window.valorTotal > 0) {
+                        } else if (window.valorTotal >= 0) {
                             $('#gastoTotal').html(formatarNumeroBrasileiro(window.valorTotal));
                         }
 
@@ -537,6 +535,7 @@ $mesAtual = date('n');
             numeral: true,
             numeralThousandsGroupStyle: 'thousand',
             prefix: 'R$ ', // Adiciona o "R$" no início
+            noImmediatePrefix: true,
             delimiter: '.', // Separador de milhar
             decimal: ',', // Separador decimal
             numeralDecimalMark: ',', // Define a vírgula como separador decimal

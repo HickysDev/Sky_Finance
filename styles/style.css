@@ -244,7 +244,7 @@ table.dataTable td.dt-type-date {
     width: 100%;
   }
 
-  /* S� aplica o border-bottom na primeira .col-lg-6 */
+  /* So aplica o border-bottom na primeira .col-lg-6 */
   .responsivo1600 .col-lg-6:first-of-type {
     float: none;
     width: 100%;
@@ -257,3 +257,100 @@ table.dataTable td.dt-type-date {
     border-right: none;
   }
 }
+
+/* GERENCIAMENTO */
+
+.quadrado {
+  position: relative;
+  width: 100%;
+  padding-top: 60%;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
+
+.quadrado:hover {
+  transform: scale(1.03);
+}
+
+.quadrado .conteudo-centralizado {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.cartao-box {
+  position: relative;
+  width: 100%;
+  padding-top: 60%;
+  border-radius: 12px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  margin-bottom: 20px;
+}
+
+.cartao-box:hover {
+  transform: scale(1.03);
+  background-color: #181c147c;
+}
+
+.cartao-conteudo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.cartao-conteudo i {
+  font-size: 3rem;
+  color: #E9DCCA;
+}
+
+.cartao-nome {
+  font-size: 1.2rem;
+  margin-top: 10px;
+  font-weight: 500;
+}
+
+.botoes-cartao {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 5px;
+  z-index: 10;
+}
+
+.botoes-cartao .btn {
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: brightness(0) saturate(100%) invert(88%) sepia(13%) saturate(438%) hue-rotate(4deg) brightness(92%) contrast(88%);
+}
+
+.form-select {
+  appearance: none; /* remove aparência nativa */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23E9DCCA' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 20px;
+}
+
+#adicionarCartao {
+  cursor: pointer;
+}
+

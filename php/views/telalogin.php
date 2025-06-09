@@ -1,5 +1,6 @@
 <?php
-require_once("php/header.php");
+require_once(__DIR__ . '/../templates/header.php');
+require_once(__DIR__ . '/../../conn/conn.php');
 ?>
 
 <div class="painel mt-2" style="margin: 0 400px;">
@@ -26,5 +27,5 @@ require_once("php/header.php");
 </div>
 
 <?php
-require_once("php/footer.php");
+require_once("../templates/footer.php");
 ?>

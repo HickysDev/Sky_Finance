@@ -314,6 +314,7 @@ $mesAtual = date('n');
             numeral: true,
             numeralThousandsGroupStyle: 'thousand',
             prefix: 'R$ ', // Adiciona o "R$" no início
+            noImmediatePrefix: true,
             delimiter: '.', // Separador de milhar
             decimal: ',', // Separador decimal
             numeralDecimalMark: ',', // Define a vírgula como separador decimal
