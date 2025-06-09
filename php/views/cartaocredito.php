@@ -9,7 +9,7 @@ $conn = Database::getConnection();
 $buscaCartao = $conn->prepare("SELECT * FROM cartoes_credito");
 $buscaCartao->execute();
 $cartoes = $buscaCartao->fetchAll(PDO::FETCH_ASSOC);
- teste
+
 $meses = [
     1 => "Janeiro",
     2 => "Fevereiro",
