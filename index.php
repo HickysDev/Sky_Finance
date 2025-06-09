@@ -1,5 +1,5 @@
 <?php
-require_once("php/header.php");
+require_once("php/templates/header.php");
 ?>
 
 <div class="text-center titulo-pagina">
@@ -9,5 +9,5 @@ require_once("php/header.php");
 
 
 <?php
-require_once("php/footer.php");
+require_once("php/templates/footer.php");
 ?>

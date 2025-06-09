@@ -46,6 +46,10 @@ h5 {
   color: #ecdfcc !important;
 }
 
+.voltarBtn {
+  cursor: pointer;
+}
+
 .col-esquerda {
   border-right: 2px solid #ecdfcc;
 }
@@ -118,7 +122,7 @@ h5 {
   box-shadow: none;
 }
 
-/* Estilizando a opção do select */
+/* Estilizando a opï¿½ï¿½o do select */
 .form-select option {
   background-color: #333;
   color: #fff;
@@ -145,7 +149,7 @@ h5 {
   border: none;
 }
 
-/*deixar botão maior no hover*/
+/*deixar botï¿½o maior no hover*/
 .btn-expansivo {
   transition: all 0.3s ease;
 }
@@ -178,11 +182,11 @@ table.dataTable td.dt-type-date {
 }
 
 .modal-header {
-  border-bottom: 1px solid #444; /* Cor da borda do cabeçalho */
+  border-bottom: 1px solid #444; /* Cor da borda do cabeï¿½alho */
 }
 
 .modal-footer {
-  border-top: 1px solid #444; /* Cor da borda do rodapé */
+  border-top: 1px solid #444; /* Cor da borda do rodapï¿½ */
 }
 .modal-header .btn-close {
   background-color: #ecdfcc;
@@ -240,7 +244,7 @@ table.dataTable td.dt-type-date {
     width: 100%;
   }
 
-  /* Só aplica o border-bottom na primeira .col-lg-6 */
+  /* Sï¿½ aplica o border-bottom na primeira .col-lg-6 */
   .responsivo1600 .col-lg-6:first-of-type {
     float: none;
     width: 100%;

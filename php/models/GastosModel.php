@@ -51,12 +51,6 @@ class GastosModel
             $cartao = NULL;
         }
 
-        if ($tipo == 'credito' && $parcelado == "") {
-            $parcelado = "N";
-        } else {
-            $parcelado = "S";
-        }
-
         $adicionar = $conn->prepare("
         INSERT INTO gastos (usuario_id, categoria_id, descricao, valor, data_gasto, metodo_pagamento, cartao_id, parcelado) 
             VALUES ( '1', :categoria, :desc, :valor, :data, :pagamento, :cartao, :parcelado);
@@ -125,16 +119,19 @@ class GastosModel
         $conn = Database::getConnection();
 
         foreach ($ids as $id) {
+            // Se for cartão de crédito, primeiro remove as parcelas
+            if ($tipo == 'credito' && $id['parcelado'] == 'S') {
+                $removerParcelas = $conn->prepare("DELETE FROM parcelas WHERE gasto_id = ?");
+                $removerParcelas->execute([$id['id']]);
 
-            $remover = $conn->prepare("DELETE FROM gastos WHERE id = ?");
-
-            $queryRemover = $remover->execute([$id]);
-
-            if ($tipo == 'credito') {
-                
+                // // Debug da query preparada (opcional)
+                /* $removerParcelas->debugDumpParams(); */
             }
-        }
 
+            // Depois remove o gasto
+            $removerGasto = $conn->prepare("DELETE FROM gastos WHERE id = ?");
+            $queryRemover = $removerGasto->execute([$id['id']]);
+        }
 
         return $queryRemover ? 1 : 2;
     }
@@ -153,7 +150,9 @@ class GastosModel
                 p.numero_parcela,
                 p.parcelas_total,
                 p.valor_parcela,
-                g.data_gasto
+                g.data_gasto,
+                g.parcelado,
+                g.id
             FROM gastos g
             INNER JOIN parcelas p ON p.gasto_id = g.id
             INNER JOIN categorias c ON c.id = g.categoria_id
