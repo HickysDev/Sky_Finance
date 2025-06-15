@@ -20,7 +20,7 @@ $conn = Database::getConnection();
                         <i class="bi bi-credit-card-2-front-fill"></i>
                     </div>
                     <div>
-                        <span class="titulo" style="font-size: 2vw;">Cartões</span>
+                        <span class="titulo" style="font-size: 2vw;">Cartões de crédito</span>
                     </div>
                 </div>
             </div>
@@ -80,25 +80,25 @@ $conn = Database::getConnection();
                     <div class="form-floating my-3">
                         <input type="text" class="form-control" id="nomeCartao" placeholder="Escreva o nome"
                             name="nomeCartao">
-                        <label for="nomeCartao">Nome do cartão:</label>
+                        <label for="nomeCartao">Nome do cartão</label>
                     </div>
 
                     <div class="form-floating my-3">
                         <input type="text" class="form-control real" id="limite" placeholder="Digite o limite"
                             name="limite">
-                        <label for="limite">Limite:</label>
+                        <label for="limite">Limite</label>
                     </div>
 
                     <div class="form-floating my-3">
-                        <input type="date" class="form-control" id="dataFechamento"
+                        <input type="text" class="form-control" id="dataFechamento"
                             placeholder="Informe a data de fechamento" name="dataFechamento">
-                        <label for="dataFechamento">Data de fechamento da fatura</label>
+                        <label for="dataFechamento">Dia de fechamento da fatura</label>
                     </div>
 
                     <div class="form-floating my-3">
-                        <input type="date" class="form-control" id="dataVencimento" placeholder="Informe a data"
+                        <input type="text" class="form-control" id="dataVencimento" placeholder="Informe a data"
                             name="dataVencimento">
-                        <label for="dataVencimento">Data Vencimento da fatura</label>
+                        <label for="dataVencimento">Dia de vencimento da fatura</label>
                     </div>
                 </div>
                 <div class="text-center mt-3 mb-2">
@@ -129,6 +129,11 @@ $conn = Database::getConnection();
     })
 
     $(document).on("click", ".editarCartao", function () {
+
+        let id = $(this).data("id");
+
+        editaCartao(id);
+
         $('#listagemCartoes, .tituloCartoes').fadeOut('slow', function () {
             $('.tituloCartoes').fadeIn('slow').html("Santander")
 
@@ -140,6 +145,23 @@ $conn = Database::getConnection();
             $("#tipoAlteracao").val("alteracao");
         })
     })
+
+    function editaCartao(id) {
+        let cartaoSelecionado = window.cartoesArray.find(cartao => cartao.id == id);
+
+        if (cartaoSelecionado) {
+            let valorLimite = cartaoSelecionado.limite;
+            let valorFormatado = valorLimite.replace('.', ',');
+            $('#limite').val(valorFormatado);
+
+            $('#nomeCartao').val(cartaoSelecionado.nome_cartao);
+            $('#dataFechamento').val(cartaoSelecionado.fechamento_dia);
+            $('#dataVencimento').val(cartaoSelecionado.vencimento_dia);
+
+        } else {
+            toastr.error("Cartão não encontrado!");
+        }
+    }
 
     $(".voltarBtn").click(function () {
         if (estado == "editaCartao") {
@@ -166,6 +188,8 @@ $conn = Database::getConnection();
             dataType: "json",
             success: function (data) {
                 window.cartoesArray = data;
+
+                console.log(data);
 
                 var listagemCartoes = "";
 
@@ -208,6 +232,85 @@ $conn = Database::getConnection();
         })
     }
 
+    $(document).on("click", "#salvaAlteracao", function () {
+        let nomeCartao = $('#nomeCartao').val();
+        let limite = $('#limite').val();
+        let dataFechamento = $('#dataFechamento').val();
+        let dataVencimento = $('#dataVencimento').val();
+
+        var cartaoArray = {
+            "nomeCartao": nomeCartao,
+            "limite": limite,
+            "dataFechamento": dataFechamento,
+            "dataVencimento": dataVencimento
+        }
+
+        criaCartao(cartaoArray, buscaCartoes);
+    })
+
+    function criaCartao(cartaoArray, callback) {
+        $.ajax({
+            type: "POST",
+            url: "../controllers/CartoesController.php",
+            data: {
+                acao: "adicionar",
+                cartao: cartaoArray
+            },
+            dataType: "json",
+            success: function (data) {
+                if (data == true) {
+                    toastr.success("Cartão criado com sucesso!");
+
+                    if (typeof callback === 'function') {
+                        callback();
+                    }
+
+                    $('#editarCartaoDiv, .tituloCartoes').fadeOut('slow', function () {
+                        $('.tituloCartoes').fadeIn('slow').html("Cartões Cadastrados")
+                        $('#listagemCartoes').fadeIn('slow');
+                        estado = "gerenciarCartao";
+                    })
+
+                } else {
+                    toastr.error("Ocorreu um erro ao criar o cartão!");
+                }
+            }, error(error) {
+                toastr.error("Ocorreu um erro ao criar o cartão ###!");
+            }
+        })
+    }
+
+    function excluirCartao(id, callback) {
+        $.ajax({
+            type: "POST",
+            url: "../controllers/CartoesController.php",
+            data: {
+                acao: "excluir",
+                id: id
+            },
+            dataType: "json",
+            success: function (data) {
+                if (data == true) {
+
+                    Swal.fire(
+                        'Cartão Removido!',
+                        'O cartão foi removido com sucesso!',
+                        'success'
+                    );
+
+                    if (typeof callback === 'function') {
+                        callback();
+                    }
+
+                } else {
+                    toastr.error("Ocorreu um erro ao excluir o cartão!");
+                }
+            }, error(error) {
+                toastr.error("Ocorreu um erro ao excluir o cartão ###!");
+            }
+        })
+    }
+
     $(document).on("click", "#adicionarCartao", function () {
         $('#listagemCartoes, .tituloCartoes').fadeOut('slow', function () {
             $('.tituloCartoes').fadeIn('slow').html("Novo cartão")
@@ -218,6 +321,12 @@ $conn = Database::getConnection();
 
             $("#salvaAlteracao").html('Criar <i class="bi bi-plus-lg"></i>');
             $("#tipoAlteracao").val("criar");
+
+            $('#limite').val("");
+
+            $('#nomeCartao').val("");
+            $('#dataFechamento').val("");
+            $('#dataVencimento').val("");
         })
     })
 
@@ -233,11 +342,11 @@ $conn = Database::getConnection();
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-                Swal.fire(
-                    'Cartão Removido!',
-                    'O cartão foi removido com sucesso!',
-                    'success'
-                );
+
+                let id = $(this).data("id");
+
+                excluirCartao(id, buscaCartoes)
+
             }
         });
     });
@@ -282,7 +391,6 @@ $conn = Database::getConnection();
         numeral: true,
         numeralThousandsGroupStyle: 'thousand',
         prefix: 'R$ ',
-        noImmediatePrefix: true,
         delimiter: '.',
         decimal: ',',
         numeralDecimalMark: ',',

@@ -11,13 +11,17 @@ $Cartoes = new CartaoModel();
 switch ($acao) {
 
     case "adicionar":
-        $Cartoes->setDescricao($descricao);
 
-        $retorno = $Cartoes->adicionaCategoria();
+        $retorno = $Cartoes->adicionaCartao($cartao);
         break;
 
     case "busca":
         $retorno = $Cartoes->buscaCartaos();
+        break;
+
+    case "excluir":
+        $Cartoes->setId($id);
+        $retorno = $Cartoes->excluiCartao();
         break;
 
     default:
