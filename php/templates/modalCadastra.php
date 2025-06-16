@@ -77,14 +77,14 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Fechar</button>
 
                 <div class="criaDespesaForm">
-                    <button type="button" class="btn btn-primary" id="adicionarDespesa">Adicionar <i class="bi bi-cart-plus-fill"></i></button>
+                    <button type="button" class="btn btn-success" id="adicionarDespesa">Adicionar <i class="bi bi-cart-plus-fill"></i></button>
                 </div>
 
                 <div class="criaCategoriaForm" style="display: none;">
-                    <button type="button" class="btn btn-primary" id="criarCategoria">Criar <i class="bi bi-clipboard-plus-fill"></i></button>
+                    <button type="button" class="btn btn-success" id="criarCategoria">Criar <i class="bi bi-clipboard-plus-fill"></i></button>
                 </div>
             </div>
         </div>
