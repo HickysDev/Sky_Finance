@@ -8,8 +8,8 @@ $conn = Database::getConnection();
 
 <div class="animate__animated animate__fadeIn">
     <div class="text-center titulo-pagina">
-        <h1 style="font-size: 4vw;"><i class="bi bi-gear-fill"></i></h1>
         <h1 class="titulo" style="font-size: 2.3vw;">Gerenciamento</h1>
+        <h1 style="font-size: 4vw;"><i class="bi bi-gear-fill"></i></h1>
     </div>
 
     <div class="row" id="botoesGerenciamento">
@@ -90,19 +90,20 @@ $conn = Database::getConnection();
                     </div>
 
                     <div class="form-floating my-3">
-                        <input type="text" class="form-control" id="dataFechamento"
+                        <input type="number" class="form-control" id="dataFechamento"
                             placeholder="Informe a data de fechamento" name="dataFechamento">
                         <label for="dataFechamento">Dia de fechamento da fatura</label>
                     </div>
 
                     <div class="form-floating my-3">
-                        <input type="text" class="form-control" id="dataVencimento" placeholder="Informe a data"
+                        <input type="number" class="form-control" id="dataVencimento" placeholder="Informe a data"
                             name="dataVencimento">
                         <label for="dataVencimento">Dia de vencimento da fatura</label>
                     </div>
                 </div>
                 <div class="text-center mt-3 mb-2">
                     <input type="hidden" id="tipoAlteracao" value="">
+                    <input type="hidden" id="idCartao" value="">
                     <button class="btn btn-success" id="salvaAlteracao">Salvar alterações &nbsp; <i
                             class="bi bi-floppy-fill"></i></button>
                 </div>
@@ -135,7 +136,7 @@ $conn = Database::getConnection();
         editaCartao(id);
 
         $('#listagemCartoes, .tituloCartoes').fadeOut('slow', function () {
-            $('.tituloCartoes').fadeIn('slow').html("Santander")
+            $('.tituloCartoes').fadeIn('slow').html(cartoesArray[id].nome_cartao)
 
             $('#editarCartaoDiv').fadeIn('slow');
 
@@ -143,11 +144,12 @@ $conn = Database::getConnection();
 
             $("#salvaAlteracao").html('Salvar alterações &nbsp; <i class="bi bi-floppy-fill"></i>');
             $("#tipoAlteracao").val("alteracao");
+            $("#idCartao").val(id);
         })
     })
 
     function editaCartao(id) {
-        let cartaoSelecionado = window.cartoesArray.find(cartao => cartao.id == id);
+        let cartaoSelecionado = window.cartoesArray[id];
 
         if (cartaoSelecionado) {
             let valorLimite = cartaoSelecionado.limite;
@@ -188,8 +190,6 @@ $conn = Database::getConnection();
             dataType: "json",
             success: function (data) {
                 window.cartoesArray = data;
-
-                console.log(data);
 
                 var listagemCartoes = "";
 
@@ -237,6 +237,8 @@ $conn = Database::getConnection();
         let limite = $('#limite').val();
         let dataFechamento = $('#dataFechamento').val();
         let dataVencimento = $('#dataVencimento').val();
+        let tipo = $("#tipoAlteracao").val();
+        let idCartao = $("#idCartao").val()
 
         var cartaoArray = {
             "nomeCartao": nomeCartao,
@@ -245,8 +247,46 @@ $conn = Database::getConnection();
             "dataVencimento": dataVencimento
         }
 
-        criaCartao(cartaoArray, buscaCartoes);
+        if (tipo == "criacao") {
+            criaCartao(cartaoArray, buscaCartoes);
+        } else if (tipo == "alteracao") {
+            alteraCartao(cartaoArray, idCartao, buscaCartoes);
+        }
+
     })
+
+    function alteraCartao(cartaoArray, idCartao, callback) {
+        $.ajax({
+            type: "POST",
+            url: "../controllers/CartoesController.php",
+            data: {
+                acao: "alterar",
+                cartao: cartaoArray,
+                idCartao: idCartao
+            },
+            dataType: "json",
+            success: function (data) {
+                if (data == true) {
+                    toastr.success("Cartão criado com sucesso!");
+
+                    if (typeof callback === 'function') {
+                        callback();
+                    }
+
+                    $('#editarCartaoDiv, .tituloCartoes').fadeOut('slow', function () {
+                        $('.tituloCartoes').fadeIn('slow').html("Cartões Cadastrados")
+                        $('#listagemCartoes').fadeIn('slow');
+                        estado = "gerenciarCartao";
+                    })
+
+                } else {
+                    toastr.error("Ocorreu um erro ao criar o cartão!");
+                }
+            }, error(error) {
+                toastr.error("Ocorreu um erro ao criar o cartão ###!");
+            }
+        })
+    }
 
     function criaCartao(cartaoArray, callback) {
         $.ajax({

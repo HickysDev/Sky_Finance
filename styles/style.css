@@ -40,6 +40,7 @@ h5 {
   font-family: "Bebas Neue", serif;
   font-weight: 400;
   font-style: normal;
+  margin-bottom: 0px;
 }
 
 .cor-am {
@@ -258,6 +259,13 @@ table.dataTable td.dt-type-date {
   }
 }
 
+@media (min-width: 1600px) {
+.nav-item {
+  font-size: 0.9vw;
+}
+}
+
+
 .form-select {
     background-color: #2B2C3B;
     color: #F0F0F5;
@@ -364,4 +372,43 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 #adicionarCartao {
   cursor: pointer;
 }
+
+.painel .form-control{
+  background-color: #1E1E2F !important;
+}
+
+.cartao-bloco {
+  display: inline-block;
+  text-align: center;
+  line-height: 1;
+}
+
+.cartao-icon {
+  font-size: 4vw;
+  color: #4d88ff;
+  display: block;
+  line-height: 1;
+}
+
+.cartao-label {
+  color: #ccc;
+  padding: 2px 0;
+  font-size: 1.1vw;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+
+.botoesCartao {
+  font-size: 1.5vw;
+  color: #ccc !important;
+  cursor: pointer;
+}
+
+.cartao-animado {
+  transition: all 0.2s ease;
+  opacity: 1;
+}
+
+
 

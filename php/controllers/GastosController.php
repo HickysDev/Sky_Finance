@@ -25,7 +25,7 @@ switch ($acao) {
         break;
 
     case 'buscar':
-        $retorno = GastosModel::buscarGastosPorMes($mes, $tipo);
+        $retorno = GastosModel::buscarGastosPorMes($mes, $cartaoId, $tipo);
         break;
 
     case 'remover':

@@ -4,16 +4,20 @@ include_once("../../conn/conn.php");
 
 class GastosModel
 {
-    public static function buscarGastosPorMes($mes, $tipo)
+    public static function buscarGastosPorMes($mes, $cartaoId, $tipo)
     {
         $conn = Database::getConnection();
 
         $condicao = "";
 
         if ($tipo == 'debito') {
-            $condicao = " AND metodo_pagamento IN ('Dinheiro', 'Débito', 'Pix' )";
+            $condicao .= " AND metodo_pagamento IN ('Dinheiro', 'Débito', 'Pix' )";
         } else {
-            $condicao = " AND metodo_pagamento = 'Crédito' AND parcelado = 'N'";
+            $condicao .= " AND metodo_pagamento = 'Crédito' AND parcelado = 'N'";
+        }
+
+        if($cartaoId){
+            $condicao .= " AND cartao_id = '$cartaoId'";
         }
 
         $ano_atual = date("Y");

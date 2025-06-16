@@ -33,12 +33,31 @@ $mesAtual = date('n');
 
 <div class="animate__animated animate__fadeIn">
     <div class="text-center titulo-pagina">
-        <h1 style="font-size: 4vw;"><i class="bi bi-credit-card-2-back-fill"></i></h1>
-        <h1 class="titulo" style="font-size: 2.3vw;">Cartão de Crédito</h1>
+        <h1 class="titulo mt-3" style="font-size: 2.3vw;">Cartão de Crédito</h1>
+
+        <div class="cartao-bloco mx-auto text-center">
+            <div class="d-flex justify-content-center align-items-center gap-2">
+                <i class="bi bi-arrow-left-circle-fill anterior botoesCartao" id="btn-anterior"></i>
+
+                <h1 class="mb-0" id="cartao-container">
+                    <i class="bi bi-credit-card-2-back-fill cartao-icon"></i>
+                </h1>
+
+                <i class="bi bi-arrow-right-circle-fill proximo botoesCartao" id="btn-proximo"></i>
+            </div>
+
+            <div class="cartao-label titulo" id="cartao-nome">Todos</div>
+            <input type="hidden" id="cartaoAtual">
+        </div>
+
     </div>
 
+
+
+
     <div class="d-flex justify-content-around">
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAdiciona">Adicionar Despesa <i class="bi bi-bag-plus-fill"></i></button>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAdiciona">Adicionar Despesa <i
+                class="bi bi-bag-plus-fill"></i></button>
 
         <div class="d-flex" style="gap: 10px;">
             <i class="bi bi-arrow-left-square-fill botao botaoEsquerda"></i>
@@ -59,7 +78,8 @@ $mesAtual = date('n');
     <div class="painel mt-2">
         <div class="row responsivo1600">
             <div class="col-lg-6 col-esquerda">
-                <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS DESSE MÊS - R$ <span class="cor-am titulo text-center" id="gastoTotalMes"></span></h2>
+                <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS DESSE MÊS - R$ <span
+                        class="cor-am titulo text-center" id="gastoTotalMes"></span></h2>
 
                 <div class="table-responsive">
                     <div id="loaderGastosMes" class="text-center my-3">
@@ -75,7 +95,8 @@ $mesAtual = date('n');
                                 <th>Categoria</th>
                                 <th>Tipo</th>
                                 <th>Data</th>
-                                <th><input type="checkbox" name="marcaTodosMesNormal" class="dark-checkbox" id="marcaTodosMesNormal"></th>
+                                <th><input type="checkbox" name="marcaTodosMesNormal" class="dark-checkbox"
+                                        id="marcaTodosMesNormal"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -91,7 +112,8 @@ $mesAtual = date('n');
 
             </div>
             <div class="col-lg-6">
-                <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS RECORRENTES - R$ <span class="cor-am titulo text-center" id="gastoRecorrenteTotalMes"></span></h2>
+                <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS RECORRENTES - R$ <span
+                        class="cor-am titulo text-center" id="gastoRecorrenteTotalMes"></span></h2>
 
                 <div class="table-responsive">
                     <div id="loaderRecorrentes" class="text-center my-3">
@@ -109,7 +131,8 @@ $mesAtual = date('n');
                                 <th>Parcela</th>
                                 <th>Valor Parcela</th>
                                 <th>Data Compra</th>
-                                <th><input type="checkbox" name="marcaTodosMesRecorrente" class="dark-checkbox" id="marcaTodosMesRecorrente"></th>
+                                <th><input type="checkbox" name="marcaTodosMesRecorrente" class="dark-checkbox"
+                                        id="marcaTodosMesRecorrente"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -121,7 +144,8 @@ $mesAtual = date('n');
         </div>
         <hr>
         <div class="mt-2">
-            <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS TOTAIS - R$ <span class="cor-am titulo text-center" id="gastoTotal"></span></h2>
+            <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS TOTAIS - R$ <span
+                    class="cor-am titulo text-center" id="gastoTotal"></span></h2>
         </div>
     </div>
 </div>
@@ -131,7 +155,7 @@ $mesAtual = date('n');
 <?php include '../templates/modalCadastra.php'; ?>
 
 <script>
-    $('#modalAdiciona').on('show.bs.modal', function() {
+    $('#modalAdiciona').on('show.bs.modal', function () {
         if (tipoDespesa === 'credito') {
             $('#metodo').closest('.form-floating').hide(); // esconde método
             $('#parcelado').closest('.form-check').show(); // mostra switch
@@ -142,10 +166,10 @@ $mesAtual = date('n');
         }
     });
 
-    $(document).ready(function() {
+    $(document).ready(function () {
 
         // Chama a função automaticamente ao carregar a página com o mês atual
-        buscaTabelaMes($('#mes').val(), function() {
+        buscaTabelaMes($('#mes').val(), function () {
             buscaTabelaRecorrente($('#mes').val());
         });
 
@@ -153,8 +177,73 @@ $mesAtual = date('n');
         buscaCategorias();
 
         var valorTotal = 0;
+        var cartoesArray = [];
 
-        $('.botaoEsquerda').click(function() {
+        buscaCartoes();
+
+        const cartoes = [
+            { icone: 'bi-credit-card-2-back-fill', nome: 'Todos' },
+            { icone: 'bi-credit-card-fill', nome: 'Nubank' },
+            { icone: 'bi-credit-card-2-front-fill', nome: 'Caixa' }
+        ];
+
+        $('#btn-anterior').on('click', function () {
+            trocarCartao(-1, function () {
+                buscaTabelaMes($('#mes').val(), function () {
+                    buscaTabelaRecorrente($('#mes').val());
+                });
+            });
+        });
+
+        $('#btn-proximo').on('click', function () {
+            trocarCartao(1, function () {
+                buscaTabelaMes($('#mes').val(), function () {
+                    buscaTabelaRecorrente($('#mes').val());
+                });
+            });
+        });
+
+        let indexAtual = 0;
+
+        function trocarCartao(direcao, callback) {
+            const $cartao = $('#cartao-container');
+            const $nome = $('#cartao-nome');
+            cartoesArray = window.cartoesArray;
+
+            // Adiciona animação de saída
+            $cartao.addClass('animate__animated animate__fadeOut');
+            $nome.addClass('animate__animated animate__fadeOut');
+
+            setTimeout(() => {
+                // Atualiza índice
+                indexAtual += direcao;
+                if (indexAtual < 0) indexAtual = cartoesArray.length - 1;
+                if (indexAtual >= cartoesArray.length) indexAtual = 0;
+
+                // Atualiza conteúdo
+                $cartao.html(`<i class="bi bi-credit-card-2-back-fill cartao-icon"></i>`);
+                $nome.text(cartoesArray[indexAtual].nome_cartao);
+
+                // Define o ID do cartão atual (IMPORTANTE: isso é síncrono)
+                $("#cartaoAtual").val(cartoesArray[indexAtual].id);
+
+                // Troca animação
+                $cartao.removeClass('animate__fadeOut').addClass('animate__fadeIn');
+                $nome.removeClass('animate__fadeOut').addClass('animate__fadeIn');
+
+                setTimeout(() => {
+                    $cartao.removeClass('animate__animated animate__fadeIn');
+                    $nome.removeClass('animate__animated animate__fadeIn');
+
+                    // AGORA chamamos o callback, quando tudo estiver pronto
+                    if (typeof callback === 'function') {
+                        callback();
+                    }
+                }, 300);
+            }, 200);
+        }
+
+        $('.botaoEsquerda').click(function () {
             let selectMes = $('#mes');
             let mesAtual = parseInt(selectMes.val());
 
@@ -163,7 +252,7 @@ $mesAtual = date('n');
             }
         });
 
-        $('.botaoDireita').click(function() {
+        $('.botaoDireita').click(function () {
             let selectMes = $('#mes');
             let mesAtual = parseInt(selectMes.val());
 
@@ -172,15 +261,41 @@ $mesAtual = date('n');
             }
         });
 
+        function buscaCartoes() {
+            $.ajax({
+                type: "POST",
+                url: "../controllers/CartoesController.php",
+                data: {
+                    acao: "busca",
+                },
+                dataType: "json",
+                success: function (data) {
+                    window.cartoesArray = Object.values(data);
+
+                    // Adiciona o elemento com nome_cartao: "Todos" no índice 0
+                    window.cartoesArray.unshift({
+                        id: null,
+                        usuario_id: null,
+                        nome_cartao: "Todos",
+                        limite: null,
+                        fechamento_dia: null
+                    });
+                },
+                error(error) {
+
+                }
+            })
+        }
+
         // Quando mudar o mês, chama a função
-        $("#mes").change(function() {
+        $("#mes").change(function () {
             let mesSelecionado = $(this).val();
-            buscaTabelaMes(mesSelecionado, function() {
+            buscaTabelaMes(mesSelecionado, function () {
                 buscaTabelaRecorrente(mesSelecionado);
             });
         });
 
-        $('#parcelado').change(function() {
+        $('#parcelado').change(function () {
             if ($(this).prop("checked")) {
                 $('.border-parcelado').slideDown()
                 $(this).val("checked")
@@ -190,19 +305,19 @@ $mesAtual = date('n');
             }
         })
 
-        $('#enviaCriarCategoria').click(function() {
-            $('.criaDespesaForm').fadeOut(function() {
+        $('#enviaCriarCategoria').click(function () {
+            $('.criaDespesaForm').fadeOut(function () {
                 $('.criaCategoriaForm').fadeIn();
             });
         })
 
-        $('.voltarBtn').click(function() {
-            $('.criaCategoriaForm').fadeOut(function() {
+        $('.voltarBtn').click(function () {
+            $('.criaCategoriaForm').fadeOut(function () {
                 $('.criaDespesaForm').fadeIn();
             });
         })
 
-        $('#criarCategoria').click(function() {
+        $('#criarCategoria').click(function () {
             let descricao = $('#nomeCategoria').val();
 
             $.ajax({
@@ -213,7 +328,7 @@ $mesAtual = date('n');
                     descricao: descricao
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
 
                     if (data == true) {
                         toastr.success("Categoria criada com sucesso!");
@@ -222,13 +337,13 @@ $mesAtual = date('n');
                         toastr.error("Erro ao criar categoria!");
                     }
                 },
-                error: function() {
+                error: function () {
                     toastr.error("Erro ao criar categoria!");
                 }
             });
         })
 
-        $('#adicionarDespesa').click(function() {
+        $('#adicionarDespesa').click(function () {
             let descricao = $('#descricao').val();
             let valor = $('#valor').val();
             let categoria = $('#categoria').val();
@@ -254,50 +369,50 @@ $mesAtual = date('n');
                     tipo: 'credito'
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
 
-                    buscaTabelaMes($('#mes').val(), function() {
+                    buscaTabelaMes($('#mes').val(), function () {
                         buscaTabelaRecorrente($('#mes').val());
                     });
 
                     toastr.success("Despesa criada com sucesso!");
                 },
-                error: function() {
+                error: function () {
                     toastr.error("Erro ao criar despesas!");
                 }
             });
         })
 
         //Quando selecionar o input que marca todos
-        $(document).on("change", "#marcaTodosMesNormal", function() {
+        $(document).on("change", "#marcaTodosMesNormal", function () {
             if ($(this).prop("checked")) {
-                $(".marcagastoNormal").each(function() {
+                $(".marcagastoNormal").each(function () {
                     $(this).prop("checked", true)
                 })
             } else {
-                $(".marcagastoNormal").each(function() {
+                $(".marcagastoNormal").each(function () {
                     $(this).prop("checked", false)
                 })
             }
         })
 
         //Quando selecionar o input que marca todos
-        $(document).on("change", "#marcaTodosMesRecorrente", function() {
+        $(document).on("change", "#marcaTodosMesRecorrente", function () {
             if ($(this).prop("checked")) {
-                $(".marcagastoRecorrente").each(function() {
+                $(".marcagastoRecorrente").each(function () {
                     $(this).prop("checked", true)
                 })
             } else {
-                $(".marcagastoRecorrente").each(function() {
+                $(".marcagastoRecorrente").each(function () {
                     $(this).prop("checked", false)
                 })
             }
         })
 
-        $(document).on("click", "#removerDespesa", function() {
+        $(document).on("click", "#removerDespesa", function () {
             var ids = [];
 
-            $('.marcagasto:checked').each(function() {
+            $('.marcagasto:checked').each(function () {
                 let id = $(this).data("id");
                 let parcelado = $(this).data("parcelado");
 
@@ -317,14 +432,14 @@ $mesAtual = date('n');
                         tipo: 'credito'
                     },
                     dataType: "json",
-                    success: function(data) {
-                        buscaTabelaMes($('#mes').val(), function() {
+                    success: function (data) {
+                        buscaTabelaMes($('#mes').val(), function () {
                             buscaTabelaRecorrente($('#mes').val());
                         });
 
                         toastr.success("Despesa removida com sucesso!");
                     },
-                    error: function() {
+                    error: function () {
                         toastr.error("Erro ao remover despesa!");
                     }
                 });
@@ -336,16 +451,19 @@ $mesAtual = date('n');
             $('#loaderGastosMes').show();
             window.valorTotal = 0;
 
+            var cartaoId = $("#cartaoAtual").val();
+
             $.ajax({
                 type: "POST",
                 url: "../controllers/GastosController.php",
                 data: {
                     acao: "buscar",
                     mes: mes,
+                    cartaoId: cartaoId,
                     tipo: 'credito'
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
                     if ($.fn.DataTable.isDataTable('#gastosMes')) {
                         $('#gastosMes').DataTable().destroy();
                     }
@@ -353,7 +471,7 @@ $mesAtual = date('n');
                     let tbody = $("#gastosMes tbody");
                     tbody.empty();
 
-                    $.each(data, function(index, gasto) {
+                    $.each(data, function (index, gasto) {
                         if (index != "valortotal") {
                             let linha = `<tr>
                         <td>${gasto.descricao}</td>
@@ -395,10 +513,10 @@ $mesAtual = date('n');
                     $('#loaderGastosMes').hide();
 
                     if (typeof callback === 'function') {
-                        callback(); // ✅ Chama o callback depois de tudo carregado
+                        callback();
                     }
                 },
-                error: function() {
+                error: function () {
                     toastr.error("Erro ao buscar dados!");
                 }
             });
@@ -419,7 +537,7 @@ $mesAtual = date('n');
                     tipo: 'credito'
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
                     // Verifica se existe dataTable, se existir ele destroi para construir outra
                     if ($.fn.DataTable.isDataTable('#gastosRecorrentes')) {
                         $('#gastosRecorrentes').DataTable().destroy();
@@ -428,7 +546,7 @@ $mesAtual = date('n');
                     let tbody = $("#gastosRecorrentes tbody");
                     tbody.empty(); // Limpa a tabela antes de adicionar novos dados
 
-                    $.each(data, function(index, gasto) {
+                    $.each(data, function (index, gasto) {
                         if (index != "valortotal") {
                             let linha = `<tr>
                             <td>${gasto.descricao}</td>
@@ -475,7 +593,7 @@ $mesAtual = date('n');
                     $('#gastosRecorrentes').show();
                     $('#loaderRecorrentes').hide();
                 },
-                error: function() {
+                error: function () {
                     toastr.error("Erro ao buscar dados!");
                 }
             });
@@ -489,10 +607,10 @@ $mesAtual = date('n');
                     acao: "busca",
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
                     let options = '<option value="">Selecione</option>';
 
-                    $.each(data, function(index, categoria) {
+                    $.each(data, function (index, categoria) {
                         options += `<option value="${categoria.id}">${categoria.nome}</option>`;
                     });
 

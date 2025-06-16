@@ -37,8 +37,8 @@ $mesAtual = date('n');
 
 <div class="animate__animated animate__fadeIn">
     <div class="text-center titulo-pagina">
-        <h1 style="font-size: 4vw;"><i class="bi bi-currency-dollar"></i></h1>
         <h1 class="titulo" style="font-size: 2.3vw;">À vista</h1>
+        <h1 style="font-size: 4vw;"><i class="bi bi-currency-dollar"></i></h1>
     </div>
 
     <div class="d-flex justify-content-around">

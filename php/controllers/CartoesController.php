@@ -15,6 +15,11 @@ switch ($acao) {
         $retorno = $Cartoes->adicionaCartao($cartao);
         break;
 
+    case "alterar":
+        $Cartoes->setId($idCartao);
+        $retorno = $Cartoes->alterarCartao($cartao);
+        break;    
+
     case "busca":
         $retorno = $Cartoes->buscaCartaos();
         break;
