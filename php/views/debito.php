@@ -103,15 +103,25 @@ $mesAtual = date('n');
         } else {
             $('#metodo').closest('.form-floating').show(); // mostra método
             $('#parcelado').closest('.form-check').hide(); // esconde switch
+            $('#cartao').closest('.form-floating').hide();
             $('.border-parcelado').hide(); // esconde nº de parcelas
         }
     });
+
 
     $(document).ready(function() {
 
         // Chama a função automaticamente ao carregar a página com o mês atual
         buscaTabela($('#mes').val());
 
+
+        $("#metodo").change(function(){
+            if($(this).val() == "Débito"){
+                $('#cartao').closest('.form-floating').slideDown();
+            } else {
+                $('#cartao').closest('.form-floating').slideUp(); 
+            }
+        })
 
         $('.botaoEsquerda').click(function() {
             let selectMes = $('#mes');
@@ -234,6 +244,7 @@ $mesAtual = date('n');
                 data: {
                     acao: "buscar",
                     mes: mes,
+                    cartaoId: null,
                     tipo: 'debito'
                 },
                 dataType: "json",
