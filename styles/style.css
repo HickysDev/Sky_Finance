@@ -410,5 +410,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 1;
 }
 
+.titulo-azul{
+  color: #3b82f6 !important;
+}
 
+#valorTotalFatura {
+  font-weight: bold;
+}
 

@@ -15,7 +15,7 @@ switch ($acao) {
         //Converte para float
         $valor = (float)$valor;
 
-        if($tipo == 'debito'){
+        if ($tipo == 'debito') {
             $parcelado = "N";
             $num_parcelas = "";
         }
@@ -35,6 +35,11 @@ switch ($acao) {
     case 'buscarRecorrente':
         $retorno = GastosModel::buscarRecorrentes($mes);
         break;
+
+    case "buscaFatura":
+        $retorno = GastosModel::buscarFatura($mes, $cartaoId);
+        break;
+
     default:
         break;
 }
