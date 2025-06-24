@@ -43,8 +43,12 @@ h5 {
   margin-bottom: 0px;
 }
 
+.titulo-azul {
+  color: #3B82F6 !important;
+}
+
 .cor-am {
-  color: #F0F0F5 !important;
+  color: #F0F0F5 ;
 }
 
 .voltarBtn {
@@ -374,8 +378,15 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .painel .form-control{
-  background-color: #1E1E2F !important;
+  background-color: #2C2C44 !important;
+  color: #FAFAFA !important;
 }
+
+.painel .form-control:focus {
+  border: 1px solid #FAFAFA !important;
+  box-shadow: none !important;
+}
+
 
 .cartao-bloco {
   display: inline-block;
@@ -410,11 +421,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 1;
 }
 
-.titulo-azul{
-  color: #3b82f6 !important;
+/* CATEGORIAS */
+.adicionarNovo {
+  font-size: 1.6em;
+  color: #3B82F6;
+  transform: scale(1);
+  transition: transform 0.3s ease;
+  display: inline-block; 
+  cursor: pointer; 
 }
 
-#valorTotalFatura {
-  font-weight: bold;
+.adicionarNovo:hover {
+  transform: scale(1.1); 
 }
 

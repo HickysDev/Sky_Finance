@@ -33,7 +33,7 @@ switch ($acao) {
         break;
 
     case 'buscarRecorrente':
-        $retorno = GastosModel::buscarRecorrentes($mes);
+        $retorno = GastosModel::buscarRecorrentes($mes, $cartaoId);
         break;
 
     case "buscaFatura":

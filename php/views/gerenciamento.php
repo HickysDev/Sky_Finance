@@ -24,6 +24,17 @@ $conn = Database::getConnection();
                     </div>
                 </div>
             </div>
+
+            <div class="painel quadrado mt-4" id="gerenciarRecorrentes">
+                <div class="conteudo-centralizado text-center">
+                    <div style="font-size: 3.5vw;">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </div>
+                    <div>
+                        <span class="titulo" style="font-size: 2vw;">Recorrentes</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="col-md-4">
@@ -72,7 +83,7 @@ $conn = Database::getConnection();
 
 
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 mt-3" id="listagemCartoes">
-
+                <!-- PREENCHE CARTOES -->
             </div>
 
             <div id="editarCartaoDiv" style="display: none;">
@@ -112,6 +123,45 @@ $conn = Database::getConnection();
         </div>
     </div>
 
+    <div id="gerenciarCategoriasDiv" style="display: none;">
+        <div class="painel">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <!-- Seta de voltar -->
+                <div class="d-flex align-items-center voltarBtn" style="font-size: 30px;">
+                    <i class="bi bi-arrow-left"></i>
+                </div>
+
+                <!-- Título centralizado -->
+                <h2 class="cor-am titulo text-center flex-grow-1 m-0 tituloCartoes" style="font-size: 2vw;">
+                    Categorias Cadastradas
+                </h2>
+
+                <!-- Espaço vazio do tamanho do botão pra manter o título centralizado -->
+                <div style="width: 40px;"></div>
+            </div>
+
+            <div id="mostraCategorias">
+                <table class="table table-hover table-centro" id="mostraCategoriasTable">
+                    <colgroup>
+                        <col style="width: 86%;">
+                        <col style="width: 14%">
+                    </colgroup>
+                    <thead class="bg-secundary">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+
 
 </div>
 
@@ -125,10 +175,36 @@ $conn = Database::getConnection();
         buscaCartoes();
         $('#botoesGerenciamento').fadeOut('slow', function () {
             $('#gerenciarCartoesDiv').fadeIn('slow');
-            estado = "gerenciarCartao";
+            estado = "gerenciarCartoes";
         })
     })
 
+    $('#gerenciarCategoriasBtn').click(function () {
+        buscaCategorias();
+        $('#botoesGerenciamento').fadeOut('slow', function () {
+            $('#gerenciarCategoriasDiv').fadeIn('slow');
+            estado = "gerenciarCategorias";
+        })
+    })
+
+    $(".voltarBtn").click(function () {
+        if (estado == "editaCartao") {
+            $('#editarCartaoDiv, .tituloCartoes').fadeOut('slow', function () {
+                $('.tituloCartoes').fadeIn('slow').html("Cartões Cadastrados")
+                $('#listagemCartoes').fadeIn('slow');
+                estado = "gerenciarCartoes";
+            })
+        } else if (estado == "gerenciarCartoes" || estado == "gerenciarCategorias") {
+            console.log('#' + estado + 'Div')
+            $('#' + estado + 'Div').fadeOut('slow', function () {
+                $('#botoesGerenciamento').fadeIn('slow');
+                estado = "inicial";
+            })
+        }
+    })
+
+
+    //! OPERACOES CARTAO
     $(document).on("click", ".editarCartao", function () {
 
         let id = $(this).data("id");
@@ -148,6 +224,69 @@ $conn = Database::getConnection();
         })
     })
 
+    $(document).on("click", "#salvaAlteracao", function () {
+        let nomeCartao = $('#nomeCartao').val();
+        let limite = $('#limite').val();
+        let dataFechamento = $('#dataFechamento').val();
+        let dataVencimento = $('#dataVencimento').val();
+        let tipo = $("#tipoAlteracao").val();
+        let idCartao = $("#idCartao").val()
+
+        var cartaoArray = {
+            "nomeCartao": nomeCartao,
+            "limite": limite,
+            "dataFechamento": dataFechamento,
+            "dataVencimento": dataVencimento
+        }
+
+        if (tipo == "criacao") {
+            criaCartao(cartaoArray, buscaCartoes);
+        } else if (tipo == "alteracao") {
+            alteraCartao(cartaoArray, idCartao, buscaCartoes);
+        }
+
+    })
+
+    $(document).on("click", "#adicionarCartao", function () {
+        $('#listagemCartoes, .tituloCartoes').fadeOut('slow', function () {
+            $('.tituloCartoes').fadeIn('slow').html("Novo cartão")
+
+            $('#editarCartaoDiv').fadeIn('slow');
+
+            estado = "editaCartao";
+
+            $("#salvaAlteracao").html('Criar <i class="bi bi-plus-lg"></i>');
+            $("#tipoAlteracao").val("criar");
+
+            $('#limite').val("");
+
+            $('#nomeCartao').val("");
+            $('#dataFechamento').val("");
+            $('#dataVencimento').val("");
+        })
+    })
+
+    $(document).on("click", ".excluirCartao", function () {
+        Swal.fire({
+            title: 'Tem certeza?',
+            text: "Você quer remover esse cartão?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sim, excluir!',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+
+                let id = $(this).data("id");
+
+                excluirCartao(id, buscaCartoes)
+
+            }
+        });
+    });
+
     function editaCartao(id) {
         let cartaoSelecionado = window.cartoesArray[id];
 
@@ -164,21 +303,6 @@ $conn = Database::getConnection();
             toastr.error("Cartão não encontrado!");
         }
     }
-
-    $(".voltarBtn").click(function () {
-        if (estado == "editaCartao") {
-            $('#editarCartaoDiv, .tituloCartoes').fadeOut('slow', function () {
-                $('.tituloCartoes').fadeIn('slow').html("Cartões Cadastrados")
-                $('#listagemCartoes').fadeIn('slow');
-                estado = "gerenciarCartao";
-            })
-        } else if (estado == "gerenciarCartao") {
-            $('#gerenciarCartoesDiv').fadeOut('slow', function () {
-                $('#botoesGerenciamento').fadeIn('slow');
-                estado = "inicial";
-            })
-        }
-    })
 
     function buscaCartoes() {
         $.ajax({
@@ -232,29 +356,6 @@ $conn = Database::getConnection();
         })
     }
 
-    $(document).on("click", "#salvaAlteracao", function () {
-        let nomeCartao = $('#nomeCartao').val();
-        let limite = $('#limite').val();
-        let dataFechamento = $('#dataFechamento').val();
-        let dataVencimento = $('#dataVencimento').val();
-        let tipo = $("#tipoAlteracao").val();
-        let idCartao = $("#idCartao").val()
-
-        var cartaoArray = {
-            "nomeCartao": nomeCartao,
-            "limite": limite,
-            "dataFechamento": dataFechamento,
-            "dataVencimento": dataVencimento
-        }
-
-        if (tipo == "criacao") {
-            criaCartao(cartaoArray, buscaCartoes);
-        } else if (tipo == "alteracao") {
-            alteraCartao(cartaoArray, idCartao, buscaCartoes);
-        }
-
-    })
-
     function alteraCartao(cartaoArray, idCartao, callback) {
         $.ajax({
             type: "POST",
@@ -276,7 +377,7 @@ $conn = Database::getConnection();
                     $('#editarCartaoDiv, .tituloCartoes').fadeOut('slow', function () {
                         $('.tituloCartoes').fadeIn('slow').html("Cartões Cadastrados")
                         $('#listagemCartoes').fadeIn('slow');
-                        estado = "gerenciarCartao";
+                        estado = "gerenciarCartoes";
                     })
 
                 } else {
@@ -308,7 +409,7 @@ $conn = Database::getConnection();
                     $('#editarCartaoDiv, .tituloCartoes').fadeOut('slow', function () {
                         $('.tituloCartoes').fadeIn('slow').html("Cartões Cadastrados")
                         $('#listagemCartoes').fadeIn('slow');
-                        estado = "gerenciarCartao";
+                        estado = "gerenciarCartoes";
                     })
 
                 } else {
@@ -351,29 +452,51 @@ $conn = Database::getConnection();
         })
     }
 
-    $(document).on("click", "#adicionarCartao", function () {
-        $('#listagemCartoes, .tituloCartoes').fadeOut('slow', function () {
-            $('.tituloCartoes').fadeIn('slow').html("Novo cartão")
+    //! OPERACOES CATEGORIAS
 
-            $('#editarCartaoDiv').fadeIn('slow');
+    $(document).on("click", ".editaCategoriaBtn", function () {
+        const id = $(this).data("codigo");
+        const $td = $(this).closest("tr").find(".nomeCategoriaTd");
+        const nomeCategoria = $td.text().trim();
 
-            estado = "editaCartao";
+        var input = `<input type="text" data-codigo="${id}" class="categoriaEdicao text-center form-control w-50" style="margin:0 auto;" value="${nomeCategoria}">`;
 
-            $("#salvaAlteracao").html('Criar <i class="bi bi-plus-lg"></i>');
-            $("#tipoAlteracao").val("criar");
+        $td.html(input);
+        $td.find('input.categoriaEdicao').focus();
+        $(this).prop("disabled", true);
+    });
 
-            $('#limite').val("");
+    $(document).on("change", ".categoriaEdicao", function () {
+        const id = $(this).data("codigo");
+        const $input = $(this);
+        const nome = $input.val().trim();
+        const $tr = $input.closest("tr");
+        const $td = $tr.find(".nomeCategoriaTd");
+        const $btn = $tr.find(".editaCategoriaBtn");
 
-            $('#nomeCartao').val("");
-            $('#dataFechamento').val("");
-            $('#dataVencimento').val("");
-        })
-    })
+        editaCategorias(id, nome, $td, $btn);
+    });
 
-    $(document).on("click", ".excluirCartao", function () {
+    $(document).on("click", ".adicionarNovo", function () {
+        const $tr = $(this).closest("tr");
+
+        var conteudo = `<td colspan="2"><input type="text" class="categoriaNova text-center form-control w-50" style="margin:0 auto;"></td>`
+
+        $tr.html(conteudo);
+    });
+
+    $(document).on("change", ".categoriaNova", function () {
+
+        criaCategorias($(this).val(), buscaCategorias);
+    });
+
+    $(document).on("click", ".excluiCategoriaBtn", function () {
+        const id = $(this).data("codigo");
+        const $tr = $(this).closest("tr");
+
         Swal.fire({
             title: 'Tem certeza?',
-            text: "Você quer remover esse cartão?",
+            text: "Você quer remover essa categoria?",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
@@ -383,15 +506,126 @@ $conn = Database::getConnection();
         }).then((result) => {
             if (result.isConfirmed) {
 
-                let id = $(this).data("id");
-
-                excluirCartao(id, buscaCartoes)
+                excluirCategorias(id, $tr)
 
             }
         });
     });
 
+    function buscaCategorias() {
+        $.ajax({
+            type: "POST",
+            url: "../controllers/CategoriaController.php",
+            data: {
+                acao: "busca",
+            },
+            dataType: "json",
+            success: function (data) {
 
+                var listagemCategorias = "";
+
+                $.each(data, function (codigoCategoria, valoresCategoria) {
+                    listagemCategorias += `<tr>
+                                                <td class="nomeCategoriaTd">${valoresCategoria.nome}</td>
+                                                <td>
+                                                    <div class="d-flex justify-content-center align-items-center gap-3">
+                                                        <button data-codigo="${valoresCategoria.id}" class="btn editaCategoriaBtn btn-sm btn-warning"><i class="bi bi-pencil-fill"></i></button>
+                                                        <button data-codigo="${valoresCategoria.id}" class="btn excluiCategoriaBtn btn-sm btn-danger"><i class="bi bi-trash-fill"></i></button>
+                                                    </div>
+                                                </td>
+                                            </tr>`
+                })
+
+                listagemCategorias += `<tr><td colspan="2"><i class="bi bi-plus-circle-fill adicionarNovo"></i></td></tr>`
+
+                $("#mostraCategoriasTable tbody").html(listagemCategorias)
+            },
+            error(error) {
+
+            }
+        })
+    }
+
+    function editaCategorias(id, nome, $td, $btn) {
+        $.ajax({
+            type: "POST",
+            url: "../controllers/CategoriaController.php",
+            data: {
+                acao: "editar",
+                nome: nome,
+                id: id
+            },
+            dataType: "json",
+            success: function (data) {
+                if (data == true) {
+                    toastr.success("Categoria alterada com sucesso!");
+                    $td.html(nome);
+                } else {
+                    toastr.error("Erro ao alterar categoria!");
+                }
+                $btn.prop("disabled", false);
+            },
+            error(error) {
+                toastr.error("Erro ao alterar categoria!");
+                $btn.prop("disabled", false);
+            }
+        });
+    }
+
+    function criaCategorias(nome, callback) {
+        $.ajax({
+            type: "POST",
+            url: "../controllers/CategoriaController.php",
+            data: {
+                acao: "adicionar",
+                descricao: nome
+            },
+            dataType: "json",
+            success: function (data) {
+                if (data == true) {
+                    toastr.success("Categoria criada com sucesso!");
+
+                    if (typeof callback === 'function') {
+                        callback();
+                    }
+                } else {
+                    toastr.error("Ocorreu um erro ao criar a categoria!");
+                }
+            }, error(error) {
+                toastr.error("Ocorreu um erro ao criar a categoria ###!");
+            }
+        })
+    }
+
+    function excluirCategorias(id, $tr) {
+        $.ajax({
+            type: "POST",
+            url: "../controllers/CategoriaController.php",
+            data: {
+                acao: "excluir",
+                id: id
+            },
+            dataType: "json",
+            success: function (data) {
+                if (data == true) {
+
+                    Swal.fire(
+                        'Categoria removida!',
+                        'A categoria foi removida com sucesso!',
+                        'success'
+                    );
+
+                    $tr.fadeOut();
+                } else {
+                    toastr.error("Ocorreu um erro ao excluir a categoria!");
+                }
+            }, error(error) {
+                toastr.error("Ocorreu um erro ao excluir a categoria ###!");
+            }
+        })
+    }
+
+    //! VISUAL
     $(document).on("mouseenter", "#adicionarCartao", function () {
         $(this).html('<i class="bi bi-plus-circle-fill"></i>');
     })

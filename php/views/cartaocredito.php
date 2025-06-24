@@ -95,6 +95,7 @@ $mesAtual = date('n');
                                 <th>Categoria</th>
                                 <th>Tipo</th>
                                 <th>Data</th>
+                                <th>Cartão</th>
                                 <th><input type="checkbox" name="marcaTodosMesNormal" class="dark-checkbox"
                                         id="marcaTodosMesNormal"></th>
                             </tr>
@@ -112,7 +113,7 @@ $mesAtual = date('n');
 
             </div>
             <div class="col-lg-6">
-                <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS RECORRENTES - R$ <span
+                <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS PARCELADOS - R$ <span
                         class="cor-am titulo text-center" id="gastoRecorrenteTotalMes"></span></h2>
 
                 <div class="table-responsive">
@@ -131,6 +132,7 @@ $mesAtual = date('n');
                                 <th>Parcela</th>
                                 <th>Valor Parcela</th>
                                 <th>Data Compra</th>
+                                <th>Cartão</th>
                                 <th><input type="checkbox" name="marcaTodosMesRecorrente" class="dark-checkbox"
                                         id="marcaTodosMesRecorrente"></th>
                             </tr>
@@ -150,27 +152,8 @@ $mesAtual = date('n');
     </div>
 </div>
 
-<div class="painel p-4 my-4">
-    <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">
-        Fatura Mensal
-    </h2>
-    <h3 style="font-size: 1.2vw;" class="cor-am titulo text-center">
-        <span id="valorTotalFatura"></span>
-    </h3>
+<div id="faturasDiv">
 
-    <table id="faturaMes" class="table table-hover table-condensed table-centro">
-        <thead class="bg-secundary">
-            <tr>
-                <th>Produto</th>
-                <th>Categoria</th>
-                <th>Parcela</th>
-                <th>Valor</th>
-                <th>Data Compra</th>
-            </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
 </div>
 
 <!-- MODAL -->
@@ -178,7 +161,7 @@ $mesAtual = date('n');
 <?php include '../templates/modalCadastra.php'; ?>
 
 <script>
-    $('#modalAdiciona').on('show.bs.modal', function() {
+    $('#modalAdiciona').on('show.bs.modal', function () {
         if (tipoDespesa === 'credito') {
             $('#metodo').closest('.form-floating').hide(); // esconde método
             $('#parcelado').closest('.form-check').show(); // mostra switch
@@ -189,10 +172,10 @@ $mesAtual = date('n');
         }
     });
 
-    $(document).ready(function() {
+    $(document).ready(function () {
 
         // Chama a função automaticamente ao carregar a página com o mês atual
-        buscaTabelaMes($('#mes').val(), function() {
+        buscaTabelaMes($('#mes').val(), function () {
             buscaTabelaRecorrente($('#mes').val());
         });
 
@@ -207,30 +190,30 @@ $mesAtual = date('n');
         buscaCartoes();
 
         const cartoes = [{
-                icone: 'bi-credit-card-2-back-fill',
-                nome: 'Todos'
-            },
-            {
-                icone: 'bi-credit-card-fill',
-                nome: 'Nubank'
-            },
-            {
-                icone: 'bi-credit-card-2-front-fill',
-                nome: 'Caixa'
-            }
+            icone: 'bi-credit-card-2-back-fill',
+            nome: 'Todos'
+        },
+        {
+            icone: 'bi-credit-card-fill',
+            nome: 'Nubank'
+        },
+        {
+            icone: 'bi-credit-card-2-front-fill',
+            nome: 'Caixa'
+        }
         ];
 
-        $('#btn-anterior').on('click', function() {
-            trocarCartao(-1, function() {
-                buscaTabelaMes($('#mes').val(), function() {
+        $('#btn-anterior').on('click', function () {
+            trocarCartao(-1, function () {
+                buscaTabelaMes($('#mes').val(), function () {
                     buscaTabelaRecorrente($('#mes').val())
                 }), buscaFatura($('#mes').val())
             });
         });
 
-        $('#btn-proximo').on('click', function() {
-            trocarCartao(1, function() {
-                buscaTabelaMes($('#mes').val(), function() {
+        $('#btn-proximo').on('click', function () {
+            trocarCartao(1, function () {
+                buscaTabelaMes($('#mes').val(), function () {
                     buscaTabelaRecorrente($('#mes').val())
                 }), buscaFatura($('#mes').val())
             });
@@ -280,7 +263,7 @@ $mesAtual = date('n');
             }, 200);
         }
 
-        $('.botaoEsquerda').click(function() {
+        $('.botaoEsquerda').click(function () {
             let selectMes = $('#mes');
             let mesAtual = parseInt(selectMes.val());
 
@@ -289,7 +272,7 @@ $mesAtual = date('n');
             }
         });
 
-        $('.botaoDireita').click(function() {
+        $('.botaoDireita').click(function () {
             let selectMes = $('#mes');
             let mesAtual = parseInt(selectMes.val());
 
@@ -306,7 +289,7 @@ $mesAtual = date('n');
                     acao: "busca",
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
                     window.cartoesArray = Object.values(data);
 
                     // Adiciona o elemento com nome_cartao: "Todos" no índice 0
@@ -325,16 +308,16 @@ $mesAtual = date('n');
         }
 
         // Quando mudar o mês, chama a função
-        $("#mes").change(function() {
+        $("#mes").change(function () {
             let mesSelecionado = $(this).val();
-            buscaTabelaMes(mesSelecionado, function() {
+            buscaTabelaMes(mesSelecionado, function () {
                 buscaTabelaRecorrente(mesSelecionado);
             });
 
             buscaFatura(mesSelecionado);
         });
 
-        $('#parcelado').change(function() {
+        $('#parcelado').change(function () {
             if ($(this).prop("checked")) {
                 $('.border-parcelado').slideDown()
                 $(this).val("checked")
@@ -344,19 +327,19 @@ $mesAtual = date('n');
             }
         })
 
-        $('#enviaCriarCategoria').click(function() {
-            $('.criaDespesaForm').fadeOut(function() {
+        $('#enviaCriarCategoria').click(function () {
+            $('.criaDespesaForm').fadeOut(function () {
                 $('.criaCategoriaForm').fadeIn();
             });
         })
 
-        $('.voltarBtn').click(function() {
-            $('.criaCategoriaForm').fadeOut(function() {
+        $('.voltarBtn').click(function () {
+            $('.criaCategoriaForm').fadeOut(function () {
                 $('.criaDespesaForm').fadeIn();
             });
         })
 
-        $('#criarCategoria').click(function() {
+        $('#criarCategoria').click(function () {
             let descricao = $('#nomeCategoria').val();
 
             $.ajax({
@@ -367,7 +350,7 @@ $mesAtual = date('n');
                     descricao: descricao
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
 
                     if (data == true) {
                         toastr.success("Categoria criada com sucesso!");
@@ -376,13 +359,13 @@ $mesAtual = date('n');
                         toastr.error("Erro ao criar categoria!");
                     }
                 },
-                error: function() {
+                error: function () {
                     toastr.error("Erro ao criar categoria!");
                 }
             });
         })
 
-        $('#adicionarDespesa').click(function() {
+        $('#adicionarDespesa').click(function () {
             let descricao = $('#descricao').val();
             let valor = $('#valor').val();
             let categoria = $('#categoria').val();
@@ -408,50 +391,50 @@ $mesAtual = date('n');
                     tipo: 'credito'
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
 
-                    buscaTabelaMes($('#mes').val(), function() {
+                    buscaTabelaMes($('#mes').val(), function () {
                         buscaTabelaRecorrente($('#mes').val());
                     });
 
                     toastr.success("Despesa criada com sucesso!");
                 },
-                error: function() {
+                error: function () {
                     toastr.error("Erro ao criar despesas!");
                 }
             });
         })
 
         //Quando selecionar o input que marca todos
-        $(document).on("change", "#marcaTodosMesNormal", function() {
+        $(document).on("change", "#marcaTodosMesNormal", function () {
             if ($(this).prop("checked")) {
-                $(".marcagastoNormal").each(function() {
+                $(".marcagastoNormal").each(function () {
                     $(this).prop("checked", true)
                 })
             } else {
-                $(".marcagastoNormal").each(function() {
+                $(".marcagastoNormal").each(function () {
                     $(this).prop("checked", false)
                 })
             }
         })
 
         //Quando selecionar o input que marca todos
-        $(document).on("change", "#marcaTodosMesRecorrente", function() {
+        $(document).on("change", "#marcaTodosMesRecorrente", function () {
             if ($(this).prop("checked")) {
-                $(".marcagastoRecorrente").each(function() {
+                $(".marcagastoRecorrente").each(function () {
                     $(this).prop("checked", true)
                 })
             } else {
-                $(".marcagastoRecorrente").each(function() {
+                $(".marcagastoRecorrente").each(function () {
                     $(this).prop("checked", false)
                 })
             }
         })
 
-        $(document).on("click", "#removerDespesa", function() {
+        $(document).on("click", "#removerDespesa", function () {
             var ids = [];
 
-            $('.marcagasto:checked').each(function() {
+            $('.marcagasto:checked').each(function () {
                 let id = $(this).data("id");
                 let parcelado = $(this).data("parcelado");
 
@@ -471,14 +454,14 @@ $mesAtual = date('n');
                         tipo: 'credito'
                     },
                     dataType: "json",
-                    success: function(data) {
-                        buscaTabelaMes($('#mes').val(), function() {
+                    success: function (data) {
+                        buscaTabelaMes($('#mes').val(), function () {
                             buscaTabelaRecorrente($('#mes').val());
                         });
 
                         toastr.success("Despesa removida com sucesso!");
                     },
-                    error: function() {
+                    error: function () {
                         toastr.error("Erro ao remover despesa!");
                     }
                 });
@@ -502,7 +485,7 @@ $mesAtual = date('n');
                     tipo: 'credito'
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
                     if ($.fn.DataTable.isDataTable('#gastosMes')) {
                         $('#gastosMes').DataTable().destroy();
                     }
@@ -510,7 +493,7 @@ $mesAtual = date('n');
                     let tbody = $("#gastosMes tbody");
                     tbody.empty();
 
-                    $.each(data, function(index, gasto) {
+                    $.each(data, function (index, gasto) {
                         if (index != "valortotal") {
                             let linha = `<tr>
                         <td>${gasto.descricao}</td>
@@ -518,6 +501,7 @@ $mesAtual = date('n');
                         <td>${gasto.nome}</td>
                         <td>${gasto.metodo_pagamento}</td>
                         <td>${moment(gasto.data_gasto).format("DD/MM/YYYY")}</td>
+                        <td>${gasto.nome_cartao}</td>
                         <td><input type="checkbox" name="gasto" class="marcagasto marcagastoNormal" data-parcelado="${gasto.parcelado}" data-id="${gasto.id}"></td>
                     </tr>`;
                             tbody.append(linha);
@@ -555,7 +539,7 @@ $mesAtual = date('n');
                         callback();
                     }
                 },
-                error: function() {
+                error: function () {
                     toastr.error("Erro ao buscar dados!");
                 }
             });
@@ -576,53 +560,90 @@ $mesAtual = date('n');
                     cartaoId: cartaoId
                 },
                 dataType: "json",
-                success: function(data) {
-                    // Verifica se existe dataTable, se existir ele destroi para construir outra
-                    if ($.fn.DataTable.isDataTable('#faturaMes')) {
-                        $('#faturaMes').DataTable().destroy();
-                    }
+                success: function (data) {
+                    var tabela = "";
 
-                    let tbody = $("#faturaMes tbody");
-                    tbody.empty(); // Limpa a tabela antes de adicionar novos dados
 
-                    $.each(data, function(index, gasto) {
-                        if (index != "valortotal") {
-                            let linha = `<tr>
-                            <td>${gasto.descricao}</td>
-                            <td>${gasto.categoria}</td>
-                            <td>${gasto.numero_parcela ? gasto.numero_parcela : 1}/${gasto.parcelas_total ? gasto.parcelas_total : 1}</td>
-                            <td>R$ ${gasto.valor_parcela}</td>
-                            <td>${moment(gasto.data_gasto).format("DD/MM/YYYY")}</td>
-                        </tr>`;
-                            tbody.append(linha);
-                        } else if (index == "valortotal") {
-                            $('#valorTotalFatura').html("R$ " + gasto)
-                        }
+                    $.each(data, function (idCartao, valoresCartao) {
 
+                        var nomeCartao = valoresCartao[0]?.nome_cartao || "Cartão Desconhecido";
+
+                        tabela += `  
+                <div class="painel p-4 my-4">
+                    <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">
+                        Fatura Mensal - Cartão ${nomeCartao}
+                    </h2>
+                    <h3 style="font-size: 1.2vw;" class="cor-am titulo text-center">
+                        <span id="valorTotalFatura_${idCartao}"></span>
+                    </h3>
+
+                    <div>
+                        <table id="faturaTabela_${idCartao}" class="faturaMes table table-hover table-condensed table-centro display">
+                            <thead class="bg-secundary">
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Categoria</th>
+                                    <th>Parcela</th>
+                                    <th>Valor</th>
+                                    <th>Data Compra</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+                        $.each(valoresCartao, function (gasto, valoresGasto) {
+                            if (gasto !== "valortotal") {
+                                tabela += `<tr>
+                        <td>${valoresGasto.descricao}</td>
+                        <td>${valoresGasto.categoria}</td>
+                        <td>${valoresGasto.numero_parcela ? valoresGasto.numero_parcela : 1}/${valoresGasto.parcelas_total ? valoresGasto.parcelas_total : 1}</td>
+                        <td>R$ ${valoresGasto.valor_parcela}</td>
+                        <td>${moment(valoresGasto.data_gasto).format("DD/MM/YYYY")}</td>
+                    </tr>`;
+                            }
+                        });
+
+                        tabela += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
                     });
 
+                    $("#faturasDiv").html(tabela);
 
+                    // Inicializa DataTables e insere os valores totais
+                    $.each(data, function (idCartao, valoresCartao) {
+                        $('#faturaTabela_' + idCartao).DataTable({
+                            paging: false,
+                            info: false,
+                            lengthChange: false,
+                            searching: true,
+                            ordering: true,
+                            columnDefs: [{
+                                orderable: false,
+                                targets: 2
+                            } // Desativa a ordenação na última coluna
+                            ],
+                            language: {
+                                search: "Pesquisar:",
+                                zeroRecords: "Nenhum registro encontrado",
+                                emptyTable: "Nenhum dado disponível na tabela"
+                            }
+                        });
 
-                    $('#faturaMes').DataTable({
-                        paging: false,
-                        info: false,
-                        lengthChange: false,
-                        searching: true,
-                        ordering: true,
-                        language: {
-                            search: "Pesquisar:",
-                            zeroRecords: "Nenhum registro encontrado",
-                            emptyTable: "Nenhum dado disponível na tabela"
+                        if (valoresCartao.valortotal) {
+                            $('#valorTotalFatura_' + idCartao).html("R$ " + valoresCartao.valortotal);
                         }
                     });
 
                     $('#faturaMes').show();
                     $('#loaderRecorrentes').hide();
                 },
-                error: function() {
+                error: function () {
                     toastr.error("Erro ao buscar dados!");
                 }
             });
+
         }
 
         //RECORRENTES
@@ -638,10 +659,11 @@ $mesAtual = date('n');
                 data: {
                     acao: "buscarRecorrente",
                     mes: mes,
-                    tipo: 'credito'
+                    tipo: 'credito',
+                    cartaoId: cartaoId
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
                     // Verifica se existe dataTable, se existir ele destroi para construir outra
                     if ($.fn.DataTable.isDataTable('#gastosRecorrentes')) {
                         $('#gastosRecorrentes').DataTable().destroy();
@@ -650,7 +672,8 @@ $mesAtual = date('n');
                     let tbody = $("#gastosRecorrentes tbody");
                     tbody.empty(); // Limpa a tabela antes de adicionar novos dados
 
-                    $.each(data, function(index, gasto) {
+                    $.each(data, function (index, gasto) {
+                        
                         if (index != "valortotal") {
                             let linha = `<tr>
                             <td>${gasto.descricao}</td>
@@ -659,8 +682,9 @@ $mesAtual = date('n');
                             <td>${gasto.numero_parcela}/${gasto.parcelas_total}</td>
                             <td>R$ ${gasto.valor_parcela}</td>
                             <td>${moment(gasto.data_gasto).format("DD/MM/YYYY")}</td>
+                            <td>${gasto.nome_cartao}</td>
                             <td><input type="checkbox" name="gasto" class="marcagasto marcagastoRecorrente" data-parcelado="${gasto.parcelado}" data-id="${gasto.id}"></td>
-                        </tr>`;
+                        </tr> `;
                             tbody.append(linha);
                         } else if (index == "valortotal") {
                             $('#gastoRecorrenteTotalMes').html(gasto)
@@ -697,7 +721,7 @@ $mesAtual = date('n');
                     $('#gastosRecorrentes').show();
                     $('#loaderRecorrentes').hide();
                 },
-                error: function() {
+                error: function () {
                     toastr.error("Erro ao buscar dados!");
                 }
             });
@@ -711,11 +735,13 @@ $mesAtual = date('n');
                     acao: "busca",
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
                     let options = '<option value="">Selecione</option>';
 
-                    $.each(data, function(index, categoria) {
-                        options += `<option value="${categoria.id}">${categoria.nome}</option>`;
+                    console.log(data)
+
+                    $.each(data, function (index, categoria) {
+                        options += `<option value = "${categoria.id}" > ${categoria.nome}</option >`;
                     });
 
                     $('#categoria').html(options);

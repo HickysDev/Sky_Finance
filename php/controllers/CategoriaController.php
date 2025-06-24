@@ -20,6 +20,19 @@ switch ($acao) {
         $retorno = $Categoria->buscaCategorias();
         break;
 
+    case "editar":
+        $Categoria->setDescricao($nome);
+        $Categoria->setId($id);
+
+        $retorno = $Categoria->editaCategoria();
+        break;
+
+    case "excluir":
+        $Categoria->setId($id);
+
+        $retorno = $Categoria->excluiCategoria();
+        break;    
+
     default:
         break;
 }
