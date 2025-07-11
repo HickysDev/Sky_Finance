@@ -4,6 +4,10 @@ require_once(__DIR__ . '/../../conn/conn.php');
 
 $conn = Database::getConnection();
 
+$buscaCartao = $conn->prepare("SELECT * FROM cartoes_credito");
+$buscaCartao->execute();
+$cartoes = $buscaCartao->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 
 <div class="animate__animated animate__fadeIn">
@@ -25,7 +29,7 @@ $conn = Database::getConnection();
                 </div>
             </div>
 
-            <div class="painel quadrado mt-4" id="gerenciarRecorrentes">
+            <div class="painel quadrado mt-4" id="gerenciarRecorrentesBtn">
                 <div class="conteudo-centralizado text-center">
                     <div style="font-size: 3.5vw;">
                         <i class="bi bi-arrow-clockwise"></i>
@@ -68,7 +72,7 @@ $conn = Database::getConnection();
         <div class="painel">
             <div class="d-flex align-items-center justify-content-between mb-4">
                 <!-- Seta de voltar -->
-                <div class="d-flex align-items-center voltarBtn" style="font-size: 30px;">
+                <div class="d-flex align-items-center voltarBtnGerenciamento" style="font-size: 30px;">
                     <i class="bi bi-arrow-left"></i>
                 </div>
 
@@ -127,7 +131,7 @@ $conn = Database::getConnection();
         <div class="painel">
             <div class="d-flex align-items-center justify-content-between mb-4">
                 <!-- Seta de voltar -->
-                <div class="d-flex align-items-center voltarBtn" style="font-size: 30px;">
+                <div class="d-flex align-items-center voltarBtnGerenciamento" style="font-size: 30px;">
                     <i class="bi bi-arrow-left"></i>
                 </div>
 
@@ -161,15 +165,96 @@ $conn = Database::getConnection();
         </div>
     </div>
 
+    <div id="gerenciarRecorrentesDiv" style="display: none;">
 
+        <script>
+            var tipoDespesa = 'recorrente';
+        </script>
+
+        <div class="painel">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <!-- Seta de voltar -->
+                <div class="d-flex align-items-center voltarBtnGerenciamento" style="font-size: 30px;">
+                    <i class="bi bi-arrow-left"></i>
+                </div>
+
+                <!-- Título centralizado -->
+                <h2 class="cor-am titulo text-center flex-grow-1 m-0 tituloCartoes" style="font-size: 2vw;">
+                    Gastos Recorrentes
+                </h2>
+
+                <!-- Espaço vazio do tamanho do botão pra manter o título centralizado -->
+                <div style="width: 40px;"></div>
+            </div>
+
+            <div class="d-flex justify-content-end mb-3">
+                <button class="btn btn-success" id="adicionarGasto">
+                    <i class="bi bi-plus-lg"></i></button>
+            </div>
+
+            <div id="mostraRecorrentes">
+                <table class="table table-hover table-centro" id="recorrentesTable">
+                    <colgroup>
+                        <col style="width: 30%;">
+                        <col style="width: 30%;">
+                        <col style="width: 15%;">
+                        <col style="width: 15%;">
+                        <col style="width: 10%">
+                    </colgroup>
+                    <thead class="bg-secundary">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Valor</th>
+                            <th>Categoria</th>
+                            <th>Cartão</th>
+                            <th>Ativo</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
 
 </div>
+
+<!-- MODAL -->
+
+<?php include '../templates/modalCadastra.php'; ?>
 
 <script>
 
     var estado = "inicial";
     var cartoesArray = [];
+    var recorrentesArray = [];
 
+    let modoAtual = "criar"; // ou "editar" quando for o caso
+
+    $('#modalAdiciona').on('show.bs.modal', function () {
+        $('#metodo').closest('.form-floating').hide(); // esconde método
+        $('#parcelado').closest('.form-check').hide(); // esconde switch
+        $('#data').closest('.form-floating').hide(); // esconde switch
+        $('.border-parcelado').hide(); // esconde nº de parcelas
+        $('#recorrente').prop('checked', true).prop('disabled', true);;
+
+        console.log(modoAtual)
+        if (modoAtual === "criar") {
+            $("#descricao").val("");
+            $("#valor").val("");
+            $("#categoria").val("");
+            $("#cartao").val("");
+
+            $("#adicionarDespesa").show();
+            $("#editarDespesa").hide();
+        } else if (modoAtual === "editar") {
+            $("#adicionarDespesa").hide()
+            $("#editarDespesa").show()
+        }
+    });
 
     $('#gerenciarCartoesBtn').click(function () {
         buscaCartoes();
@@ -187,14 +272,22 @@ $conn = Database::getConnection();
         })
     })
 
-    $(".voltarBtn").click(function () {
+    $('#gerenciarRecorrentesBtn').click(function () {
+        buscaRecorrentes();
+        $('#botoesGerenciamento').fadeOut('slow', function () {
+            $('#gerenciarRecorrentesDiv').fadeIn('slow');
+            estado = "gerenciarRecorrentes";
+        })
+    })
+
+    $(".voltarBtnGerenciamento").click(function () {
         if (estado == "editaCartao") {
             $('#editarCartaoDiv, .tituloCartoes').fadeOut('slow', function () {
                 $('.tituloCartoes').fadeIn('slow').html("Cartões Cadastrados")
                 $('#listagemCartoes').fadeIn('slow');
                 estado = "gerenciarCartoes";
             })
-        } else if (estado == "gerenciarCartoes" || estado == "gerenciarCategorias") {
+        } else if (estado == "gerenciarCartoes" || estado == "gerenciarCategorias" || estado == "gerenciarRecorrentes") {
             console.log('#' + estado + 'Div')
             $('#' + estado + 'Div').fadeOut('slow', function () {
                 $('#botoesGerenciamento').fadeIn('slow');
@@ -523,6 +616,7 @@ $conn = Database::getConnection();
             success: function (data) {
 
                 var listagemCategorias = "";
+                let options = '<option value="">Selecione</option>';
 
                 $.each(data, function (codigoCategoria, valoresCategoria) {
                     listagemCategorias += `<tr>
@@ -534,11 +628,16 @@ $conn = Database::getConnection();
                                                     </div>
                                                 </td>
                                             </tr>`
+
+                    options += `<option value = "${valoresCategoria.id}" > ${valoresCategoria.nome}</option >`;
                 })
 
                 listagemCategorias += `<tr><td colspan="2"><i class="bi bi-plus-circle-fill adicionarNovo"></i></td></tr>`
 
                 $("#mostraCategoriasTable tbody").html(listagemCategorias)
+
+                $('#categoria').html(options);
+
             },
             error(error) {
 
@@ -625,6 +724,302 @@ $conn = Database::getConnection();
         })
     }
 
+
+    //! RECORRENTES
+
+    // Busca Categorias
+    buscaCategorias();
+
+    $('#enviaCriarCategoria').click(function () {
+        $('.criaDespesaForm').fadeOut(function () {
+            $('.criaCategoriaForm').fadeIn();
+        });
+    })
+
+    $('#criarCategoria').click(function () {
+        let descricao = $('#nomeCategoria').val();
+
+        $.ajax({
+            type: "POST",
+            url: "../controllers/CategoriaController.php",
+            data: {
+                acao: "adicionar",
+                descricao: descricao
+            },
+            dataType: "json",
+            success: function (data) {
+
+                if (data == true) {
+                    toastr.success("Categoria criada com sucesso!");
+                    buscaCategorias();
+                } else {
+                    toastr.error("Erro ao criar categoria!");
+                }
+            },
+            error: function () {
+                toastr.error("Erro ao criar categoria!");
+            }
+        });
+    })
+
+    $('.voltarBtn').click(function () {
+        $('.criaCategoriaForm').fadeOut(function () {
+            $('.criaDespesaForm').fadeIn();
+        });
+    })
+
+    $('#adicionarDespesa').click(function () {
+        let descricao = $('#descricao').val();
+        let valor = $('#valor').val();
+        let categoria = $('#categoria').val();
+        let cartao = $('#cartao').val();
+        let metodo = "Crédito";
+        let data = $('#data').val();
+        let recorrente = 'S';
+
+        $.ajax({
+            type: "POST",
+            url: "../controllers/GastosController.php",
+            data: {
+                acao: "adicionar",
+                descricao: descricao,
+                valor: valor,
+                categoria: categoria,
+                metodo: metodo,
+                cartao: cartao,
+                data: data,
+                recorrente: recorrente,
+                tipo: 'recorrente'
+            },
+            dataType: "json",
+            success: function (data) {
+                buscaRecorrentes();
+                toastr.success("Despesa criada com sucesso!");
+            },
+            error: function () {
+                toastr.error("Erro ao criar despesas!");
+            }
+        });
+    })
+
+    $(document).on("change", "#marcaTodosMesRecorrente", function () {
+        if ($(this).prop("checked")) {
+            $(".marcagastoRecorrente").each(function () {
+                $(this).prop("checked", true)
+            })
+        } else {
+            $(".marcagastoRecorrente").each(function () {
+                $(this).prop("checked", false)
+            })
+        }
+    })
+
+    $(document).on("click", ".editaRecorrenteBtn", function () {
+        modoAtual = "editar";
+
+        $("#gastoId").val($(this).data("codigo"));
+        $("#modalAdiciona").modal('show');
+
+        preencheRocorrente(recorrentesArray)
+    })
+
+    $(document).on("click", ".inativaRecorrenteBtn", function () {
+
+        inativaRecorrente($(this).data("codigo"), buscaRecorrentes);
+    })
+
+    $(document).on("click", ".ativaRecorrenteBtn", function () {
+
+        ativaRecorrente($(this).data("codigo"), buscaRecorrentes);
+    })
+
+    $("#adicionarGasto").click(function () {
+        modoAtual = "criar";
+
+        $("#gastoId").val("");
+        $("#modalAdiciona").modal('show');
+    })
+
+    $("#editarDespesa").click(function () {
+        var id = $("#gastoId").val();
+
+        editaGasto(id, buscaRecorrentes)
+    })
+
+    function editaGasto(id, callback) {
+        var nome = $("#descricao").val();
+        var valor = $("#valor").val();
+        var categoria = $("#categoria").val();
+        var cartao = $("#cartao").val();
+
+        $.ajax({
+            type: "POST",
+            url: "../controllers/GastosController.php",
+            data: {
+                acao: "editaGasto",
+                id: id,
+                nome: nome,
+                valor: valor,
+                categoria: categoria,
+                cartao: cartao
+            },
+            dataType: "json",
+            success: function (data) {
+                console.log("sucesso")
+                if (typeof callback === 'function') {
+                    callback();
+                }
+            },
+            error(error) {
+                console.log("Erro")
+            }
+        })
+    }
+
+    function preencheRocorrente(recorrentesArray) {
+        let gasto = $("#gastoId").val();
+        let desc = recorrentesArray[gasto]["nome"];
+        let id_cartao = recorrentesArray[gasto]["id_cartao"];
+        let valor = recorrentesArray[gasto]["valor"];
+        let id_categoria = recorrentesArray[gasto]["id_categoria"];
+
+        $("#descricao").val(desc);
+        $("#valor").val(valor);
+        $("#categoria").val(id_categoria);
+        $("#cartao").val(id_cartao);
+    }
+
+    function buscaRecorrentes() {
+        $.ajax({
+            type: "POST",
+            url: "../controllers/GastosController.php",
+            data: {
+                acao: "buscarRecorrentes",
+            },
+            dataType: "json",
+            success: function (data) {
+
+                var listagemRecorrentes = "";
+
+                window.recorrentesArray = data;
+
+                let arrayRecorrentes = Object.values(data);
+
+                arrayRecorrentes.sort((a, b) => a.ativo === "N" ? 1 : -1);
+
+
+                $.each(arrayRecorrentes, function (k, valoresRecorrentes) {
+
+                    //Tratando ativos e inativos
+                    const statusIcon = valoresRecorrentes.ativo === "S"
+                        ? '<i class="bi bi-check-circle-fill ativo text-success"></i>'
+                        : '<i class="bi bi-exclamation-circle-fill inativo text-danger"></i>';
+
+                    if (valoresRecorrentes.ativo === "S") {
+                        botaoAtivo = `<button data-codigo="${valoresRecorrentes.id}" class="btn inativaRecorrenteBtn btn-sm btn-danger"><i class="bi bi-ban"></i></button>`
+                    } else {
+                        botaoAtivo = `<button data-codigo="${valoresRecorrentes.id}" class="btn ativaRecorrenteBtn btn-sm btn-success"><i class="bi bi-check-circle-fill"></i></button>`
+                    }
+
+
+                    listagemRecorrentes += `<tr>
+                                                <td>${valoresRecorrentes.nome}</td>
+                                                <td>${valoresRecorrentes.valor}</td>
+                                                <td>${valoresRecorrentes.categoria}</td>
+                                                <td>${valoresRecorrentes.nome_cartao}</td>
+                                                <td>${statusIcon}</td>
+                                                <td>
+                                                    <div class="d-flex justify-content-center align-items-center gap-3">
+                                                            <button data-codigo="${valoresRecorrentes.id}" class="btn editaRecorrenteBtn btn-sm btn-warning"><i class="bi bi-pencil-fill"></i></button>
+                                                            ${botaoAtivo}
+                                                    </div>
+                                                </td>
+                                            </tr>`
+                })
+
+                $("#recorrentesTable tbody").html(listagemRecorrentes)
+
+                tippy('.ativo', {
+                    content: 'Ativo', // O conteúdo do tooltip
+                    animation: 'fade', // Animação do tooltip
+                    theme: 'dark', // Tema de cor
+                    placement: 'top', // Onde o tooltip será exibido (pode ser 'top', 'bottom', 'left', 'right')
+                    arrow: true, // Adiciona uma seta
+                    duration: 300, // Duração da animação
+                });
+
+                tippy('.inativo', {
+                    content: 'Inativo', // O conteúdo do tooltip
+                    animation: 'fade', // Animação do tooltip
+                    theme: 'dark', // Tema de cor
+                    placement: 'top', // Onde o tooltip será exibido (pode ser 'top', 'bottom', 'left', 'right')
+                    arrow: true, // Adiciona uma seta
+                    duration: 300, // Duração da animação
+                });
+                
+                tippy('.ativaRecorrenteBtn', {
+                    content: 'Ativar gasto', // O conteúdo do tooltip
+                    animation: 'fade', // Animação do tooltip
+                    theme: 'dark', // Tema de cor
+                    placement: 'top', // Onde o tooltip será exibido (pode ser 'top', 'bottom', 'left', 'right')
+                    arrow: true, // Adiciona uma seta
+                    duration: 300, // Duração da animação
+                });
+                tippy('.inativaRecorrenteBtn', {
+                    content: 'Inativar gasto', // O conteúdo do tooltip
+                    animation: 'fade', // Animação do tooltip
+                    theme: 'dark', // Tema de cor
+                    placement: 'top', // Onde o tooltip será exibido (pode ser 'top', 'bottom', 'left', 'right')
+                    arrow: true, // Adiciona uma seta
+                    duration: 300, // Duração da animação
+                });
+            },
+            error(error) {
+
+            }
+        })
+    }
+
+    function inativaRecorrente(id, callback) {
+        $.ajax({
+            type: "POST",
+            url: "../controllers/GastosController.php",
+            data: {
+                acao: "inativaRecorrentes",
+                id: id
+            },
+            dataType: "json",
+            success: function (data) {
+                if (typeof callback === 'function') {
+                    callback();
+                }
+            },
+            error(error) {
+
+            }
+        })
+    }
+
+    function ativaRecorrente(id, callback) {
+        $.ajax({
+            type: "POST",
+            url: "../controllers/GastosController.php",
+            data: {
+                acao: "ativaRecorrentes",
+                id: id
+            },
+            dataType: "json",
+            success: function (data) {
+                if (typeof callback === 'function') {
+                    callback();
+                }
+            },
+            error(error) {
+
+            }
+        })
+    }
+
     //! VISUAL
     $(document).on("mouseenter", "#adicionarCartao", function () {
         $(this).html('<i class="bi bi-plus-circle-fill"></i>');
@@ -668,6 +1063,17 @@ $conn = Database::getConnection();
         delimiter: '.',
         decimal: ',',
         numeralDecimalMark: ',',
+        stripLeadingZeroes: true
+    });
+
+    var cleave = new Cleave('#valor', {
+        numeral: true,
+        numeralThousandsGroupStyle: 'thousand',
+        prefix: 'R$ ', // Adiciona o "R$" no início
+        noImmediatePrefix: true,
+        delimiter: '.', // Separador de milhar
+        decimal: ',', // Separador decimal
+        numeralDecimalMark: ',', // Define a vírgula como separador decimal
         stripLeadingZeroes: true
     });
 

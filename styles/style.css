@@ -51,7 +51,7 @@ h5 {
   color: #F0F0F5 ;
 }
 
-.voltarBtn {
+.voltarBtn, .voltarBtnGerenciamento {
   cursor: pointer;
 }
 

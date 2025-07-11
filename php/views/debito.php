@@ -42,7 +42,8 @@ $mesAtual = date('n');
     </div>
 
     <div class="d-flex justify-content-around">
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAdiciona">Adicionar Despesa <i class="bi bi-bag-plus-fill"></i></button>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAdiciona">Adicionar Despesa <i
+                class="bi bi-bag-plus-fill"></i></button>
 
         <div class="d-flex" style="gap: 10px;">
             <i class="bi bi-arrow-left-square-fill botao botaoEsquerda"></i>
@@ -61,7 +62,8 @@ $mesAtual = date('n');
     </div>
 
     <div class="painel mt-2">
-        <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS DESSE MÊS - R$ <span class="cor-am titulo text-center" id="gastoTotalMes"></span></h2>
+        <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS DESSE MÊS - R$ <span
+                class="cor-am titulo text-center" id="gastoTotalMes"></span></h2>
 
         <div>
             <div id="loaderGasto" class="text-center my-3">
@@ -95,7 +97,7 @@ $mesAtual = date('n');
 
 
 <script>
-    $('#modalAdiciona').on('show.bs.modal', function() {
+    $('#modalAdiciona').on('show.bs.modal', function () {
         if (tipoDespesa === 'credito') {
             $('#metodo').closest('.form-floating').hide(); // esconde método
             $('#parcelado').closest('.form-check').show(); // mostra switch
@@ -105,25 +107,26 @@ $mesAtual = date('n');
             $('#parcelado').closest('.form-check').hide(); // esconde switch
             $('#cartao').closest('.form-floating').hide();
             $('.border-parcelado').hide(); // esconde nº de parcelas
+            $('#recorrente').closest('.form-check').hide();
         }
     });
 
 
-    $(document).ready(function() {
+    $(document).ready(function () {
 
         // Chama a função automaticamente ao carregar a página com o mês atual
         buscaTabela($('#mes').val());
 
 
-        $("#metodo").change(function(){
-            if($(this).val() == "Débito"){
+        $("#metodo").change(function () {
+            if ($(this).val() == "Débito") {
                 $('#cartao').closest('.form-floating').slideDown();
             } else {
-                $('#cartao').closest('.form-floating').slideUp(); 
+                $('#cartao').closest('.form-floating').slideUp();
             }
         })
 
-        $('.botaoEsquerda').click(function() {
+        $('.botaoEsquerda').click(function () {
             let selectMes = $('#mes');
             let mesAtual = parseInt(selectMes.val());
 
@@ -132,7 +135,7 @@ $mesAtual = date('n');
             }
         });
 
-        $('.botaoDireita').click(function() {
+        $('.botaoDireita').click(function () {
             let selectMes = $('#mes');
             let mesAtual = parseInt(selectMes.val());
 
@@ -142,12 +145,50 @@ $mesAtual = date('n');
         });
 
         // Quando mudar o mês, chama a função
-        $("#mes").change(function() {
+        $("#mes").change(function () {
             let mesSelecionado = $(this).val();
             buscaTabela(mesSelecionado);
         });
 
-        $('#adicionarDespesa').click(function() {
+        $('#enviaCriarCategoria').click(function () {
+            $('.criaDespesaForm').fadeOut(function () {
+                $('.criaCategoriaForm').fadeIn();
+            });
+        })
+
+        $('#criarCategoria').click(function () {
+            let descricao = $('#nomeCategoria').val();
+
+            $.ajax({
+                type: "POST",
+                url: "../controllers/CategoriaController.php",
+                data: {
+                    acao: "adicionar",
+                    descricao: descricao
+                },
+                dataType: "json",
+                success: function (data) {
+
+                    if (data == true) {
+                        toastr.success("Categoria criada com sucesso!");
+                        buscaCategorias();
+                    } else {
+                        toastr.error("Erro ao criar categoria!");
+                    }
+                },
+                error: function () {
+                    toastr.error("Erro ao criar categoria!");
+                }
+            });
+        })
+
+        $('.voltarBtn').click(function () {
+            $('.criaCategoriaForm').fadeOut(function () {
+                $('.criaDespesaForm').fadeIn();
+            });
+        })
+
+        $('#adicionarDespesa').click(function () {
             let descricao = $('#descricao').val();
             let valor = $('#valor').val();
             let categoria = $('#categoria').val();
@@ -170,21 +211,21 @@ $mesAtual = date('n');
                     tipo: 'debito'
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
                     console.log(data)
 
                     buscaTabela($('#mes').val())
                 },
-                error: function() {
+                error: function () {
                     alert("Erro ao buscar dados.");
                 }
             });
         })
 
-        $(document).on("click", "#removerDespesa", function() {
+        $(document).on("click", "#removerDespesa", function () {
             var ids = [];
 
-            $('.marcagasto:checked').each(function() {
+            $('.marcagasto:checked').each(function () {
                 let id = $(this).data("id");
                 let parcelado = $(this).data("parcelado");
 
@@ -204,12 +245,12 @@ $mesAtual = date('n');
                         tipo: 'debito'
                     },
                     dataType: "json",
-                    success: function(data) {
+                    success: function (data) {
                         console.log(data)
 
                         buscaTabela($('#mes').val())
                     },
-                    error: function() {
+                    error: function () {
                         alert("Erro ao buscar dados.");
                     }
                 });
@@ -220,13 +261,13 @@ $mesAtual = date('n');
 
 
         //Quando selecionar o input que marca todos
-        $(document).on("change", "#marcaTodos", function() {
+        $(document).on("change", "#marcaTodos", function () {
             if ($(this).prop("checked")) {
-                $(".marcagasto").each(function() {
+                $(".marcagasto").each(function () {
                     $(this).prop("checked", true)
                 })
             } else {
-                $(".marcagasto").each(function() {
+                $(".marcagasto").each(function () {
                     $(this).prop("checked", false)
                 })
             }
@@ -248,7 +289,7 @@ $mesAtual = date('n');
                     tipo: 'debito'
                 },
                 dataType: "json",
-                success: function(data) {
+                success: function (data) {
                     // Verifica se existe dataTable, se existir ele destroi para construir outra
                     if ($.fn.DataTable.isDataTable('#gastosMes')) {
                         $('#gastosMes').DataTable().destroy();
@@ -257,7 +298,7 @@ $mesAtual = date('n');
                     let tbody = $("#gastosMes tbody");
                     tbody.empty(); // Limpa a tabela antes de adicionar novos dados
 
-                    $.each(data, function(index, gasto) {
+                    $.each(data, function (index, gasto) {
                         if (index != "valortotal") {
                             let linha = `<tr>
                             <td>${gasto.descricao}</td>
@@ -282,9 +323,9 @@ $mesAtual = date('n');
                         searching: true,
                         ordering: true,
                         columnDefs: [{
-                                orderable: false,
-                                targets: 5
-                            } // Desativa a ordenação na última coluna
+                            orderable: false,
+                            targets: 5
+                        } // Desativa a ordenação na última coluna
                         ],
                         language: {
                             search: "Pesquisar:",
@@ -297,7 +338,7 @@ $mesAtual = date('n');
                     $('#loaderGasto').hide();
 
                 },
-                error: function() {
+                error: function () {
                     alert("Erro ao buscar dados.");
                 }
             });

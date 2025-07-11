@@ -78,6 +78,6 @@ class CategoriaModel {
         $buscaCategorias->execute();
         $categorias = $buscaCategorias->fetchAll(PDO::FETCH_ASSOC);
 
-        return $categorias;
+        return $categorias; 
     }
 }

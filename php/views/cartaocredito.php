@@ -2,10 +2,6 @@
 require_once(__DIR__ . '/../templates/header.php');
 require_once(__DIR__ . '/../../conn/conn.php');
 
-
-
-$conn = Database::getConnection();
-
 $buscaCartao = $conn->prepare("SELECT * FROM cartoes_credito");
 $buscaCartao->execute();
 $cartoes = $buscaCartao->fetchAll(PDO::FETCH_ASSOC);
@@ -592,13 +588,22 @@ $mesAtual = date('n');
 
                         $.each(valoresCartao, function (gasto, valoresGasto) {
                             if (gasto !== "valortotal") {
+
+                                if(valoresGasto.tipo == 'NORMAL'){
+                                    tipoGasto = moment(valoresGasto.data_gasto).format("DD/MM/YYYY");
+                                    infoParcela = `${valoresGasto.numero_parcela ? valoresGasto.numero_parcela : 1}/${valoresGasto.parcelas_total ? valoresGasto.parcelas_total : 1}`;
+                                } else {
+                                    tipoGasto = `<i class="bi bi-arrow-clockwise"></i>`
+                                    infoParcela = `<i class="bi bi-arrow-clockwise"></i>`;
+                                }   
+
                                 tabela += `<tr>
-                        <td>${valoresGasto.descricao}</td>
-                        <td>${valoresGasto.categoria}</td>
-                        <td>${valoresGasto.numero_parcela ? valoresGasto.numero_parcela : 1}/${valoresGasto.parcelas_total ? valoresGasto.parcelas_total : 1}</td>
-                        <td>R$ ${valoresGasto.valor_parcela}</td>
-                        <td>${moment(valoresGasto.data_gasto).format("DD/MM/YYYY")}</td>
-                    </tr>`;
+                                                <td>${valoresGasto.descricao}</td>
+                                                <td>${valoresGasto.categoria}</td>
+                                                <td>${infoParcela}</td>
+                                                <td>R$ ${valoresGasto.valor_parcela}</td>
+                                                <td>${tipoGasto}</td>
+                                            </tr>`;
                             }
                         });
 
@@ -657,7 +662,7 @@ $mesAtual = date('n');
                 type: "POST",
                 url: "../controllers/GastosController.php",
                 data: {
-                    acao: "buscarRecorrente",
+                    acao: "buscarCredito",
                     mes: mes,
                     tipo: 'credito',
                     cartaoId: cartaoId
@@ -673,7 +678,7 @@ $mesAtual = date('n');
                     tbody.empty(); // Limpa a tabela antes de adicionar novos dados
 
                     $.each(data, function (index, gasto) {
-                        
+
                         if (index != "valortotal") {
                             let linha = `<tr>
                             <td>${gasto.descricao}</td>

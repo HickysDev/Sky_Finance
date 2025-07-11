@@ -2,6 +2,62 @@
 include_once(__DIR__ . '/../../conn/conn.php');
 
 require_once(__DIR__ . '/../../conn/config.php');
+
+$conn = Database::getConnection();
+
+// ADICIONANDO O GASTO RECORRENTE NA FATURA
+
+$hoje = date('Y-m-d'); // Data da geração
+$dataReferencia = strtotime($hoje);
+
+$verificar = $conn->prepare("
+    SELECT COUNT(*) as total 
+    FROM gastos_recorrentes_lancamentos 
+    WHERE mes_referencia = :mes
+");
+$verificar->execute([':mes' => date('Y-m-01', $dataReferencia)]);
+$resultado = $verificar->fetch(PDO::FETCH_ASSOC);
+
+if ($resultado['total'] == 0) {
+  // Busca os gastos ativos com seus cartões (para pegar fechamento_dia)
+  $sql = $conn->query("
+        SELECT gr.*, cc.fechamento_dia 
+        FROM gastos_recorrentes gr
+        LEFT JOIN cartoes_credito cc ON cc.id = gr.cartao_id
+        WHERE gr.ativo = 'S'
+    ");
+  $gastos = $sql->fetchAll(PDO::FETCH_ASSOC);
+
+  foreach ($gastos as $gasto) {
+    // Data do fechamento da fatura referente ao mês atual
+    $fechamentoDia = (int) $gasto['fechamento_dia'];
+    $dataFechamentoAtual = date('Y-m-d', strtotime(date('Y-m', $dataReferencia) . '-' . str_pad($fechamentoDia, 2, '0', STR_PAD_LEFT)));
+
+    // Se já passou o fechamento, joga o lançamento pro mês seguinte
+    if ($hoje >= $dataFechamentoAtual) {
+      $mesReferencia = date('Y-m-01', strtotime('+1 month', $dataReferencia));
+    } else {
+      $mesReferencia = date('Y-m-01', $dataReferencia);
+    }
+
+    $stmt = $conn->prepare("
+            INSERT INTO gastos_recorrentes_lancamentos 
+            (gasto_recorrente_id, mes_referencia, valor, nome, categoria_id, cartao_id, usuario_id)
+            VALUES 
+            (:id, :mes, :valor, :nome, :categoria, :cartao, :usuario)
+        ");
+
+    $stmt->execute([
+      ':id' => $gasto['id'],
+      ':mes' => $mesReferencia,
+      ':valor' => $gasto['valor'],
+      ':nome' => $gasto['nome'],
+      ':categoria' => $gasto['categoria_id'],
+      ':cartao' => $gasto['cartao_id'],
+      ':usuario' => $gasto['usuario_id'],
+    ]);
+  }
+}
 ?>
 
 <!DOCTYPE html>
