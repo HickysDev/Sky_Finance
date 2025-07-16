@@ -283,12 +283,27 @@ table.dataTable td.dt-type-date {
   position: relative;
   width: 100%;
   padding-top: 60%;
+}
+
+.gerenciamento {
   transition: transform 0.3s ease;
   cursor: pointer;
 }
 
-.quadrado:hover {
+.gerenciamento:hover {
   transform: scale(1.03);
+}
+
+.quadrado .conteudo-centralizado {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
 }
 
 .quadrado .conteudo-centralizado {
@@ -422,16 +437,30 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* CATEGORIAS */
-.adicionarNovo {
-  font-size: 1.6em;
-  color: #3B82F6;
-  transform: scale(1);
-  transition: transform 0.3s ease;
-  display: inline-block; 
-  cursor: pointer; 
+.cartao-fixo {
+  position: relative;
+  width: 100%;
+  padding-top: 60%; /* controla a proporção altura/largura */
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.adicionarNovo:hover {
-  transform: scale(1.1); 
+/* Conteúdo posicionado no topo do card */
+.cartao-fixo .conteudo-interno {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 15px;
+  overflow-y: auto;
 }
+
+.card-img-top {
+  height: 180px;         /* Altura fixa */
+  object-fit: cover;     /* Corta e preenche mantendo proporção */
+}
+
 

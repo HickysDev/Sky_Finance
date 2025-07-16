@@ -18,7 +18,7 @@ $cartoes = $buscaCartao->fetchAll(PDO::FETCH_ASSOC);
 
     <div class="row" id="botoesGerenciamento">
         <div class="col-md-4">
-            <div class="painel quadrado" id="gerenciarCartoesBtn">
+            <div class="painel quadrado gerenciamento" id="gerenciarCartoesBtn">
                 <div class="conteudo-centralizado text-center">
                     <div style="font-size: 3.5vw;">
                         <i class="bi bi-credit-card-2-front-fill"></i>
@@ -29,7 +29,7 @@ $cartoes = $buscaCartao->fetchAll(PDO::FETCH_ASSOC);
                 </div>
             </div>
 
-            <div class="painel quadrado mt-4" id="gerenciarRecorrentesBtn">
+            <div class="painel quadrado gerenciamento mt-4" id="gerenciarRecorrentesBtn">
                 <div class="conteudo-centralizado text-center">
                     <div style="font-size: 3.5vw;">
                         <i class="bi bi-arrow-clockwise"></i>
@@ -42,7 +42,7 @@ $cartoes = $buscaCartao->fetchAll(PDO::FETCH_ASSOC);
         </div>
 
         <div class="col-md-4">
-            <div class="painel quadrado" id="gerenciarCategoriasBtn">
+            <div class="painel quadrado gerenciamento" id="gerenciarCategoriasBtn">
                 <div class="conteudo-centralizado text-center">
                     <div style="font-size: 3.5vw;">
                         <i class="bi bi-list-columns"></i>
@@ -55,7 +55,7 @@ $cartoes = $buscaCartao->fetchAll(PDO::FETCH_ASSOC);
         </div>
 
         <div class="col-md-4">
-            <div class="painel quadrado" id="gerenciarUsuarioBtn">
+            <div class="painel quadrado gerenciamento" id="gerenciarUsuarioBtn">
                 <div class="conteudo-centralizado text-center">
                     <div style="font-size: 3.5vw;">
                         <i class="bi bi-person-gear"></i>

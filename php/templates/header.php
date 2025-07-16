@@ -162,7 +162,7 @@ if ($resultado['total'] == 0) {
               <a class="nav-link titulo" href="<?= BASE_URL ?>php/views/debito.php">Débito</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link titulo" href="#">Finanças</a>
+              <a class="nav-link titulo" href="<?= BASE_URL ?>php/views/financas.php">Finanças</a>
             </li>
             <li class="nav-item">
               <a class="nav-link titulo" href="<?= BASE_URL ?>php/views/gerenciamento.php">Gerenciar</a>
