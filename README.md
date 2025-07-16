@@ -19,13 +19,13 @@ Este projeto é um sistema de controle de gastos pessoais, desenvolvido com foco
 
 ## ⏳ Funcionalidades futuras
 
-- [ ] 📊 Visualização em dashboard  
-- [ ] 💰 Renda mensal  
-- [ ] 💰 Implementação de banco de dados na web  
-- [ ] 🐷 Criação de cofrinhos  
-- [ ] 🎯 Meta de gastos e dinheiro disponível para o mês  
-- [ ] 🔐 Criação de login  
-- [ ] 🏠 Tela inicial mais intuitiva
+- 📊 Visualização em dashboard  
+- 💰 Renda mensal  
+- 💰 Implementação de banco de dados na web  
+- 🐷 Criação de cofrinhos  
+- 🎯 Meta de gastos e dinheiro disponível para o mês  
+- 🔐 Criação de login  
+- 🏠 Tela inicial mais intuitiva
 
 ## 🔧 Tecnologias utilizadas
 
