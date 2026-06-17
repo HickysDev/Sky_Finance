@@ -1,39 +1,46 @@
 <?php
+include_once __DIR__ . '/../models/CategoriaModel.php';
 
-include_once("../models/CategoriaModel.php");
+header('Content-Type: application/json; charset=utf-8');
 
-foreach ($_REQUEST as $key => $val) {
-    ${$key} = $val;
-}
+$acao      = $_POST['acao']      ?? $_GET['acao']      ?? '';
+$id        = $_POST['id']        ?? $_GET['id']        ?? null;
+$descricao = trim($_POST['descricao'] ?? '');
+$nome      = trim($_POST['nome']      ?? '');
+$cor       = trim($_POST['cor']       ?? '#6B7280');
+$icone     = trim($_POST['icone']     ?? '');
 
 $Categoria = new CategoriaModel();
+$retorno   = null;
 
 switch ($acao) {
-
-    case "adicionar":
+    case 'adicionar':
         $Categoria->setDescricao($descricao);
-
+        $Categoria->setCor($cor ?: '#6B7280');
+        $Categoria->setIcone($icone ?: null);
         $retorno = $Categoria->adicionaCategoria();
         break;
 
-    case "busca":
+    case 'busca':
         $retorno = $Categoria->buscaCategorias();
         break;
 
-    case "editar":
+    case 'editar':
         $Categoria->setDescricao($nome);
-        $Categoria->setId($id);
-
+        $Categoria->setId((int) $id);
+        $Categoria->setCor($cor ?: '#6B7280');
+        $Categoria->setIcone($icone ?: null);
         $retorno = $Categoria->editaCategoria();
         break;
 
-    case "excluir":
-        $Categoria->setId($id);
-
+    case 'excluir':
+        $Categoria->setId((int) $id);
         $retorno = $Categoria->excluiCategoria();
-        break;    
+        break;
 
     default:
+        http_response_code(400);
+        $retorno = ['erro' => 'Ação inválida'];
         break;
 }
 

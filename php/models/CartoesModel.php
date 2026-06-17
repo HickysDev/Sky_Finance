@@ -1,6 +1,6 @@
 <?php
 
-include_once("../../conn/conn.php");
+include_once __DIR__ . '/../../conn/conn.php';
 
 class CartaoModel {
 
@@ -16,53 +16,50 @@ class CartaoModel {
         return $this->id;
     }
 
+    private function parseLimite(string $raw): float {
+        $clean = str_replace(['R$', ' ', '.'], '', $raw);
+        return (float) str_replace(',', '.', $clean);
+    }
+
+    private function parseCor(string $cor): string {
+        return preg_match('/^#[0-9A-Fa-f]{6}$/', $cor) ? $cor : '#3B82F6';
+    }
+
     public function adicionaCartao($cartao) {
         $conn = Database::getConnection();
 
-        //TRATANDO O VALOR
-        $limite = str_replace(['R$', ' ', '.'], '', $cartao['limite']); // Remove "R$" e espaÃ§os
-        $limite = str_replace(',', '.', $limite);   // Substitui a vÃ­rgula por ponto
+        $sql = $conn->prepare("
+            INSERT INTO cartoes_credito (usuario_id, nome_cartao, limite, fechamento_dia, vencimento_dia, cor)
+            VALUES (:id, :nome, :limite, :fechamento, :vencimento, :cor)
+        ");
 
-        //Converte para float
-        $limite = (float) $limite;
-
-        $sql = $conn->prepare("INSERT INTO cartoes_credito (usuario_id, nome_cartao, limite, fechamento_dia, vencimento_dia) VALUES (:id, :nome, :limite, :fechamento, :vencimento)");
-
-        $query = $sql->execute([
-            ':id' => 1,
-            ':nome' => $cartao['nomeCartao'],
-            ':limite' => $limite,
-            ':fechamento' => $cartao['dataFechamento'],
-            ':vencimento' => $cartao['dataVencimento']
+        return $sql->execute([
+            ':id'        => 1,
+            ':nome'      => $cartao['nomeCartao'],
+            ':limite'    => $this->parseLimite($cartao['limite'] ?? ''),
+            ':fechamento'=> (int) $cartao['dataFechamento'],
+            ':vencimento'=> (int) $cartao['dataVencimento'],
+            ':cor'       => $this->parseCor($cartao['cor'] ?? '#3B82F6'),
         ]);
-
-        return $query;
     }
 
     public function alterarCartao($cartao) {
         $conn = Database::getConnection();
 
-        //TRATANDO O VALOR
-        $limite = str_replace(['R$', ' ', '.'], '', $cartao['limite']); // Remove "R$" e espaÃ§os
-        $limite = str_replace(',', '.', $limite);   // Substitui a vÃ­rgula por ponto
+        $sql = $conn->prepare("
+            UPDATE cartoes_credito
+            SET nome_cartao = :nome, limite = :limite, fechamento_dia = :fechamento, vencimento_dia = :vencimento, cor = :cor
+            WHERE id = :cartaoId
+        ");
 
-        //Converte para float
-        $limite = (float) $limite;
-
-        $sql = $conn->prepare("UPDATE cartoes_credito SET usuario_id = :id, nome_cartao = :nome, limite = :limite, fechamento_dia = :fechamento, vencimento_dia = :vencimento WHERE id = :cartaoId");
-
-        $query = $sql->execute([
-            ':id' => 1,
-            ':nome' => $cartao['nomeCartao'],
-            ':limite' => $limite,
-            ':fechamento' => $cartao['dataFechamento'],
-            ':vencimento' => $cartao['dataVencimento'],
-            ':cartaoId' => $this->getId()
+        return $sql->execute([
+            ':nome'      => $cartao['nomeCartao'],
+            ':limite'    => $this->parseLimite($cartao['limite'] ?? ''),
+            ':fechamento'=> (int) $cartao['dataFechamento'],
+            ':vencimento'=> (int) $cartao['dataVencimento'],
+            ':cor'       => $this->parseCor($cartao['cor'] ?? '#3B82F6'),
+            ':cartaoId'  => $this->getId(),
         ]);
-
-        // $sql->debugDumpParams();
-
-        return $query;
     }
 
     public function excluiCartao() {
@@ -88,5 +85,35 @@ class CartaoModel {
         }
 
         return $cartoes;
+    }
+
+    public static function getFaturaPaga(int $cartaoId, int $mes, int $ano): ?string {
+        $conn = Database::getConnection();
+        $stmt = $conn->prepare("
+            SELECT data_pagamento FROM faturas_pagas
+            WHERE cartao_id = :cid AND mes = :mes AND ano = :ano AND usuario_id = 1
+        ");
+        $stmt->execute([':cid' => $cartaoId, ':mes' => $mes, ':ano' => $ano]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $row['data_pagamento'] : null;
+    }
+
+    public static function marcarFaturaPaga(int $cartaoId, int $mes, int $ano, string $data): bool {
+        $conn = Database::getConnection();
+        $stmt = $conn->prepare("
+            INSERT INTO faturas_pagas (usuario_id, cartao_id, mes, ano, data_pagamento)
+            VALUES (1, :cid, :mes, :ano, :data)
+            ON DUPLICATE KEY UPDATE data_pagamento = :data2
+        ");
+        return $stmt->execute([':cid' => $cartaoId, ':mes' => $mes, ':ano' => $ano, ':data' => $data, ':data2' => $data]);
+    }
+
+    public static function desmarcarFaturaPaga(int $cartaoId, int $mes, int $ano): bool {
+        $conn = Database::getConnection();
+        $stmt = $conn->prepare("
+            DELETE FROM faturas_pagas
+            WHERE cartao_id = :cid AND mes = :mes AND ano = :ano AND usuario_id = 1
+        ");
+        return $stmt->execute([':cid' => $cartaoId, ':mes' => $mes, ':ano' => $ano]);
     }
 }

@@ -1,109 +1,173 @@
-<div class="modal fade" id="modalAdiciona" tabindex="-1" aria-labelledby="modalAdicionaLabel" aria-hidden="true">
+<div class="modal fade" id="modalAdiciona" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary">
-                <h5 class="modal-title">Adicionar Despesa</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body bg-body">
-                <div class="criaCategoriaForm" style="font-size: 30px; display: none;">
-                    <i class="bi bi-arrow-left voltarBtn"></i>
-                </div>
-                <div style="width: 50%; margin: 0 auto;">
-                    <div class="criaDespesaForm">
-                        <div class="form-floating mb-3 mt-3">
-                            <input type="text" class="form-control" id="descricao" placeholder="Escreva a descrição"
-                                name="descricao">
-                            <label for="descricao">Descrição</label>
-                        </div>
-                        <div class="form-floating mb-3 mt-3">
-                            <input type="text" class="form-control" id="valor" placeholder="Escreva o valor"
-                                name="valor">
-                            <label for="valor">Valor (R$)</label>
-                        </div>
-                        <div class="d-flex align-items-center mb-3 mt-3" style="gap: 10px;">
-                            <div class="form-floating flex-grow-1">
-                                <select class="form-select" id="categoria" name="categoria">
-                                    <option value="">Selecione</option>
-                                    <?php foreach ($categorias as $categoria): ?>
-                                        <option value="<?= $categoria['id'] ?>"><?= $categoria['nome'] ?></option>
-                                    <?php endforeach ?>
-                                </select>
-                                <label for="categoria" class="form-label">Selecione a categoria:</label>
-                            </div>
-                            <button class="btn btn-success" id="enviaCriarCategoria" type="button">
-                                <i class="bi bi-plus-lg"></i>
-                            </button>
-                        </div>
 
-                        <div class="form-floating mb-3 mt-3">
-                            <select class="form-select" id="metodo" name="metodo">
+            <div class="modal-header" style="background:#2C2C44;border-bottom:1px solid #3F3F46;">
+                <h5 class="modal-title" style="color:#F0F0F5;">
+                    <i class="bi bi-cart-plus-fill titulo-azul me-2"></i>
+                    <span class="criaDespesaForm">Adicionar Despesa</span>
+                    <span class="criaCategoriaForm" style="display:none;">Nova Categoria</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body" style="padding:1.5rem;">
+
+                <!-- VOLTAR (criar categoria) -->
+                <div class="criaCategoriaForm mb-3" style="display:none;">
+                    <button type="button" class="btn btn-sm btn-outline-secondary voltarBtn">
+                        <i class="bi bi-arrow-left me-1"></i>Voltar
+                    </button>
+                </div>
+
+                <!-- FORM PRINCIPAL -->
+                <div class="criaDespesaForm">
+
+                    <!-- Linha 1: Descrição + Valor -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-7">
+                            <label for="descricao" class="form-label">Descrição</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-pencil-fill"></i></span>
+                                <input type="text" class="form-control" id="descricao" placeholder="Ex: Mercado">
+                            </div>
+                        </div>
+                        <div class="col-5">
+                            <label for="valor" class="form-label">Valor</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-cash-coin"></i></span>
+                                <input type="text" class="form-control" id="valor" placeholder="R$ 0,00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Linha 2: Categoria + Data -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-7">
+                            <label for="categoria" class="form-label">Categoria</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-tag-fill"></i></span>
+                                <div class="form-control p-0 cat-sel-container dropdown" id="catSelWrapper">
+                                    <button type="button" id="catSelBtn"
+                                            class="btn cat-sel-btn w-100 h-100 d-flex align-items-center gap-2"
+                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                        <span class="cat-sel-preview text-muted">Selecione</span>
+                                        <i class="bi bi-chevron-down ms-auto" style="font-size:0.75rem;opacity:0.6;"></i>
+                                    </button>
+                                    <ul class="dropdown-menu cat-sel-menu" id="catSelMenu"></ul>
+                                </div>
+                                <input type="hidden" id="categoria" name="categoria">
+                                <button class="btn" id="enviaCriarCategoria" type="button"
+                                    style="background:#2C2C44;border-color:#3F3F46;color:#3B82F6;"
+                                    title="Nova categoria">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-5" id="dataWrapper">
+                            <label for="data" class="form-label">Data</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                                <input type="date" class="form-control" id="data">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Método de pagamento (visível apenas em débito) -->
+                    <div class="mb-3" id="metodoWrapper">
+                        <label for="metodo" class="form-label">Método de pagamento</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-wallet2"></i></span>
+                            <select class="form-select" id="metodo">
                                 <option value="">Selecione</option>
                                 <option value="Débito">Débito</option>
                                 <option value="Dinheiro">Dinheiro</option>
                                 <option value="Pix">Pix</option>
                             </select>
-                            <label for="metodo" class="form-label">Selecione método de pagamento:</label>
-                        </div>
-
-                        <div class="form-floating mb-3 mt-3">
-                            <select class="form-select" id="cartao" name="cartao">
-                                <option value="">Selecione</option>
-                                <?php foreach ($cartoes as $cartao): ?>
-                                    <option value="<?= $cartao['id'] ?>"><?= $cartao['nome_cartao'] ?></option>
-                                <?php endforeach ?>
-                            </select>
-                            <label for="cartao" class="form-label">Selecione o cartão:</label>
-                        </div>
-                        <div class="form-floating mb-3 mt-3">
-                            <input type="date" class="form-control" id="data" placeholder="Informe a data" name="data">
-                            <label for="data">Data</label>
-                        </div>
-                        <div class="form-check form-switch">
-                            <label class="form-check-label" for="parcelado">Parcelado</label>
-                            <input class="form-check-input" type="checkbox" id="parcelado" name="parcelado">
-                        </div>
-
-                        <div class="form-check form-switch">
-                            <label class="form-check-label" for="recorrente">Recorrente</label>
-                            <input class="form-check-input" type="checkbox" id="recorrente" name="recorrente">
-                        </div>
-
-                        <div class="form-floating mb-3 mt-3 border-parcelado">
-                            <input type="text" class="form-control" id="num_parcelas" placeholder="Escreva o valor"
-                                name="num_parcelas">
-                            <label for="num_parcelas">Nº de parcelas:</label>
                         </div>
                     </div>
 
-                    <div class="criaCategoriaForm" style="display: none;">
-                        <div class="form-floating mb-3 mt-3">
-                            <input type="text" class="form-control" id="nomeCategoria"
-                                placeholder="Escreva o nome da categoria" name="nomeCategoria">
-                            <label for="nomeCategoria">Nome da categoria</label>
+                    <!-- Cartão (thumbnails para crédito, select para débito) -->
+                    <div class="mb-3" id="cartaoWrapper">
+                        <label class="form-label">Cartão</label>
+                        <!-- Thumbnails (crédito e débito com cartão) -->
+                        <div class="d-flex gap-2 flex-wrap" id="cartaoSelectorModal"></div>
+                        <!-- Select fallback (preenchido via AJAX) -->
+                        <select class="form-select mt-2" id="cartaoSelect" style="display:none;">
+                            <option value="">Selecione</option>
+                        </select>
+                        <input type="hidden" id="cartao" name="cartao">
+                    </div>
+
+                    <!-- Responsável -->
+                    <div class="mb-3" id="responsavelWrapper">
+                        <label class="form-label">
+                            <i class="bi bi-person-fill me-1" style="color:var(--cor-azul);"></i>
+                            Responsável pelo pagamento
+                        </label>
+                        <input type="hidden" id="responsavel" name="responsavel">
+                        <div class="d-flex gap-2 flex-wrap" id="responsavelSelector"></div>
+                    </div>
+
+                    <!-- Switches -->
+                    <div class="d-flex gap-4 mb-2">
+                        <div class="form-check form-switch" id="parceladoWrapper">
+                            <input class="form-check-input" type="checkbox" id="parcelado" name="parcelado">
+                            <label class="form-check-label" for="parcelado">Parcelado</label>
                         </div>
+                        <div class="form-check form-switch" id="recorrenteWrapper">
+                            <input class="form-check-input" type="checkbox" id="recorrente" name="recorrente">
+                            <label class="form-check-label" for="recorrente">Recorrente</label>
+                        </div>
+                    </div>
+
+                    <!-- Nº parcelas (aparece quando parcelado ativo) -->
+                    <div class="mb-2 border-parcelado" style="display:none;">
+                        <label for="num_parcelas" class="form-label">Nº de parcelas</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-list-ol"></i></span>
+                            <input type="number" class="form-control" id="num_parcelas"
+                                placeholder="Ex: 6" min="2" max="48">
+                        </div>
+                    </div>
+
+                </div><!-- /criaDespesaForm -->
+
+                <!-- FORM CRIAR CATEGORIA -->
+                <div class="criaCategoriaForm" style="display:none;">
+                    <label for="nomeCategoria" class="form-label">Nome da nova categoria</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-tag-fill"></i></span>
+                        <input type="text" class="form-control" id="nomeCategoria" placeholder="Ex: Alimentação">
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Fechar</button>
+
+            </div><!-- /modal-body -->
+
+            <div class="modal-footer" style="border-top:1px solid #3F3F46;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
 
                 <div class="criaDespesaForm">
-                    <button type="button" class="btn btn-success" id="adicionarDespesa">Adicionar <i
-                            class="bi bi-cart-plus-fill"></i></button>
+                    <button type="button" class="btn btn-success" id="adicionarDespesa">
+                        Adicionar <i class="bi bi-cart-plus-fill"></i>
+                    </button>
                 </div>
 
                 <div class="editaDespesaForm">
-                    <button type="button" style="display: none;" class="btn btn-success" id="editarDespesa">Modificar <i class="bi bi-pencil-fill"></i></button>
+                    <button type="button" class="btn btn-warning" id="editarDespesa" style="display:none;">
+                        Modificar <i class="bi bi-pencil-fill"></i>
+                    </button>
                 </div>
 
                 <input type="hidden" id="gastoId">
 
-                <div class="criaCategoriaForm" style="display: none;">
-                    <button type="button" class="btn btn-success" id="criarCategoria">Criar <i
-                            class="bi bi-clipboard-plus-fill"></i></button>
+                <div class="criaCategoriaForm" style="display:none;">
+                    <button type="button" class="btn btn-success" id="criarCategoria">
+                        Criar <i class="bi bi-clipboard-plus-fill"></i>
+                    </button>
                 </div>
             </div>
+
         </div>
     </div>
 </div>

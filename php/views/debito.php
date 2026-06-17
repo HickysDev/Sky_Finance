@@ -1,380 +1,359 @@
 <?php
-require_once(__DIR__ . '/../templates/header.php');
-require_once(__DIR__ . '/../../conn/conn.php');
-
-$conn = Database::getConnection();
-
-$buscaCategorias = $conn->prepare("SELECT * FROM categorias");
-$buscaCategorias->execute();
-$categorias = $buscaCategorias->fetchAll(PDO::FETCH_ASSOC);
-
-$buscaCartao = $conn->prepare("SELECT * FROM cartoes_credito");
-$buscaCartao->execute();
-$cartoes = $buscaCartao->fetchAll(PDO::FETCH_ASSOC);
+require_once __DIR__ . '/../templates/header.php';
 
 $meses = [
-    1 => "Janeiro",
-    2 => "Fevereiro",
-    3 => "Março",
-    4 => "Abril",
-    5 => "Maio",
-    6 => "Junho",
-    7 => "Julho",
-    8 => "Agosto",
-    9 => "Setembro",
-    10 => "Outubro",
-    11 => "Novembro",
-    12 => "Dezembro"
+    1 => "Janeiro",  2 => "Fevereiro", 3 => "Março",    4 => "Abril",
+    5 => "Maio",     6 => "Junho",     7 => "Julho",    8 => "Agosto",
+    9 => "Setembro", 10 => "Outubro",  11 => "Novembro", 12 => "Dezembro"
 ];
 
 $mesAtual = date('n');
-
 ?>
-
-<script>
-    var tipoDespesa = 'debito';
-</script>
+<script>var tipoDespesa = 'debito';</script>
 
 <div class="animate__animated animate__fadeIn">
-    <div class="text-center titulo-pagina">
-        <h1 class="titulo" style="font-size: 2.3vw;">À vista</h1>
-        <h1 style="font-size: 4vw;"><i class="bi bi-currency-dollar"></i></h1>
-    </div>
 
-    <div class="d-flex justify-content-around">
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAdiciona">Adicionar Despesa <i
-                class="bi bi-bag-plus-fill"></i></button>
-
-        <div class="d-flex" style="gap: 10px;">
+    <!-- HEADER -->
+    <div class="d-flex align-items-center justify-content-between titulo-pagina mb-4">
+        <h1 class="titulo mt-2 fs-titulo-pag">
+            À Vista &nbsp;<i class="bi bi-currency-dollar titulo-azul"></i>
+        </h1>
+        <div class="d-flex align-items-center gap-2">
             <i class="bi bi-arrow-left-square-fill botao botaoEsquerda"></i>
-
-            <select class="form-select text-center" id="mes" style="width: 11vw;">
-                <?php
-                foreach ($meses as $mes => $nomeMes): ?>
-                    <option value="<?= $mes ?>" <?= ($mes == $mesAtual) ? "selected" : "" ?>><?= $nomeMes ?></option>
+            <select class="form-select text-center" id="mes" style="width:140px;">
+                <?php foreach ($meses as $num => $nome): ?>
+                    <option value="<?= $num ?>" <?= ($num == $mesAtual) ? 'selected' : '' ?>><?= $nome ?></option>
                 <?php endforeach ?>
             </select>
-
             <i class="bi bi-arrow-right-square-fill botao botaoDireita"></i>
+            <span style="color:var(--cor-borda);font-size:1.1rem;">|</span>
+            <i class="bi bi-arrow-left-square-fill botao" id="anoEsquerda"></i>
+            <span id="anoDisplay" style="font-size:0.95rem;font-weight:700;min-width:44px;text-align:center;"><?= date('Y') ?></span>
+            <i class="bi bi-arrow-right-square-fill botao" id="anoDireita"></i>
         </div>
-
-        <button class="btn btn-danger" id="removerDespesa">Remover Despesa <i class="bi bi-bag-x-fill"></i></button>
     </div>
 
-    <div class="painel mt-2">
-        <h2 class="cor-am titulo text-center" style="font-size: 1.8vw;">GASTOS DESSE MÊS - R$ <span
-                class="cor-am titulo text-center" id="gastoTotalMes"></span></h2>
-
+    <!-- BARRA RESUMO -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <div id="loaderGasto" class="text-center my-3">
-                <div class="spinner-border cor-am" role="status">
-                    <span class="visually-hidden">Carregando...</span>
-                </div>
+            <span class="titulo cor-am me-2 fs-total-label">Total do mês:</span>
+            <span class="titulo titulo-azul fs-total-valor" id="totalMes">—</span>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-danger btn-sm" id="removerSelecionados" style="display:none;">
+                <i class="bi bi-trash-fill"></i> Remover selecionados
+            </button>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAdiciona">
+                <i class="bi bi-plus-lg"></i> Adicionar Despesa
+            </button>
+        </div>
+    </div>
+
+    <!-- PAINEL DE GASTOS -->
+    <div class="painel">
+
+        <div class="text-center py-5" id="loaderGasto">
+            <div class="spinner-border" style="color:#3B82F6;" role="status">
+                <span class="visually-hidden">Carregando...</span>
             </div>
-            <table id="gastosMes" class="table table-hover table-condensed table-centro">
+        </div>
+
+        <div class="table-responsive" id="tabelaWrapper" style="display:none;">
+            <table id="gastosMes" class="table table-hover table-centro" style="width:100%;">
                 <thead class="bg-secundary">
                     <tr>
                         <th>Produto</th>
                         <th>Valor</th>
                         <th>Categoria</th>
-                        <th>Tipo</th>
+                        <th>Método</th>
                         <th>Data</th>
-                        <th><input type="checkbox" name="marcaTodos" class="dark-checkbox" id="marcaTodos"></th>
+                        <th><input type="checkbox" id="marcaTodos"></th>
                     </tr>
                 </thead>
-                <tbody>
-                    <!-- ADICIONA AQUI -->
-                </tbody>
+                <tbody></tbody>
             </table>
         </div>
+
+        <div id="estadoVazio" style="display:none;" class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size:3rem;color:#3F3F46;"></i>
+            <p class="mt-3" style="color:#6B7280;">Nenhum gasto encontrado para este mês.</p>
+        </div>
+
     </div>
+
 </div>
 
 <!-- MODAL -->
-
 <?php include '../templates/modalCadastra.php'; ?>
-
-
+<?php include '../templates/modalCategoria.php'; ?>
 
 <script>
-    $('#modalAdiciona').on('show.bs.modal', function () {
-        if (tipoDespesa === 'credito') {
-            $('#metodo').closest('.form-floating').hide(); // esconde método
-            $('#parcelado').closest('.form-check').show(); // mostra switch
-            $('.border-parcelado').show(); // mostra nº de parcelas
-        } else {
-            $('#metodo').closest('.form-floating').show(); // mostra método
-            $('#parcelado').closest('.form-check').hide(); // esconde switch
-            $('#cartao').closest('.form-floating').hide();
-            $('.border-parcelado').hide(); // esconde nº de parcelas
-            $('#recorrente').closest('.form-check').hide();
-        }
-    });
-
 
     $(document).ready(function () {
 
-        // Chama a função automaticamente ao carregar a página com o mês atual
-        buscaTabela($('#mes').val());
+        buscaCartoes();
+        buscaCategorias();
 
+        // ─── MODAL ───────────────────────────────────────────────────────────────
+        $('#modalAdiciona').on('show.bs.modal', function () {
+            $('#metodoWrapper').show();
+            $('#cartaoWrapper').hide();
+            $('#parceladoWrapper').hide();
+            $('#recorrenteWrapper').hide();
+            $('.border-parcelado').hide();
+            $('#metodo').val('');
+            $('#cartao').val('');
+            $('#cartaoSelectorModal').html('');
+            resetCatSelect();
+        });
 
-        $("#metodo").change(function () {
-            if ($(this).val() == "Débito") {
-                $('#cartao').closest('.form-floating').slideDown();
-            } else {
-                $('#cartao').closest('.form-floating').slideUp();
-            }
-        })
+        // ─── SELETOR DE MÊS / ANO ────────────────────────────────────────────
+        function getAno() { return parseInt($('#anoDisplay').text()); }
 
         $('.botaoEsquerda').click(function () {
-            let selectMes = $('#mes');
-            let mesAtual = parseInt(selectMes.val());
-
-            if (mesAtual > 1) { // Garante que não vá antes de janeiro (mês 1)
-                selectMes.val(mesAtual - 1).change();
-            }
+            let val = parseInt($('#mes').val());
+            if (val > 1) { $('#mes').val(val - 1).trigger('change'); }
+            else { $('#mes').val(12); $('#anoDisplay').text(getAno() - 1); buscaTabela(12); }
         });
 
         $('.botaoDireita').click(function () {
-            let selectMes = $('#mes');
-            let mesAtual = parseInt(selectMes.val());
-
-            if (mesAtual < 12) { // Garante que não vá depois de dezembro (mês 12)
-                selectMes.val(mesAtual + 1).change();
-            }
+            let val = parseInt($('#mes').val());
+            if (val < 12) { $('#mes').val(val + 1).trigger('change'); }
+            else { $('#mes').val(1); $('#anoDisplay').text(getAno() + 1); buscaTabela(1); }
         });
 
-        // Quando mudar o mês, chama a função
-        $("#mes").change(function () {
-            let mesSelecionado = $(this).val();
-            buscaTabela(mesSelecionado);
+        $('#anoEsquerda').click(function () { $('#anoDisplay').text(getAno() - 1); buscaTabela($('#mes').val()); });
+        $('#anoDireita').click(function ()  { $('#anoDisplay').text(getAno() + 1); buscaTabela($('#mes').val()); });
+
+        $('#mes').change(function () {
+            buscaTabela($(this).val());
         });
 
-        $('#enviaCriarCategoria').click(function () {
-            $('.criaDespesaForm').fadeOut(function () {
-                $('.criaCategoriaForm').fadeIn();
-            });
-        })
-
-        $('#criarCategoria').click(function () {
-            let descricao = $('#nomeCategoria').val();
-
-            $.ajax({
-                type: "POST",
-                url: "../controllers/CategoriaController.php",
-                data: {
-                    acao: "adicionar",
-                    descricao: descricao
-                },
-                dataType: "json",
-                success: function (data) {
-
-                    if (data == true) {
-                        toastr.success("Categoria criada com sucesso!");
-                        buscaCategorias();
-                    } else {
-                        toastr.error("Erro ao criar categoria!");
-                    }
-                },
-                error: function () {
-                    toastr.error("Erro ao criar categoria!");
-                }
-            });
-        })
-
-        $('.voltarBtn').click(function () {
-            $('.criaCategoriaForm').fadeOut(function () {
-                $('.criaDespesaForm').fadeIn();
-            });
-        })
-
-        $('#adicionarDespesa').click(function () {
-            let descricao = $('#descricao').val();
-            let valor = $('#valor').val();
-            let categoria = $('#categoria').val();
-            let cartao = $('#cartao').val() == "" ? null : $('#cartao').val();
-            let metodo = $('#metodo').val();
-            let data = $('#data').val();
-
-
-            $.ajax({
-                type: "POST",
-                url: "../controllers/GastosController.php",
-                data: {
-                    acao: "adicionar",
-                    descricao: descricao,
-                    valor: valor,
-                    categoria: categoria,
-                    metodo: metodo,
-                    cartao: cartao,
-                    data: data,
-                    tipo: 'debito'
-                },
-                dataType: "json",
-                success: function (data) {
-                    console.log(data)
-
-                    buscaTabela($('#mes').val())
-                },
-                error: function () {
-                    alert("Erro ao buscar dados.");
-                }
-            });
-        })
-
-        $(document).on("click", "#removerDespesa", function () {
-            var ids = [];
-
-            $('.marcagasto:checked').each(function () {
-                let id = $(this).data("id");
-                let parcelado = $(this).data("parcelado");
-
-                ids.push({
-                    id: id,
-                    parcelado: parcelado
-                });
-            });
-
-            if (ids.length > 0) {
-                $.ajax({
-                    type: "POST",
-                    url: "../controllers/GastosController.php",
-                    data: {
-                        acao: "remover",
-                        ids: ids,
-                        tipo: 'debito'
-                    },
-                    dataType: "json",
-                    success: function (data) {
-                        console.log(data)
-
-                        buscaTabela($('#mes').val())
-                    },
-                    error: function () {
-                        alert("Erro ao buscar dados.");
-                    }
-                });
-            }
-
-            console.log(ids); // Agora vai exibir um array correto com os IDs marcados
-        });
-
-
-        //Quando selecionar o input que marca todos
-        $(document).on("change", "#marcaTodos", function () {
-            if ($(this).prop("checked")) {
-                $(".marcagasto").each(function () {
-                    $(this).prop("checked", true)
-                })
+        // ─── MÉTODO → MOSTRAR CARTÃO SE DÉBITO ───────────────────────────────
+        $('#metodo').change(function () {
+            if ($(this).val() === 'Débito') {
+                $('#cartaoWrapper').slideDown();
+                renderCartoesMiniModal();
             } else {
-                $(".marcagasto").each(function () {
-                    $(this).prop("checked", false)
-                })
+                $('#cartaoWrapper').slideUp();
+                $('#cartao').val('');
             }
-        })
+        });
 
+        $(document).on('click', '.cartao-mini-modal', function () {
+            $('.cartao-mini-modal').removeClass('selecionado');
+            $(this).addClass('selecionado');
+            $('#cartao').val($(this).data('id'));
+        });
 
+        // ─── MARCAR TODOS ─────────────────────────────────────────────────────
+        $(document).on('change', '#marcaTodos', function () {
+            let checked = $(this).prop('checked');
+            $('.marcagasto').prop('checked', checked);
+            $('#removerSelecionados').toggle(checked && $('.marcagasto').length > 0);
+        });
 
+        $(document).on('change', '.marcagasto', function () {
+            let total   = $('.marcagasto').length;
+            let marcados = $('.marcagasto:checked').length;
+            $('#marcaTodos').prop('checked', total === marcados);
+            $('#removerSelecionados').toggle(marcados > 0);
+        });
+
+        // ─── REMOVER SELECIONADOS ─────────────────────────────────────────────
+        $('#removerSelecionados').click(function () {
+            var ids = [];
+            $('.marcagasto:checked').each(function () {
+                ids.push({ id: $(this).data('id'), parcelado: 'N' });
+            });
+
+            if (!ids.length) return;
+
+            Swal.fire({
+                title: 'Remover despesas?',
+                text: ids.length + ' despesa(s) selecionada(s)',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#6B7280',
+                confirmButtonText: 'Sim, remover',
+                cancelButtonText: 'Cancelar'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        type: 'POST',
+                        url: '../controllers/GastosController.php',
+                        data: { acao: 'remover', ids: ids, tipo: 'debito' },
+                        dataType: 'json',
+                        success: function () {
+                            toastr.success('Despesa(s) removida(s)!');
+                            $('#removerSelecionados').hide();
+                            $('#marcaTodos').prop('checked', false);
+                            buscaTabela($('#mes').val());
+                        },
+                        error: function () { toastr.error('Erro ao remover!'); }
+                    });
+                }
+            });
+        });
+
+        // ─── ADICIONAR DESPESA ────────────────────────────────────────────────
+        $('#adicionarDespesa').click(function () {
+            let cartao = $('#cartao').val() || null;
+            $.ajax({
+                type: 'POST',
+                url: '../controllers/GastosController.php',
+                data: {
+                    acao:        'adicionar',
+                    descricao:   $('#descricao').val(),
+                    valor:       $('#valor').val(),
+                    categoria:   $('#categoria').val(),
+                    metodo:      $('#metodo').val(),
+                    cartao:      cartao,
+                    data:        $('#data').val(),
+                    tipo:        'debito',
+                    responsavel: $('#responsavel').val() || '',
+                },
+                dataType: 'json',
+                success: function () {
+                    toastr.success('Despesa adicionada com sucesso!');
+                    $('#modalAdiciona').modal('hide');
+                    buscaTabela($('#mes').val());
+                },
+                error: function () { toastr.error('Erro ao adicionar despesa!'); }
+            });
+        });
+
+        $(document).on('cat:salva', function () { buscaCategorias(); });
+
+        // ─── FUNÇÕES ──────────────────────────────────────────────────────────
+
+        function buscaCartoes() {
+            $.ajax({
+                type: 'POST',
+                url: '../controllers/CartoesController.php',
+                data: { acao: 'busca' },
+                dataType: 'json',
+                success: function (data) { window.cartoesArray = data; }
+            });
+        }
+
+        function renderCartoesMiniModal() {
+            let html = '';
+            if (window.cartoesArray) {
+                $.each(window.cartoesArray, function (id, cartao) {
+                    let cor = cartao.cor || '#3B82F6';
+                    html += `<div class="cartao-mini-modal" data-id="${cartao.id}" style="--cartao-cor:${cor};">
+                        <i class="bi bi-credit-card-fill" style="color:${cor};"></i>
+                        ${cartao.nome_cartao}
+                    </div>`;
+                });
+            }
+            $('#cartaoSelectorModal').html(html || '<span style="color:#6B7280;font-size:.85rem;">Nenhum cartão cadastrado</span>');
+        }
 
         function buscaTabela(mes) {
-            $('#gastosMes').hide();
-            $('#loaderGasto').show();
-            $.ajax({
-                type: "POST",
-                url: "../controllers/GastosController.php",
-                data: {
-                    acao: "buscar",
-                    mes: mes,
-                    cartaoId: null,
-                    tipo: 'debito'
-                },
-                dataType: "json",
-                success: function (data) {
-                    // Verifica se existe dataTable, se existir ele destroi para construir outra
-                    if ($.fn.DataTable.isDataTable('#gastosMes')) {
-                        $('#gastosMes').DataTable().destroy();
-                    }
+            if ($.fn.DataTable.isDataTable('#gastosMes')) {
+                $('#gastosMes').DataTable().destroy();
+            }
 
-                    let tbody = $("#gastosMes tbody");
-                    tbody.empty(); // Limpa a tabela antes de adicionar novos dados
+            $('#tabelaWrapper').hide();
+            $('#estadoVazio').hide();
+            $('#loaderGasto').show();
+            $('#totalMes').text('—');
+
+            $.ajax({
+                type: 'POST',
+                url: '../controllers/GastosController.php',
+                data: { acao: 'buscar', mes: mes, ano: getAno(), cartaoId: null, tipo: 'debito' },
+                dataType: 'json',
+                success: function (data) {
+                    $('#loaderGasto').hide();
+
+                    let tbody    = $('#gastosMes tbody');
+                    let temDados = false;
+                    tbody.empty();
 
                     $.each(data, function (index, gasto) {
-                        if (index != "valortotal") {
-                            let linha = `<tr>
+                        if (index === 'valortotal') {
+                            $('#totalMes').text('R$ ' + gasto);
+                            return;
+                        }
+
+                        temDados = true;
+
+                        let badge;
+                        switch (gasto.metodo_pagamento) {
+                            case 'Pix':
+                                badge = '<span class="badge" style="background:#10B981;">Pix</span>';
+                                break;
+                            case 'Débito':
+                                badge = '<span class="badge" style="background:#F59E0B;color:#111;">Débito</span>';
+                                break;
+                            default:
+                                badge = '<span class="badge bg-secondary">Dinheiro</span>';
+                        }
+
+                        tbody.append(`<tr>
                             <td>${gasto.descricao}</td>
                             <td>R$ ${gasto.valor}</td>
-                            <td>${gasto.nome}</td>
-                            <td>${gasto.metodo_pagamento}</td>
-                            <td>${moment(gasto.data_gasto).format("DD/MM/YYYY")}</td>
-                            <td><input type="checkbox" name="gasto" class="marcagasto" data-id="${gasto.id}"></td>
-                        </tr>`;
-                            tbody.append(linha);
-                        } else if (index == "valortotal") {
-                            $('#gastoTotalMes').html(gasto)
-                        }
+                            <td>${catBadgeHtml(gasto.nome)}</td>
+                            <td>${badge}</td>
+                            <td>${moment(gasto.data_gasto).format('DD/MM/YYYY')}</td>
+                            <td><input type="checkbox" class="marcagasto" data-id="${gasto.id}"></td>
+                        </tr>`);
                     });
 
+                    if (!temDados) {
+                        $('#estadoVazio').show();
+                        $('#totalMes').text('R$ 0,00');
+                        return;
+                    }
 
-
+                    $('#tabelaWrapper').show();
                     $('#gastosMes').DataTable({
                         paging: false,
                         info: false,
                         lengthChange: false,
                         searching: true,
                         ordering: true,
-                        columnDefs: [{
-                            orderable: false,
-                            targets: 5
-                        } // Desativa a ordenação na última coluna
-                        ],
+                        columnDefs: [{ orderable: false, targets: 5 }],
                         language: {
-                            search: "Pesquisar:",
-                            zeroRecords: "Nenhum registro encontrado",
-                            emptyTable: "Nenhum dado disponível na tabela"
+                            search: 'Pesquisar:',
+                            zeroRecords: 'Nenhum registro encontrado',
+                            emptyTable: 'Nenhum dado disponível'
                         }
                     });
-
-                    $('#gastosMes').show();
-                    $('#loaderGasto').hide();
-
                 },
-                error: function () {
-                    alert("Erro ao buscar dados.");
+                error: function () { toastr.error('Erro ao buscar dados!'); }
+            });
+        }
+
+        function buscaCategorias() {
+            $.ajax({
+                type: 'POST',
+                url: '../controllers/CategoriaController.php',
+                data: { acao: 'busca' },
+                dataType: 'json',
+                success: function (data) {
+                    popularCatSelect(data);
+                    buscaTabela($('#mes').val());
                 }
             });
         }
 
-        function dataFormatada() {
-            var data = new Date(),
-                dia = data.getDate().toString().padStart(2, '0'),
-                mes = (data.getMonth() + 1).toString().padStart(2, '0'), //+1 pois no getMonth Janeiro começa com zero.
-                ano = data.getFullYear();
-            return dia + "/" + mes + "/" + ano;
-        }
-
-        // Aplica o Tippy ao botão
-        tippy('#removerDespesa', {
-            content: 'Selecione as despesas que quer remover e clique aqui', // O conteúdo do tooltip
-            animation: 'fade', // Animação do tooltip
-            theme: 'dark', // Tema de cor
-            placement: 'top', // Onde o tooltip será exibido (pode ser 'top', 'bottom', 'left', 'right')
-            arrow: true, // Adiciona uma seta
-            duration: 300, // Duração da animação
-        });
-
-        var cleave = new Cleave('#valor', {
+        new Cleave('#valor', {
             numeral: true,
             numeralThousandsGroupStyle: 'thousand',
-            prefix: 'R$ ', // Adiciona o "R$" no início
+            prefix: 'R$ ',
             noImmediatePrefix: true,
-            delimiter: '.', // Separador de milhar
-            decimal: ',', // Separador decimal
-            numeralDecimalMark: ',', // Define a vírgula como separador decimal
+            delimiter: '.',
+            decimal: ',',
+            numeralDecimalMark: ',',
             stripLeadingZeroes: true
         });
+
     });
 </script>
 
-<?php
-require_once("../templates/footer.php");
-?>
+<?php require_once __DIR__ . '/../templates/footer.php'; ?>
