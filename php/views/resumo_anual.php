@@ -91,12 +91,14 @@ $anoAtual = (int) date('Y');
                                 <th class="text-end">Renda</th>
                                 <th class="text-end">À Vista</th>
                                 <th class="text-end">Crédito</th>
-                                <th class="text-end">Recorrente</th>
+                                <th class="text-end">Recorrentes</th>
+                                <th class="text-end">Fixas</th>
+                                <th class="text-end">A Pagar</th>
                                 <th class="text-end">Saldo</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyMensal">
-                            <tr><td colspan="6" class="text-center py-3">
+                            <tr><td colspan="8" class="text-center py-3">
                                 <div class="spinner-border spinner-border-sm" style="color:var(--cor-azul);" role="status"></div>
                             </td></tr>
                         </tbody>
@@ -107,6 +109,8 @@ $anoAtual = (int) date('Y');
                                 <td class="text-end" id="footDebito"></td>
                                 <td class="text-end" id="footCredito"></td>
                                 <td class="text-end" id="footRecorrente"></td>
+                                <td class="text-end" id="footFixas"></td>
+                                <td class="text-end" id="footContas"></td>
                                 <td class="text-end" id="footSaldo"></td>
                             </tr>
                         </tfoot>
@@ -367,17 +371,22 @@ $(document).ready(function () {
 
     // ─── TABELA MENSAL ───────────────────────────────────────────────────────
     function renderTabela(meses, totais) {
+        const fmtVal = (v) => 'R$ ' + formatBR(v);
+        const fmtZero = (v) => v > 0 ? fmtVal(v) : '<span style="color:var(--cor-texto-off);">—</span>';
+
         let rows = '';
         meses.forEach(function (m) {
-            const pos   = m.saldo >= 0;
-            const cor   = pos ? '#22C55E' : '#EF4444';
+            const pos      = m.saldo >= 0;
+            const cor      = pos ? '#22C55E' : '#EF4444';
             const temDados = m.gasto > 0 || m.renda > 0;
             rows += '<tr style="' + (!temDados ? 'opacity:0.4;' : '') + '">' +
                 '<td><strong>' + mNomes[m.mes] + '</strong></td>' +
-                '<td class="text-end" style="color:#22C55E;">R$ ' + formatBR(m.renda) + '</td>' +
-                '<td class="text-end">R$ ' + formatBR(m.debito) + '</td>' +
-                '<td class="text-end">R$ ' + formatBR(m.credito) + '</td>' +
-                '<td class="text-end">R$ ' + formatBR(m.recorrente) + '</td>' +
+                '<td class="text-end" style="color:#22C55E;">' + fmtVal(m.renda) + '</td>' +
+                '<td class="text-end">' + fmtZero(m.debito) + '</td>' +
+                '<td class="text-end">' + fmtZero(m.credito) + '</td>' +
+                '<td class="text-end">' + fmtZero(m.recorrente) + '</td>' +
+                '<td class="text-end">' + fmtZero(m.fixas) + '</td>' +
+                '<td class="text-end">' + fmtZero(m.contas) + '</td>' +
                 '<td class="text-end" style="color:' + cor + ';font-weight:600;">' +
                     (pos ? '' : '− ') + 'R$ ' + formatBR(Math.abs(m.saldo)) +
                 '</td>' +
@@ -388,10 +397,12 @@ $(document).ready(function () {
 
         const posTotal = totais.saldo >= 0;
         const corTotal = posTotal ? '#22C55E' : '#EF4444';
-        $('#footRenda').html('<span style="color:#22C55E;">R$ ' + formatBR(totais.renda) + '</span>');
-        $('#footDebito').text('R$ ' + formatBR(totais.debito));
-        $('#footCredito').text('R$ ' + formatBR(totais.credito));
-        $('#footRecorrente').text('R$ ' + formatBR(totais.recorrente));
+        $('#footRenda').html('<span style="color:#22C55E;">' + fmtVal(totais.renda) + '</span>');
+        $('#footDebito').text(fmtVal(totais.debito));
+        $('#footCredito').text(fmtVal(totais.credito));
+        $('#footRecorrente').text(fmtVal(totais.recorrente));
+        $('#footFixas').text(fmtVal(totais.fixas || 0));
+        $('#footContas').text(fmtVal(totais.contas || 0));
         $('#footSaldo').html('<span style="color:' + corTotal + ';">' + (posTotal ? '' : '− ') + 'R$ ' + formatBR(Math.abs(totais.saldo)) + '</span>');
         $('#tfootMensal').show();
     }

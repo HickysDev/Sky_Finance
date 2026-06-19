@@ -206,28 +206,21 @@ $conn = Database::getConnection();
 <?php
 $paginaAtual = $_SERVER['REQUEST_URI'] ?? '';
 
-$navLinks = [
-    ['href' => BASE_URL . '/index.php', 'label' => 'Dashboard', 'icon' => 'bi-speedometer2', 'match' => '/index.php'],
-    [
-        'dropdown' => true,
-        'label'    => 'Despesas',
-        'icon'     => 'bi-wallet2',
-        'items'    => [
-            ['href' => BASE_URL . '/php/views/cartaocredito.php', 'label' => 'Crédito',      'icon' => 'bi-credit-card-fill', 'match' => 'cartaocredito.php'],
-            ['href' => BASE_URL . '/php/views/debito.php',        'label' => 'Débito',       'icon' => 'bi-bank',             'match' => 'debito.php'],
-            ['href' => BASE_URL . '/php/views/contas_fixas.php',  'label' => 'Contas Fixas', 'icon' => 'bi-receipt-cutoff',   'match' => 'contas_fixas.php'],
-        ],
+$navGrupos = [
+    'principal' => [
+        ['href' => BASE_URL . '/index.php',                                        'label' => 'Dashboard',    'icon' => 'bi-speedometer2',        'match' => 'index.php',          'match_q' => ''],
     ],
-    [
-        'dropdown' => true,
-        'label'    => 'Gestão',
-        'icon'     => 'bi-bar-chart-fill',
-        'items'    => [
-            ['href' => BASE_URL . '/php/views/financas.php',      'label' => 'Finanças',       'icon' => 'bi-piggy-bank-fill',     'match' => 'financas.php'],
-            ['href' => BASE_URL . '/php/views/resumo_anual.php',  'label' => 'Resumo Anual',   'icon' => 'bi-bar-chart-line-fill', 'match' => 'resumo_anual.php'],
-            ['href' => BASE_URL . '/php/views/responsaveis.php',  'label' => 'Responsáveis',   'icon' => 'bi-people-fill',         'match' => 'responsaveis.php'],
-            ['href' => BASE_URL . '/php/views/gerenciamento.php', 'label' => 'Gerenciar',      'icon' => 'bi-gear-fill',           'match' => 'gerenciamento.php'],
-        ],
+    'despesas' => [
+        ['href' => BASE_URL . '/php/views/cartaocredito.php',                      'label' => 'Crédito',      'icon' => 'bi-credit-card-fill',    'match' => 'cartaocredito.php',  'match_q' => ''],
+        ['href' => BASE_URL . '/php/views/debito.php',                             'label' => 'À Vista',      'icon' => 'bi-cash-coin',           'match' => 'debito.php',         'match_q' => ''],
+        ['href' => BASE_URL . '/php/views/contas_fixas.php',                       'label' => 'Fixas',        'icon' => 'bi-receipt-cutoff',      'match' => 'contas_fixas.php',   'match_q' => ''],
+    ],
+    'gestao' => [
+        ['href' => BASE_URL . '/php/views/financas.php',                           'label' => 'Finanças',     'icon' => 'bi-piggy-bank-fill',     'match' => 'financas.php',       'match_q' => ''],
+        ['href' => BASE_URL . '/php/views/resumo_anual.php',                       'label' => 'Resumo',       'icon' => 'bi-bar-chart-line-fill', 'match' => 'resumo_anual.php',   'match_q' => ''],
+        ['href' => BASE_URL . '/php/views/responsaveis.php',                       'label' => 'Pessoas',      'icon' => 'bi-people-fill',         'match' => 'responsaveis.php',   'match_q' => ''],
+        ['href' => BASE_URL . '/php/views/simulador.php',                          'label' => 'Simulador',    'icon' => 'bi-calculator-fill',     'match' => 'simulador.php',      'match_q' => ''],
+        ['href' => BASE_URL . '/php/views/gerenciamento.php',                      'label' => 'Config.',      'icon' => 'bi-gear-fill',           'match' => 'gerenciamento.php',  'match_q' => ''],
     ],
 ];
 ?>
@@ -242,60 +235,55 @@ $navLinks = [
 </div>
 
 <header>
-  <nav class="navbar navbar-expand-lg navbar-sky">
+  <nav class="navbar-sky">
+    <!-- Logo -->
     <a class="navbar-brand-sky" href="<?= BASE_URL ?>/index.php">
       <img src="<?= BASE_URL ?>/src/img/logo.png" alt="Sky Finance" class="brand-logo">
       <span>Sky Finance</span>
     </a>
 
+    <!-- Toggler mobile -->
     <button class="navbar-toggler-sky ms-auto" type="button"
       data-bs-toggle="collapse" data-bs-target="#navbarNav"
       aria-controls="navbarNav" aria-expanded="false">
       <i class="bi bi-list"></i>
     </button>
 
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="nav-sky ms-4 flex-grow-1">
-        <?php foreach ($navLinks as $link): ?>
-          <?php if (!empty($link['dropdown'])): ?>
-            <?php
-              $dropAtivo = false;
-              foreach ($link['items'] as $item) {
-                  if (str_contains($paginaAtual, $item['match'])) { $dropAtivo = true; break; }
-              }
-            ?>
-            <li class="nav-sky-dropdown">
-              <a class="nav-link-sky<?= $dropAtivo ? ' ativo' : '' ?> nav-dropdown-toggle"
-                 href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi <?= $link['icon'] ?>"></i>
-                <?= $link['label'] ?>
-                <i class="bi bi-chevron-down nav-caret"></i>
-              </a>
-              <ul class="dropdown-menu dropdown-menu-sky">
-                <?php foreach ($link['items'] as $item):
-                  $itemAtivo = str_contains($paginaAtual, $item['match']) ? ' active' : '';
-                ?>
-                <li>
-                  <a class="dropdown-item-sky<?= $itemAtivo ?>" href="<?= $item['href'] ?>">
-                    <i class="bi <?= $item['icon'] ?>"></i>
-                    <?= $item['label'] ?>
-                  </a>
-                </li>
-                <?php endforeach; ?>
-              </ul>
-            </li>
-          <?php else: ?>
-            <?php $ativo = str_contains($paginaAtual, $link['match']) ? ' ativo' : ''; ?>
+    <!-- Links -->
+    <div class="navbar-collapse collapse" id="navbarNav" style="flex:1;display:flex;align-items:center;">
+      <ul class="nav-sky">
+
+        <?php foreach ($navGrupos as $grupo => $links): ?>
+
+          <?php foreach ($links as $link):
+            $matchQ  = $link['match_q'] ?? '';
+            $matched = strpos($paginaAtual, $link['match']) !== false;
+            if ($matched && $matchQ !== '') {
+                $matched = strpos($paginaAtual, $matchQ) !== false;
+            } elseif ($matched && $matchQ === '' && strpos($link['match'], 'gerenciamento.php') !== false) {
+                // Config. só fica ativo se não estiver numa tab com link próprio na navbar
+                $matched = strpos($paginaAtual, 'tab=Recorrentes') === false
+                        && strpos($paginaAtual, 'tab=Cartoes') === false;
+            }
+            $ativo = $matched ? ' ativo' : '';
+          ?>
             <li>
               <a class="nav-link-sky<?= $ativo ?>" href="<?= $link['href'] ?>">
-                <i class="bi <?= $link['icon'] ?>"></i>
-                <?= $link['label'] ?>
+                <i class="bi <?= $link['icon'] ?> nav-icon"></i>
+                <span class="nav-label"><?= $link['label'] ?></span>
               </a>
             </li>
+          <?php endforeach; ?>
+
+          <?php if ($grupo !== 'gestao'): ?>
+            <li class="nav-sep" aria-hidden="true"></li>
           <?php endif; ?>
+
         <?php endforeach; ?>
+
       </ul>
 
+      <!-- Usuário -->
       <?php
         $navFoto = null;
         try {
@@ -304,7 +292,7 @@ $navLinks = [
           $navFoto = $sNav->fetchColumn() ?: null;
         } catch (Exception $e) {}
       ?>
-      <div class="nav-sky-user ms-auto">
+      <div class="nav-sky-user">
         <div class="nav-avatar">
           <?php if ($navFoto): ?>
             <img src="<?= BASE_URL ?>/src/img/avatars/<?= htmlspecialchars($navFoto) ?>" alt="avatar" class="nav-avatar-img">
@@ -312,7 +300,7 @@ $navLinks = [
             <span><?= strtoupper(substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?></span>
           <?php endif; ?>
         </div>
-        <span><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></span>
+        <span class="nav-username"><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></span>
         <a href="<?= BASE_URL ?>/logout.php" class="btn-logout" title="Sair">
           <i class="bi bi-box-arrow-right"></i>
         </a>

@@ -10,13 +10,13 @@ class GastosModel {
         $params = [(int) $mes, (int) ($ano ?: date("Y"))];
 
         if ($tipo === 'debito') {
-            $sql = "SELECT g.id, g.descricao, g.valor, c.nome, g.metodo_pagamento, g.data_gasto, g.parcelado, cc.nome_cartao
+            $sql = "SELECT g.id, g.descricao, g.valor, g.categoria_id, c.nome, g.metodo_pagamento, g.cartao_id, g.data_gasto, g.parcelado, cc.nome_cartao
                     FROM gastos g
                     INNER JOIN categorias c ON c.id = g.categoria_id
                     LEFT JOIN cartoes_credito cc ON cc.id = g.cartao_id
                     WHERE MONTH(data_gasto) = ? AND metodo_pagamento IN ('Dinheiro', 'Débito', 'Pix') AND YEAR(data_gasto) = ?";
         } else {
-            $sql = "SELECT g.id, g.descricao, g.valor, c.nome, g.metodo_pagamento, g.data_gasto, g.parcelado, cc.nome_cartao
+            $sql = "SELECT g.id, g.descricao, g.valor, g.categoria_id, c.nome, g.metodo_pagamento, g.cartao_id, g.data_gasto, g.parcelado, cc.nome_cartao
                     FROM gastos g
                     INNER JOIN categorias c ON c.id = g.categoria_id
                     LEFT JOIN cartoes_credito cc ON cc.id = g.cartao_id
@@ -257,6 +257,7 @@ class GastosModel {
                 g.descricao,
                 g.valor,
                 c.nome AS categoria,
+                g.categoria_id,
                 p.numero_parcela,
                 p.parcelas_total,
                 p.valor_parcela,
@@ -282,6 +283,7 @@ class GastosModel {
                 gr.nome AS descricao,
                 gr.valor,
                 cat.nome AS categoria,
+                NULL AS categoria_id,
                 NULL AS numero_parcela,
                 NULL AS parcelas_total,
                 NULL AS valor_parcela,
@@ -629,13 +631,28 @@ class GastosModel {
             $totalContas = 0;
         }
 
-        $totalGasto = $totalDebito + $totalCredito + $totalRecorrente + $totalContas;
+        // Total de contas fixas ativas no mês
+        $totalContasFixas = 0;
+        try {
+            $s = $conn->prepare("
+                SELECT COALESCE(SUM(valor), 0)
+                FROM contas_fixas
+                WHERE usuario_id = 1 AND ativo = 1
+            ");
+            $s->execute();
+            $totalContasFixas = (float) $s->fetchColumn();
+        } catch (Exception $e) {
+            $totalContasFixas = 0;
+        }
+
+        $totalGasto = $totalDebito + $totalCredito + $totalRecorrente + $totalContas + $totalContasFixas;
 
         return [
             'totalDebito'      => $totalDebito,
             'totalCredito'     => $totalCredito,
             'totalRecorrente'  => $totalRecorrente,
             'totalContas'      => $totalContas,
+            'totalContasFixas' => $totalContasFixas,
             'totalGasto'       => $totalGasto,
             'totalRenda'       => $totalRenda,
             'saldo'            => $totalRenda - $totalGasto,
@@ -645,12 +662,25 @@ class GastosModel {
     }
 
     public static function resumoAnual(int $ano): array {
+        // Garante lançamentos recorrentes para todos os meses do ano
+        for ($m = 1; $m <= 12; $m++) {
+            self::gerarLancamentosParaMes($m, $ano);
+        }
+
         $conn = Database::getConnection();
 
         $meses = [];
         for ($m = 1; $m <= 12; $m++) {
-            $meses[$m] = ['mes' => $m, 'debito' => 0.0, 'credito' => 0.0, 'recorrente' => 0.0, 'contas' => 0.0, 'renda' => 0.0];
+            $meses[$m] = ['mes' => $m, 'debito' => 0.0, 'credito' => 0.0, 'recorrente' => 0.0, 'contas' => 0.0, 'fixas' => 0.0, 'renda' => 0.0];
         }
+
+        // Contas fixas ativas (valor igual em todos os meses)
+        try {
+            $s = $conn->prepare("SELECT COALESCE(SUM(valor),0) FROM contas_fixas WHERE usuario_id = 1 AND ativo = 1");
+            $s->execute();
+            $totalFixas = (float) $s->fetchColumn();
+            for ($m = 1; $m <= 12; $m++) { $meses[$m]['fixas'] = $totalFixas; }
+        } catch (Exception $e) {}
 
         // À vista por mês
         $s = $conn->prepare("
@@ -730,7 +760,7 @@ class GastosModel {
 
         // Gasto e saldo por mês
         foreach ($meses as &$m) {
-            $m['gasto'] = $m['debito'] + $m['credito'] + $m['recorrente'] + $m['contas'];
+            $m['gasto'] = $m['debito'] + $m['credito'] + $m['recorrente'] + $m['contas'] + $m['fixas'];
             $m['saldo'] = $m['renda'] - $m['gasto'];
         }
         unset($m);
@@ -769,6 +799,7 @@ class GastosModel {
             'debito'     => array_sum(array_column($meses, 'debito')),
             'credito'    => array_sum(array_column($meses, 'credito')),
             'recorrente' => array_sum(array_column($meses, 'recorrente')),
+            'fixas'      => array_sum(array_column($meses, 'fixas')),
             'contas'     => array_sum(array_column($meses, 'contas')),
             'renda'      => array_sum(array_column($meses, 'renda')),
             'gasto'      => array_sum(array_column($meses, 'gasto')),
@@ -786,6 +817,39 @@ class GastosModel {
             'melhorMes'    => $melhor,
             'piorMes'      => $pior,
         ];
+    }
+
+    public static function editarGastoSimples($id, $descricao, $categoriaId) {
+        $conn = Database::getConnection();
+        $stmt = $conn->prepare("UPDATE gastos SET descricao = ?, categoria_id = ? WHERE id = ?");
+        $stmt->execute([$descricao, $categoriaId ?: null, (int) $id]);
+        return ['success' => true];
+    }
+
+    public static function editarRecorrenteSimples($id, $nome, $categoriaId) {
+        $conn = Database::getConnection();
+        $stmt = $conn->prepare("UPDATE gastos_recorrentes SET nome = ?, categoria_id = ? WHERE id = ?");
+        $stmt->execute([$nome, $categoriaId ?: null, (int) $id]);
+        return ['success' => true];
+    }
+
+    public static function editarGasto($id, $descricao, $valor, $categoriaId, $metodo, $cartaoId, $data) {
+        $conn = Database::getConnection();
+        $stmt = $conn->prepare("
+            UPDATE gastos
+            SET descricao = ?, valor = ?, categoria_id = ?, metodo_pagamento = ?, cartao_id = ?, data_gasto = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([
+            $descricao,
+            $valor,
+            $categoriaId ?: null,
+            $metodo,
+            $cartaoId ?: null,
+            $data,
+            (int) $id,
+        ]);
+        return ['success' => true];
     }
 
     public static function editaRecorrentes($id, $nome, $valor, $categoria, $cartao) {

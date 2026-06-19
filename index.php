@@ -44,12 +44,18 @@ $mesAtual = date('n');
         </div>
     </div>
 
-    <!-- KPI CARDS -->
-    <div class="row g-3 mb-4" id="kpiRow">
+    <!-- AVISOS -->
+    <div id="avisosSection" class="mb-3" style="display:none;"></div>
+
+    <!-- KPI CARDS — 3 principais -->
+    <div class="row g-3 mb-2" id="kpiRow">
         <div class="col-12 text-center py-4">
             <div class="spinner-border" style="color:var(--cor-azul);" role="status"></div>
         </div>
     </div>
+
+    <!-- KPI BREAKDOWN — detalhamento compacto -->
+    <div id="kpiBreakdown" class="mb-4" style="display:none;"></div>
 
     <!-- FATURAS DOS CARTÕES -->
     <div class="mb-3" id="faturasDashSection" style="display:none;">
@@ -189,6 +195,36 @@ $mesAtual = date('n');
 
     </div>
 
+    <!-- LINHA 4: Ações Rápidas -->
+    <div class="row g-3 mt-1">
+        <div class="col-12">
+            <div class="painel">
+                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                    <h6 class="titulo fs-secao-titulo mb-0">
+                        <i class="bi bi-lightning-charge-fill titulo-azul me-2"></i>Ações Rápidas
+                    </h6>
+                    <span id="arLoader" style="display:none;">
+                        <div class="spinner-border spinner-border-sm" style="color:var(--cor-azul);" role="status"></div>
+                    </span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="ar-subtitulo">
+                            <i class="bi bi-house-fill me-1" style="color:#F97316;"></i>Contas Fixas
+                        </div>
+                        <div id="arContasFixas"><div class="ar-empty">Carregando…</div></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="ar-subtitulo">
+                            <i class="bi bi-credit-card-fill me-1" style="color:#3B82F6;"></i>Faturas do Mês
+                        </div>
+                        <div id="arFaturas"><div class="ar-empty">Carregando…</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
@@ -242,6 +278,9 @@ $(document).ready(function () {
         $('#faturasDashSection').hide();
         $('#faturasDashList').html('');
 
+        $('#arContasFixas, #arFaturas').html('<div class="ar-empty">Carregando…</div>');
+        $('#avisosSection').hide().empty();
+
         $.ajax({
             type: 'POST', url: 'php/controllers/GastosController.php',
             data: { acao: 'dashboard', mes: mes, ano: ano }, dataType: 'json',
@@ -267,41 +306,27 @@ $(document).ready(function () {
         ).done(function (resCartoes, resFaturas) {
             var cartoes = resCartoes[0];
             var faturas = resFaturas[0];
-            if (!faturas || $.isEmptyObject(faturas)) return;
             window.cartoesArray = cartoes;
-            renderFaturasDash(faturas, cartoes);
+            if (faturas && !$.isEmptyObject(faturas)) renderFaturasDash(faturas, cartoes);
+            carregaAcoesRapidas(mes, ano);
         });
     }
 
     // ─── KPI CARDS ───────────────────────────────────────────────────────
     function renderKPI(d) {
-        const pos = d.saldo >= 0;
-        var cards = [
-            { icon: 'bi-arrow-down-circle-fill', cor: '#22C55E', label: 'Renda estimada',   sub: 'fontes de renda ativas',  valor: formatBR(d.totalRenda) },
-            { icon: 'bi-wallet-fill',             cor: '#F59E0B', label: 'À vista',          sub: 'débito · pix · dinheiro', valor: formatBR(d.totalDebito) },
-            { icon: 'bi-credit-card-fill',        cor: '#3B82F6', label: 'Fatura crédito',   sub: 'vencimento no mês',       valor: formatBR(d.totalCredito) },
-            { icon: 'bi-arrow-clockwise',         cor: '#8B5CF6', label: 'Recorrentes',      sub: 'gastos fixos do mês',     valor: formatBR(d.totalRecorrente) },
-            {
-                icon:  pos ? 'bi-graph-up-arrow' : 'bi-graph-down-arrow',
-                cor:   pos ? '#22C55E' : '#EF4444',
-                label: 'Saldo estimado',
-                sub:   'renda − total gasto',
-                valor: (pos ? '' : '− ') + formatBR(Math.abs(d.saldo)),
-            },
+        const pos      = d.saldo >= 0;
+        const saldoCor = pos ? '#22C55E' : '#EF4444';
+
+        // ── Linha 1: 3 cards grandes ──
+        const main = [
+            { icon: 'bi-arrow-down-circle-fill',                          cor: '#22C55E', label: 'Renda estimada', sub: 'fontes de renda ativas',   valor: formatBR(d.totalRenda) },
+            { icon: 'bi-arrow-up-circle-fill',                            cor: '#EF4444', label: 'Total gasto',    sub: 'todas as despesas do mês', valor: formatBR(d.totalGasto) },
+            { icon: pos ? 'bi-graph-up-arrow' : 'bi-graph-down-arrow',   cor: saldoCor,  label: 'Saldo estimado', sub: 'renda − total gasto',
+              valor: (pos ? '' : '− ') + formatBR(Math.abs(d.saldo)) },
         ];
 
-        if (d.totalContas > 0) {
-            cards.splice(4, 0, {
-                icon:  'bi-people-fill',
-                cor:   '#EC4899',
-                label: 'Contas a pagar',
-                sub:   'o que devo a responsáveis',
-                valor: formatBR(d.totalContas),
-            });
-        }
-
-        const html = cards.map(c => `
-            <div class="col-6 col-lg-4 col-xl kpi-col">
+        $('#kpiRow').html(main.map(c => `
+            <div class="col-12 col-md-4">
                 <div class="painel kpi-card" style="--kpi-accent:${c.cor};">
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <div class="kpi-icon" style="background:${c.cor}22;color:${c.cor};">
@@ -312,9 +337,31 @@ $(document).ready(function () {
                     <div class="kpi-valor" style="color:${c.cor};">R$ ${c.valor}</div>
                     <div class="kpi-sub">${c.sub}</div>
                 </div>
-            </div>`).join('');
+            </div>`).join(''));
 
-        $('#kpiRow').html(html);
+        // ── Linha 2: todos os cards menores ──
+        const base = App.base + '/php/views/';
+        const sub = [
+            { icon: 'bi-wallet-fill',      cor: '#F59E0B', label: 'À vista',        sub: 'débito · pix · dinheiro', valor: d.totalDebito,        href: base + 'debito.php' },
+            { icon: 'bi-credit-card-fill', cor: '#3B82F6', label: 'Fatura crédito', sub: 'vencimento no mês',       valor: d.totalCredito,       href: base + 'cartaocredito.php' },
+            { icon: 'bi-arrow-clockwise',  cor: '#8B5CF6', label: 'Recorrentes',    sub: 'serviços e assinaturas',  valor: d.totalRecorrente,    href: base + 'gerenciamento.php?tab=Recorrentes' },
+            { icon: 'bi-house-fill',       cor: '#F97316', label: 'Contas fixas',   sub: 'luz · água · internet',   valor: d.totalContasFixas || 0, href: base + 'contas_fixas.php' },
+            { icon: 'bi-people-fill',      cor: '#EC4899', label: 'A pagar',        sub: 'devo a responsáveis',     valor: d.totalContas || 0,   href: base + 'responsaveis.php' },
+        ];
+
+        $('#kpiBreakdown').html(`<div class="row g-2">${sub.map(c => `
+            <div class="col-6 col-sm-4 col-lg kpi-col">
+                <a href="${c.href}" class="painel kpi-sm text-decoration-none d-block" style="--kpi-accent:${c.cor};">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <div class="kpi-sm-icon" style="background:${c.cor}1a;color:${c.cor};">
+                            <i class="bi ${c.icon}"></i>
+                        </div>
+                        <span class="kpi-sm-label">${c.label}</span>
+                    </div>
+                    <div class="kpi-sm-valor" style="color:${c.cor};">R$ ${formatBR(c.valor)}</div>
+                    <div class="kpi-sm-sub">${c.sub}</div>
+                </a>
+            </div>`).join('')}</div>`).show();
     }
 
     // ─── GRÁFICO DE ROSCA + LISTA ─────────────────────────────────────────
@@ -492,6 +539,10 @@ $(document).ready(function () {
 
     // ─── FATURAS DOS CARTÕES ─────────────────────────────────────────────
     function renderFaturasDash(faturas, cartoes) {
+        window.faturasTotais = {};
+        $.each(faturas, function (idCartao, items) {
+            window.faturasTotais[idCartao] = items.valortotal || '0,00';
+        });
         var html = '';
 
         $.each(faturas, function (idCartao, items) {
@@ -558,6 +609,240 @@ $(document).ready(function () {
         $(this).closest('.fdc-card').find('.fdc-caret').css('transform', 'rotate(0deg)');
     });
 
+    // ─── AÇÕES RÁPIDAS ───────────────────────────────────────────────────
+    function carregaAcoesRapidas(mes, ano) {
+        $('#arLoader').show();
+
+        var cfItems     = null;
+        var fatResults  = null;
+        var cfDone      = false;
+        var fatDone     = false;
+
+        function tentaRenderAvisos() {
+            if (cfDone && fatDone) renderAvisos(cfItems, fatResults, mes, ano);
+        }
+
+        // Contas Fixas pendentes
+        $.ajax({
+            type: 'POST', url: 'php/controllers/ContasFixasController.php',
+            data: { acao: 'resumoMes', mes: mes, ano: ano }, dataType: 'json',
+            success: function (data) {
+                cfItems = data;
+                renderArContasFixas(data, mes, ano);
+            },
+            error: function () { $('#arContasFixas').html('<div class="ar-empty text-danger">Erro ao carregar.</div>'); },
+            complete: function () { cfDone = true; tentaRenderAvisos(); }
+        });
+
+        // Fatura status por cartão
+        var cartoes = window.cartoesArray || {};
+        var lista = [];
+        $.each(cartoes, function (_, c) { lista.push(c); });
+
+        if (!lista.length) {
+            $('#arFaturas').html('<div class="ar-empty">Nenhum cartão cadastrado.</div>');
+            fatResults = [];
+            fatDone = true;
+            $('#arLoader').hide();
+            tentaRenderAvisos();
+            return;
+        }
+
+        var pendente = lista.length;
+        var resultados = [];
+        lista.forEach(function (cartao) {
+            $.ajax({
+                type: 'POST', url: 'php/controllers/CartoesController.php',
+                data: { acao: 'faturaPaga', cartaoId: cartao.id, mes: mes, ano: ano },
+                dataType: 'json',
+                success: function (r) {
+                    resultados.push({ cartao: cartao, pago: r.pago, dataPago: r.data_pagamento });
+                },
+                complete: function () {
+                    pendente--;
+                    if (pendente === 0) {
+                        fatResults = resultados;
+                        fatDone = true;
+                        renderArFaturas(resultados, mes, ano);
+                        $('#arLoader').hide();
+                        tentaRenderAvisos();
+                    }
+                }
+            });
+        });
+    }
+
+    function renderArContasFixas(items, mes, ano) {
+        if (!items || !items.length) {
+            $('#arContasFixas').html('<div class="ar-empty">Nenhuma conta fixa cadastrada.</div>');
+            return;
+        }
+        var html = '';
+        items.forEach(function (cf) {
+            var pago = cf.pago;
+            html += '<div class="ar-item" data-id="' + cf.id + '">' +
+                '<div class="ar-item-info">' +
+                    '<span class="ar-item-dot" style="background:' + (cf.cor || '#F97316') + ';"></span>' +
+                    '<div>' +
+                        '<div class="ar-item-nome">' + escHtml(cf.nome) + '</div>' +
+                        '<div class="ar-item-val">R$ ' + formatBR(cf.valor) + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<button class="ar-btn ' + (pago ? 'ar-btn-pago' : 'ar-btn-pagar') + '" ' +
+                    'data-tipo="cf" data-id="' + cf.id + '" data-mes="' + mes + '" data-ano="' + ano + '" ' +
+                    'data-valor="' + cf.valor + '" data-pago="' + (pago ? 1 : 0) + '">' +
+                    (pago ? '<i class="bi bi-check-circle-fill me-1"></i>Pago' : '<i class="bi bi-check-circle me-1"></i>Pagar') +
+                '</button>' +
+            '</div>';
+        });
+        $('#arContasFixas').html(html);
+    }
+
+    function renderArFaturas(resultados, mes, ano) {
+        if (!resultados.length) {
+            $('#arFaturas').html('<div class="ar-empty">Nenhum cartão.</div>');
+            return;
+        }
+        resultados.sort(function (a, b) { return a.pago - b.pago; });
+        var html = '';
+        resultados.forEach(function (r) {
+            var cor   = r.cartao.cor || '#3B82F6';
+            var total = (window.faturasTotais || {})[r.cartao.id] || '0,00';
+            html += '<div class="ar-item" data-id="' + r.cartao.id + '">' +
+                '<div class="ar-item-info">' +
+                    '<i class="bi bi-credit-card-fill" style="color:' + cor + ';font-size:1rem;flex-shrink:0;"></i>' +
+                    '<div>' +
+                        '<div class="ar-item-nome">' + escHtml(r.cartao.nome_cartao) + '</div>' +
+                        '<div class="ar-item-val">R$ ' + total + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<button class="ar-btn ' + (r.pago ? 'ar-btn-pago' : 'ar-btn-pagar') + '" ' +
+                    'data-tipo="fat" data-id="' + r.cartao.id + '" data-mes="' + mes + '" data-ano="' + ano + '" ' +
+                    'data-pago="' + (r.pago ? 1 : 0) + '">' +
+                    (r.pago ? '<i class="bi bi-check-circle-fill me-1"></i>Paga' : '<i class="bi bi-check-circle me-1"></i>Marcar paga') +
+                '</button>' +
+            '</div>';
+        });
+        $('#arFaturas').html(html);
+    }
+
+    function renderAvisos(cfItems, fatResults, mes, ano) {
+        var hoje     = new Date();
+        var diaHoje  = hoje.getDate();
+        var mesHoje  = hoje.getMonth() + 1;
+        var anoHoje  = hoje.getFullYear();
+
+        // Só calcula avisos para o mês atual
+        if (parseInt(mes) !== mesHoje || parseInt(ano) !== anoHoje) return;
+
+        var avisos = [];
+
+        // ── Contas Fixas ──
+        (cfItems || []).forEach(function (cf) {
+            if (cf.pago) return;
+            var dias = parseInt(cf.dia_vencimento) - diaHoje;
+            if (dias < 0) {
+                avisos.push({ nivel: 'danger', icon: 'bi-exclamation-triangle-fill',
+                    msg: 'Vencida há ' + Math.abs(dias) + ' dia(s): <strong>' + escHtml(cf.nome) + '</strong> (dia ' + cf.dia_vencimento + ')', dias: dias });
+            } else if (dias === 0) {
+                avisos.push({ nivel: 'danger', icon: 'bi-exclamation-triangle-fill',
+                    msg: 'Vence <strong>hoje</strong>: <strong>' + escHtml(cf.nome) + '</strong>', dias: dias });
+            } else if (dias <= 7) {
+                var nivel = dias <= 3 ? 'warning' : 'info';
+                avisos.push({ nivel: nivel, icon: 'bi-clock-fill',
+                    msg: escHtml(cf.nome) + ' vence em <strong>' + dias + ' dia(s)</strong> (dia ' + cf.dia_vencimento + ')', dias: dias });
+            }
+        });
+
+        // ── Faturas de Cartão ──
+        (fatResults || []).forEach(function (r) {
+            if (r.pago) return;
+            var venc = parseInt(r.cartao.vencimento_dia);
+            if (!venc) return;
+            var dias = venc - diaHoje;
+            if (dias < 0) {
+                avisos.push({ nivel: 'danger', icon: 'bi-credit-card-fill',
+                    msg: 'Fatura vencida há ' + Math.abs(dias) + ' dia(s): <strong>' + escHtml(r.cartao.nome_cartao) + '</strong> (dia ' + venc + ')', dias: dias });
+            } else if (dias === 0) {
+                avisos.push({ nivel: 'danger', icon: 'bi-credit-card-fill',
+                    msg: 'Fatura vence <strong>hoje</strong>: <strong>' + escHtml(r.cartao.nome_cartao) + '</strong>', dias: dias });
+            } else if (dias <= 7) {
+                var nivel = dias <= 3 ? 'warning' : 'info';
+                avisos.push({ nivel: nivel, icon: 'bi-credit-card-fill',
+                    msg: 'Fatura ' + escHtml(r.cartao.nome_cartao) + ' vence em <strong>' + dias + ' dia(s)</strong> (dia ' + venc + ')', dias: dias });
+            }
+        });
+
+        if (!avisos.length) { $('#avisosSection').hide(); return; }
+
+        avisos.sort(function (a, b) { return a.dias - b.dias; });
+
+        var corMap   = { danger: '#EF4444', warning: '#F59E0B', info: '#3B82F6' };
+        var bgMap    = { danger: '#EF444415', warning: '#F59E0B15', info: '#3B82F615' };
+        var html = '<div class="avisos-wrap">';
+        avisos.forEach(function (av) {
+            var cor = corMap[av.nivel];
+            var bg  = bgMap[av.nivel];
+            html += '<div class="aviso-item" style="background:' + bg + ';border-left:3px solid ' + cor + ';">' +
+                '<i class="bi ' + av.icon + '" style="color:' + cor + ';font-size:0.95rem;flex-shrink:0;"></i>' +
+                '<span class="aviso-msg">' + av.msg + '</span>' +
+            '</div>';
+        });
+        html += '</div>';
+
+        $('#avisosSection').html(html).show();
+    }
+
+    // Handlers dos botões de ação rápida
+    $(document).on('click', '.ar-btn', function () {
+        var $btn  = $(this);
+        var tipo  = $btn.data('tipo');
+        var id    = $btn.data('id');
+        var mes   = $btn.data('mes');
+        var ano   = $btn.data('ano');
+        var pago  = parseInt($btn.data('pago'));
+        var novoPago = pago ? 0 : 1;
+
+        $btn.prop('disabled', true);
+
+        if (tipo === 'cf') {
+            var acao = novoPago ? 'marcarPago' : 'desmarcarPago';
+            var payload = { acao: acao, id: id, mes: mes, ano: ano, data: new Date().toISOString().slice(0,10), valor: $btn.data('valor') };
+            $.ajax({
+                type: 'POST', url: 'php/controllers/ContasFixasController.php',
+                data: payload, dataType: 'json',
+                success: function () {
+                    $btn.data('pago', novoPago)
+                        .removeClass('ar-btn-pagar ar-btn-pago')
+                        .addClass(novoPago ? 'ar-btn-pago' : 'ar-btn-pagar')
+                        .html(novoPago
+                            ? '<i class="bi bi-check-circle-fill me-1"></i>Pago'
+                            : '<i class="bi bi-check-circle me-1"></i>Pagar');
+                    toastr.success(novoPago ? 'Conta marcada como paga!' : 'Pagamento desfeito.');
+                },
+                error: function () { toastr.error('Erro ao atualizar.'); },
+                complete: function () { $btn.prop('disabled', false); }
+            });
+        } else {
+            $.ajax({
+                type: 'POST', url: 'php/controllers/CartoesController.php',
+                data: { acao: 'marcarFaturaPaga', cartaoId: id, mes: mes, ano: ano, data: new Date().toISOString().slice(0,10), pago: novoPago },
+                dataType: 'json',
+                success: function () {
+                    $btn.data('pago', novoPago)
+                        .removeClass('ar-btn-pagar ar-btn-pago')
+                        .addClass(novoPago ? 'ar-btn-pago' : 'ar-btn-pagar')
+                        .html(novoPago
+                            ? '<i class="bi bi-check-circle-fill me-1"></i>Paga'
+                            : '<i class="bi bi-check-circle me-1"></i>Marcar paga');
+                    toastr.success(novoPago ? 'Fatura marcada como paga!' : 'Fatura desmarcada.');
+                },
+                error: function () { toastr.error('Erro ao atualizar.'); },
+                complete: function () { $btn.prop('disabled', false); }
+            });
+        }
+    });
+
     // ─── UTILITÁRIOS ─────────────────────────────────────────────────────
     function formatBR(n) {
         return parseFloat(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -581,8 +866,7 @@ $(document).ready(function () {
 </script>
 
 <style>
-/* ── KPI Cards ── */
-.kpi-col { flex: 1 1 0; min-width: 0; }
+/* ── KPI Cards — 3 principais ── */
 .kpi-card {
     height: 100%;
     border-left: 3px solid var(--kpi-accent, var(--cor-azul));
@@ -608,6 +892,50 @@ $(document).ready(function () {
     margin-bottom: 0.15rem; letter-spacing: 0.02em;
 }
 .kpi-sub { color: var(--cor-texto-off); font-size: 0.74rem; }
+
+/* ── kpi-col: stretch igual em telas grandes ── */
+.kpi-col { flex: 1 1 0; min-width: 0; }
+
+/* ── Cards menores (linha 2) ── */
+.kpi-sm {
+    border-left: 3px solid var(--kpi-accent, var(--cor-azul));
+    padding: 0.6rem 0.85rem;
+    transition: transform var(--trans), box-shadow var(--trans);
+}
+.kpi-sm:hover { transform: translateY(-2px); box-shadow: var(--sombra-md); }
+.kpi-sm-icon {
+    width: 26px; height: 26px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; flex-shrink: 0;
+}
+.kpi-sm-label { font-size: 0.72rem; font-weight: 600; color: var(--cor-texto-sec); line-height: 1.2; }
+.kpi-sm-valor {
+    font-family: "Bebas Neue", sans-serif;
+    font-size: 1.2rem; line-height: 1;
+    margin-bottom: 0.08rem; letter-spacing: 0.02em;
+}
+.kpi-sm-sub { font-size: 0.65rem; color: var(--cor-texto-off); }
+
+/* ── Avisos ── */
+.avisos-wrap  { display: flex; flex-direction: column; gap: 0.4rem; }
+.aviso-item   { display: flex; align-items: center; gap: 0.65rem; padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); font-size: 0.82rem; }
+.aviso-msg    { color: var(--cor-texto); line-height: 1.3; }
+.aviso-msg strong { color: inherit; }
+
+/* ── Ações Rápidas ── */
+.ar-subtitulo { font-size: 0.78rem; font-weight: 700; color: var(--cor-texto-off); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 0.5rem; }
+.ar-empty     { font-size: 0.82rem; color: var(--cor-texto-off); padding: 0.4rem 0; }
+.ar-item      { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--cor-borda); }
+.ar-item:last-child { border-bottom: none; }
+.ar-item-info { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.ar-item-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ar-item-nome { font-size: 0.85rem; font-weight: 500; color: var(--cor-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.ar-item-val  { font-size: 0.75rem; color: var(--cor-texto-off); }
+.ar-btn { border: none; border-radius: 20px; padding: 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all .2s; flex-shrink: 0; }
+.ar-btn-pagar { background: #EF444422; color: #EF4444; }
+.ar-btn-pagar:hover { background: #EF4444; color: #fff; }
+.ar-btn-pago  { background: #22C55E22; color: #22C55E; }
+.ar-btn-pago:hover { background: #22C55E33; }
 
 /* ── Últimas despesas ── */
 .recente-item  { padding: 0.55rem 0; }

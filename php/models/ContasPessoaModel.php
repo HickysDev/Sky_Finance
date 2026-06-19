@@ -4,16 +4,22 @@ include_once __DIR__ . '/../../conn/conn.php';
 
 class ContasPessoaModel {
 
-    public static function listar(int $responsavelId): array {
+    public static function listar(int $responsavelId, ?int $mes = null, ?int $ano = null): array {
         $conn = Database::getConnection();
+        $filtroMes = ($mes && $ano)
+            ? "AND MONTH(cp.data) = :mes AND YEAR(cp.data) = :ano"
+            : "";
         $stmt = $conn->prepare("
             SELECT cp.*, cat.nome AS categoria, cat.cor AS cat_cor, cat.icone AS cat_icone
             FROM contas_pessoa cp
             LEFT JOIN categorias cat ON cat.id = cp.categoria_id
             WHERE cp.responsavel_id = :rid AND cp.usuario_id = 1
+            $filtroMes
             ORDER BY cp.pago ASC, cp.data DESC
         ");
-        $stmt->execute([':rid' => $responsavelId]);
+        $params = [':rid' => $responsavelId];
+        if ($mes && $ano) { $params[':mes'] = $mes; $params[':ano'] = $ano; }
+        $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as &$r) {
             $r['valor'] = (float) $r['valor'];

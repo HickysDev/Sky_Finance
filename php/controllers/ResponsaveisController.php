@@ -67,7 +67,9 @@ switch ($acao) {
 
     case 'contas.listar':
         if (!$id) { http_response_code(400); echo json_encode(['erro' => 'ID inválido']); exit; }
-        $retorno = ContasPessoaModel::listar($id);
+        $mesFiltro = isset($_POST['mes']) && $_POST['mes'] !== '' ? (int) $_POST['mes'] : null;
+        $anoFiltro = isset($_POST['ano']) && $_POST['ano'] !== '' ? (int) $_POST['ano'] : null;
+        $retorno = ContasPessoaModel::listar($id, $mesFiltro, $anoFiltro);
         break;
 
     case 'contas.adicionar':

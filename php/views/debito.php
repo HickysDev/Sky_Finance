@@ -40,9 +40,6 @@ $mesAtual = date('n');
             <span class="titulo titulo-azul fs-total-valor" id="totalMes">—</span>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-danger btn-sm" id="removerSelecionados" style="display:none;">
-                <i class="bi bi-trash-fill"></i> Remover selecionados
-            </button>
             <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAdiciona">
                 <i class="bi bi-plus-lg"></i> Adicionar Despesa
             </button>
@@ -67,11 +64,23 @@ $mesAtual = date('n');
                         <th>Categoria</th>
                         <th>Método</th>
                         <th>Data</th>
-                        <th><input type="checkbox" id="marcaTodos"></th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody></tbody>
             </table>
+        </div>
+
+        <div id="barraSelecao" style="display:none;" class="barra-selecao mt-3">
+            <i class="bi bi-calculator-fill me-2" style="color:var(--cor-azul);"></i>
+            <span id="selCount" class="me-1"></span>
+            <span style="color:var(--cor-texto-off);">·</span>
+            <span class="ms-1 me-1" style="color:var(--cor-texto-off);">Total:</span>
+            <strong id="selTotal" class="titulo-azul"></strong>
+            <button class="btn btn-sm ms-3 py-0 px-2" id="limparSelecao"
+                style="background:transparent;border:1px solid var(--cor-borda);color:var(--cor-texto-off);">
+                <i class="bi bi-x"></i>
+            </button>
         </div>
 
         <div id="estadoVazio" style="display:none;" class="text-center py-5">
@@ -94,8 +103,12 @@ $mesAtual = date('n');
         buscaCartoes();
         buscaCategorias();
 
+        var _modoEditDeb = false;
+        var _pendingRepetirDeb = null;
+
         // ─── MODAL ───────────────────────────────────────────────────────────────
         $('#modalAdiciona').on('show.bs.modal', function () {
+            if (_modoEditDeb) return;
             $('#metodoWrapper').show();
             $('#cartaoWrapper').hide();
             $('#parceladoWrapper').hide();
@@ -105,6 +118,23 @@ $mesAtual = date('n');
             $('#cartao').val('');
             $('#cartaoSelectorModal').html('');
             resetCatSelect();
+        });
+
+        $('#modalAdiciona').on('hidden.bs.modal', function () { _modoEditDeb = false; _pendingRepetirDeb = null; limpaErrosModal(); });
+
+        $('#modalAdiciona').on('shown.bs.modal', function () {
+            if (!_pendingRepetirDeb) return;
+            var d = _pendingRepetirDeb;
+            _pendingRepetirDeb = null;
+            $('#descricao').val(d.descricao);
+            valorCleaveDeb.setRawValue(parseFloat(d.valor));
+            var hoje = new Date();
+            var pad = function(n){ return String(n).padStart(2,'0'); };
+            $('#data').val(hoje.getFullYear() + '-' + pad(hoje.getMonth()+1) + '-' + pad(hoje.getDate()));
+            setCatSelecionada(d.categoria);
+            $('.metodo-mini').removeClass('selecionado');
+            $('.metodo-mini[data-metodo="' + d.metodo + '"]').addClass('selecionado');
+            $('#metodo').val(d.metodo);
         });
 
         // ─── SELETOR DE MÊS / ANO ────────────────────────────────────────────
@@ -146,49 +176,52 @@ $mesAtual = date('n');
             $('#cartao').val($(this).data('id'));
         });
 
-        // ─── MARCAR TODOS ─────────────────────────────────────────────────────
-        $(document).on('change', '#marcaTodos', function () {
-            let checked = $(this).prop('checked');
-            $('.marcagasto').prop('checked', checked);
-            $('#removerSelecionados').toggle(checked && $('.marcagasto').length > 0);
+        // ─── SELEÇÃO PARA SOMA ───────────────────────────────────────────────
+        $(document).on('click', '.linha-clicavel', function (e) {
+            if ($(e.target).closest('button, input').length) return;
+            $(this).toggleClass('linha-selecionada');
+            atualizaBarraSelecao();
         });
 
-        $(document).on('change', '.marcagasto', function () {
-            let total   = $('.marcagasto').length;
-            let marcados = $('.marcagasto:checked').length;
-            $('#marcaTodos').prop('checked', total === marcados);
-            $('#removerSelecionados').toggle(marcados > 0);
+        $('#limparSelecao').on('click', function () {
+            $('.linha-selecionada').removeClass('linha-selecionada');
+            $('#barraSelecao').hide();
         });
 
-        // ─── REMOVER SELECIONADOS ─────────────────────────────────────────────
-        $('#removerSelecionados').click(function () {
-            var ids = [];
-            $('.marcagasto:checked').each(function () {
-                ids.push({ id: $(this).data('id'), parcelado: 'N' });
+        function atualizaBarraSelecao() {
+            var $sel = $('.linha-selecionada');
+            if (!$sel.length) { $('#barraSelecao').hide(); return; }
+            var total = 0;
+            $sel.each(function () {
+                var v = String($(this).data('valor')).replace(/\./g, '').replace(',', '.');
+                total += parseFloat(v) || 0;
             });
+            var fmt = total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            $('#selCount').text($sel.length + ' selecionada(s)');
+            $('#selTotal').text('R$ ' + fmt);
+            $('#barraSelecao').show();
+        }
 
-            if (!ids.length) return;
-
+        // ─── REMOVER POR LINHA ────────────────────────────────────────────────
+        $(document).on('click', '.btn-remover-gasto', function () {
+            var id = $(this).data('id');
             Swal.fire({
-                title: 'Remover despesas?',
-                text: ids.length + ' despesa(s) selecionada(s)',
+                title: 'Remover despesa?',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#EF4444',
                 cancelButtonColor: '#6B7280',
-                confirmButtonText: 'Sim, remover',
+                confirmButtonText: 'Remover',
                 cancelButtonText: 'Cancelar'
             }).then(function (result) {
                 if (result.isConfirmed) {
                     $.ajax({
                         type: 'POST',
                         url: '../controllers/GastosController.php',
-                        data: { acao: 'remover', ids: ids, tipo: 'debito' },
+                        data: { acao: 'remover', ids: [{ id: id, parcelado: 'N' }], tipo: 'debito' },
                         dataType: 'json',
                         success: function () {
-                            toastr.success('Despesa(s) removida(s)!');
-                            $('#removerSelecionados').hide();
-                            $('#marcaTodos').prop('checked', false);
+                            toastr.success('Despesa removida!');
                             buscaTabela($('#mes').val());
                         },
                         error: function () { toastr.error('Erro ao remover!'); }
@@ -198,7 +231,51 @@ $mesAtual = date('n');
         });
 
         // ─── ADICIONAR DESPESA ────────────────────────────────────────────────
+        function limpaErrosModal() {
+            $('#descricao, #valor, #data, #metodo').removeClass('is-invalid');
+            $('#catSelWrapper').removeClass('borda-erro');
+            $('#cartaoSelectorModal').removeClass('borda-erro');
+        }
+
+        function validaFormDebito() {
+            limpaErrosModal();
+            var erros = [];
+
+            if (!$('#descricao').val().trim()) {
+                $('#descricao').addClass('is-invalid');
+                erros.push('Descrição');
+            }
+            var valorRaw = parseFloat($('#valor').val().replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.'));
+            if (!valorRaw || valorRaw <= 0) {
+                $('#valor').addClass('is-invalid');
+                erros.push('Valor');
+            }
+            if (!$('#categoria').val()) {
+                $('#catSelWrapper').addClass('borda-erro');
+                erros.push('Categoria');
+            }
+            if (!$('#metodo').val()) {
+                $('#metodo').addClass('is-invalid');
+                erros.push('Método de pagamento');
+            }
+            if ($('#metodo').val() === 'Débito' && !$('#cartao').val()) {
+                $('#cartaoSelectorModal').addClass('borda-erro');
+                erros.push('Cartão (para método Débito)');
+            }
+            if (!$('#data').val()) {
+                $('#data').addClass('is-invalid');
+                erros.push('Data');
+            }
+
+            if (erros.length) {
+                toastr.warning('Preencha: ' + erros.join(', '));
+                return false;
+            }
+            return true;
+        }
+
         $('#adicionarDespesa').click(function () {
+            if (!validaFormDebito()) return;
             let cartao = $('#cartao').val() || null;
             $.ajax({
                 type: 'POST',
@@ -221,6 +298,95 @@ $mesAtual = date('n');
                     buscaTabela($('#mes').val());
                 },
                 error: function () { toastr.error('Erro ao adicionar despesa!'); }
+            });
+        });
+
+        // ─── REPETIR GASTO ───────────────────────────────────────────────────
+        $(document).on('click', '.btn-repetir-gasto-deb', function () {
+            _pendingRepetirDeb = {
+                descricao: $(this).data('descricao'),
+                valor:     $(this).data('valor'),
+                categoria: $(this).data('categoria'),
+                metodo:    $(this).data('metodo')
+            };
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdiciona')).show();
+        });
+
+        // ─── EDITAR DESPESA ──────────────────────────────────────────────────
+        $(document).on('click', '.btn-editar-gasto', function () {
+            var $btn = $(this);
+            _modoEditDeb = true;
+
+            // Alterna botões no modal
+            $('#adicionarDespesa').hide();
+            $('#editarDespesa').show();
+            $('#gastoId').val($btn.data('id'));
+
+            // Preenche campos
+            $('#descricao').val($btn.data('descricao'));
+            $('#data').val($btn.data('data').substring(0, 10));
+
+            // Valor formatado
+            var valorNum = parseFloat(String($btn.data('valor')).replace('.', '').replace(',', '.'));
+            valorCleaveDeb.setRawValue(valorNum);
+
+            // Método
+            var metodo = $btn.data('metodo');
+            $('#metodo').val(metodo);
+            if (metodo === 'Débito') {
+                $('#cartaoWrapper').show();
+                renderCartoesMiniModal();
+                var cartaoId = $btn.data('cartao');
+                if (cartaoId) {
+                    setTimeout(function () {
+                        $('.cartao-mini-modal[data-id="' + cartaoId + '"]').addClass('selecionado');
+                        $('#cartao').val(cartaoId);
+                    }, 100);
+                }
+            } else {
+                $('#cartaoWrapper').hide();
+                $('#cartao').val('');
+            }
+
+            // Categoria
+            setCatSelecionada($btn.data('categoria'));
+
+            // Abre modal
+            var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdiciona'));
+            modal.show();
+        });
+
+        $('#editarDespesa').on('click', function () {
+            var id = $('#gastoId').val();
+            if (!id) return;
+            limpaErrosModal();
+            var erros = [];
+            if (!$('#descricao').val().trim()) { $('#descricao').addClass('is-invalid'); erros.push('Descrição'); }
+            var vr = parseFloat($('#valor').val().replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.'));
+            if (!vr || vr <= 0) { $('#valor').addClass('is-invalid'); erros.push('Valor'); }
+            if (!$('#categoria').val()) { $('#catSelWrapper').addClass('borda-erro'); erros.push('Categoria'); }
+            if (!$('#data').val()) { $('#data').addClass('is-invalid'); erros.push('Data'); }
+            if (erros.length) { toastr.warning('Preencha: ' + erros.join(', ')); return; }
+            $.ajax({
+                type: 'POST',
+                url: '../controllers/GastosController.php',
+                data: {
+                    acao:      'editar',
+                    id:        id,
+                    descricao: $('#descricao').val(),
+                    valor:     $('#valor').val(),
+                    categoria: $('#categoria').val(),
+                    metodo:    $('#metodo').val(),
+                    cartao:    $('#cartao').val() || '',
+                    data:      $('#data').val(),
+                },
+                dataType: 'json',
+                success: function () {
+                    toastr.success('Despesa atualizada!');
+                    bootstrap.Modal.getInstance(document.getElementById('modalAdiciona')).hide();
+                    buscaTabela($('#mes').val());
+                },
+                error: function () { toastr.error('Erro ao salvar!'); }
             });
         });
 
@@ -294,13 +460,39 @@ $mesAtual = date('n');
                                 badge = '<span class="badge bg-secondary">Dinheiro</span>';
                         }
 
-                        tbody.append(`<tr>
-                            <td>${gasto.descricao}</td>
+                        tbody.append(`<tr class="linha-clicavel" data-valor="${gasto.valor}">
+                            <td><span class="linha-check"><i class="bi bi-check-circle-fill"></i></span>${gasto.descricao}</td>
                             <td>R$ ${gasto.valor}</td>
                             <td>${catBadgeHtml(gasto.nome)}</td>
                             <td>${badge}</td>
                             <td>${moment(gasto.data_gasto).format('DD/MM/YYYY')}</td>
-                            <td><input type="checkbox" class="marcagasto" data-id="${gasto.id}"></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-1 justify-content-end">
+                                    <button class="btn btn-sm btn-outline-secondary btn-editar-gasto py-0 px-1"
+                                        data-id="${gasto.id}"
+                                        data-descricao="${gasto.descricao}"
+                                        data-valor="${gasto.valor}"
+                                        data-categoria="${gasto.categoria_id}"
+                                        data-metodo="${gasto.metodo_pagamento}"
+                                        data-cartao="${gasto.cartao_id || ''}"
+                                        data-data="${gasto.data_gasto}"
+                                        title="Editar">
+                                        <i class="bi bi-pencil-fill" style="font-size:.75rem;"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary btn-repetir-gasto-deb py-0 px-1"
+                                        data-descricao="${gasto.descricao}"
+                                        data-valor="${gasto.valor}"
+                                        data-categoria="${gasto.categoria_id}"
+                                        data-metodo="${gasto.metodo_pagamento}"
+                                        title="Repetir no mês atual">
+                                        <i class="bi bi-arrow-repeat" style="font-size:.75rem;"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger btn-remover-gasto py-0 px-1"
+                                        data-id="${gasto.id}" title="Remover">
+                                        <i class="bi bi-trash-fill" style="font-size:.75rem;"></i>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>`);
                     });
 
@@ -342,7 +534,7 @@ $mesAtual = date('n');
             });
         }
 
-        new Cleave('#valor', {
+        var valorCleaveDeb = new Cleave('#valor', {
             numeral: true,
             numeralThousandsGroupStyle: 'thousand',
             prefix: 'R$ ',
@@ -352,6 +544,22 @@ $mesAtual = date('n');
             numeralDecimalMark: ',',
             stripLeadingZeroes: true
         });
+
+        function setCatSelecionada(catId) {
+            var id  = String(catId || '');
+            var cat = window.categoriaMap ? window.categoriaMap[id] : null;
+            $('#categoria').val(id);
+            if (cat) {
+                var cor   = cat.cor || '#6B7280';
+                var icone = cat.icone ? '<span class="me-1">' + cat.icone + '</span>' : '';
+                $('#catSelBtn .cat-sel-preview').html(
+                    '<span class="cat-dot" style="background:' + cor + ';flex-shrink:0;"></span>' +
+                    icone + '<span class="ms-1" style="color:' + cor + ';">' + cat.nome + '</span>'
+                );
+            } else {
+                $('#catSelBtn .cat-sel-preview').html('<span class="text-muted">Selecione</span>');
+            }
+        }
 
     });
 </script>
