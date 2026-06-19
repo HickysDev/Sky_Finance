@@ -72,6 +72,23 @@ switch ($acao) {
         $retorno = GastosModel::reativarRecorrente($id, $dataReativacao);
         break;
 
+    case 'editar':
+        if (!$id) { http_response_code(400); echo json_encode(['erro' => 'ID inválido']); exit; }
+        $valorEdit = str_replace(['R$', ' ', '.'], '', $valor);
+        $valorEdit = (float) str_replace(',', '.', $valorEdit);
+        $retorno = GastosModel::editarGasto($id, $descricao, $valorEdit, $categoria, $metodo, $cartao, $data);
+        break;
+
+    case 'editarSimples':
+        if (!$id) { http_response_code(400); echo json_encode(['erro' => 'ID inválido']); exit; }
+        $retorno = GastosModel::editarGastoSimples($id, $descricao, $categoria);
+        break;
+
+    case 'editarRecorrenteSimples':
+        if (!$id) { http_response_code(400); echo json_encode(['erro' => 'ID inválido']); exit; }
+        $retorno = GastosModel::editarRecorrenteSimples($id, $descricao, $categoria);
+        break;
+
     case 'editaGasto':
         if (!empty($valor)) {
             $valor = str_replace(['R$', ' ', '.'], '', $valor);

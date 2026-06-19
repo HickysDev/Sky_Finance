@@ -433,7 +433,7 @@ $(document).on('click', '.pessoa-tab-btn', function (e) {
 function carregaItensEuDevo(respId) {
     $.ajax({
         type: 'POST', url: App.ctrl.responsaveis,
-        data: { acao: 'contas.listar', id: respId }, dataType: 'json',
+        data: { acao: 'contas.listar', id: respId, mes: mesSel, ano: anoSel }, dataType: 'json',
         error: function (xhr) {
             $('#panel-devo-' + respId).html('<div class="empty-panel text-danger"><i class="bi bi-exclamation-triangle me-1"></i>' + (xhr.responseText || 'Erro') + '</div>');
         },

@@ -15,17 +15,17 @@ $tipoDespesa = 'recorrente';
     <!-- HEADER -->
     <div class="d-flex align-items-center titulo-pagina mb-4">
         <h1 class="titulo mt-2 fs-titulo-pag">
-            Gerenciar &nbsp;<i class="bi bi-gear-fill titulo-azul"></i>
+            Configurações &nbsp;<i class="bi bi-gear-fill titulo-azul"></i>
         </h1>
     </div>
 
     <!-- TABS -->
     <div class="gerenciar-tabs mb-4">
-        <button class="gtab-btn active" data-tab="Cartoes">
-            <i class="bi bi-credit-card-2-front-fill"></i> Cartões
-        </button>
-        <button class="gtab-btn" data-tab="Categorias">
+        <button class="gtab-btn active" data-tab="Categorias">
             <i class="bi bi-list-columns"></i> Categorias
+        </button>
+        <button class="gtab-btn" data-tab="Cartoes">
+            <i class="bi bi-credit-card-2-front-fill"></i> Cartões
         </button>
         <button class="gtab-btn" data-tab="Recorrentes">
             <i class="bi bi-arrow-clockwise"></i> Recorrentes
@@ -33,16 +33,13 @@ $tipoDespesa = 'recorrente';
         <button class="gtab-btn" data-tab="Responsaveis">
             <i class="bi bi-people-fill"></i> Responsáveis
         </button>
-        <button class="gtab-btn" data-tab="ContasFixas">
-            <i class="bi bi-receipt-cutoff"></i> Contas Fixas
-        </button>
         <button class="gtab-btn" data-tab="Conta">
             <i class="bi bi-person-gear"></i> Conta
         </button>
     </div>
 
     <!-- ── CARTÕES ──────────────────────────────────────────────── -->
-    <div id="tabCartoes" class="tab-section">
+    <div id="tabCartoes" class="tab-section" style="display:none;">
         <div class="painel">
             <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
                 <h5 class="titulo fs-secao-titulo m-0">
@@ -61,7 +58,7 @@ $tipoDespesa = 'recorrente';
     </div>
 
     <!-- ── CATEGORIAS ───────────────────────────────────────────── -->
-    <div id="tabCategorias" class="tab-section" style="display:none;">
+    <div id="tabCategorias" class="tab-section">
         <div class="painel">
             <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
                 <h5 class="titulo fs-secao-titulo m-0">
@@ -1200,19 +1197,21 @@ function buscaContasFixas() {
 // ── INIT ────────────────────────────────────────────────────────
 (function () {
     var params = new URLSearchParams(window.location.search);
-    var tab = params.get('tab');
-    if (tab) {
-        $('.gtab-btn').removeClass('active');
-        $('.gtab-btn[data-tab="' + tab + '"]').addClass('active');
-        $('.tab-section').hide();
-        $('#tab' + tab).show();
-        if (tab === 'ContasFixas') buscaContasFixas();
-        if (tab === 'Conta')       { buscaUsuarios(); carregaPerfil(); }
-    }
+    var tab = params.get('tab') || 'Categorias';
+
+    $('.gtab-btn').removeClass('active');
+    $('.gtab-btn[data-tab="' + tab + '"]').addClass('active');
+    $('.tab-section').hide();
+    $('#tab' + tab).show();
+
+    if (tab === 'Categorias')   buscaCategorias();
+    if (tab === 'Recorrentes')  buscaRecorrentes();
+    if (tab === 'Cartoes')      buscaCartoes();
+    if (tab === 'ContasFixas')  buscaContasFixas();
+    if (tab === 'Responsaveis') buscaResponsaveis();
+    if (tab === 'Conta')        { buscaUsuarios(); carregaPerfil(); }
 })();
 
-buscaCartoes();
-buscaCategorias();
 carregarResponsaveis();
 
 new Cleave('.real', {
