@@ -88,6 +88,20 @@ $conn = Database::getConnection();
   };
   </script>
 
+  <!-- Escape de HTML global (previne XSS ao injetar dados do servidor) -->
+  <script>
+  function escHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+  }
+  window.escHtml = escHtml;
+  </script>
+
   <!-- Responsáveis global -->
   <script>
   window.responsaveisArray = [];
@@ -147,12 +161,12 @@ $conn = Database::getConnection();
       $.each(data, function (_, cat) {
           var cor    = cat.cor   || '#6B7280';
           var icone  = cat.icone || '';
-          var iconeH = icone ? '<span class="me-1">' + icone + '</span>' : '';
+          var iconeH = icone ? '<span class="me-1">' + escHtml(icone) + '</span>' : '';
           window.categoriaMap[String(cat.id)] = { nome: cat.nome, cor: cor, icone: icone };
           window.categoriaNomes[cat.nome]     = window.categoriaMap[String(cat.id)];
           menuHtml += '<li><a class="dropdown-item d-flex align-items-center gap-2" href="#" data-id="' + cat.id + '">' +
               '<span class="cat-dot" style="background:' + cor + ';flex-shrink:0;"></span>' +
-              iconeH + '<span style="color:' + cor + ';">' + cat.nome + '</span></a></li>';
+              iconeH + '<span style="color:' + cor + ';">' + escHtml(cat.nome) + '</span></a></li>';
       });
       $('#catSelMenu').html(menuHtml);
   }
@@ -165,21 +179,21 @@ $conn = Database::getConnection();
   function catInlineHtml(key) {
       var cat = window.categoriaMap[String(key)] || window.categoriaNomes[key];
       var fs  = 'font-size:0.78rem;';
-      if (!cat) return key ? '<span style="' + fs + 'color:var(--cor-texto-off);">' + String(key) + '</span>' : '—';
+      if (!cat) return key ? '<span style="' + fs + 'color:var(--cor-texto-off);">' + escHtml(key) + '</span>' : '—';
       var cor   = cat.cor   || '#6B7280';
-      var icone = cat.icone ? '<span class="me-1" style="' + fs + '">' + cat.icone + '</span>' : '';
+      var icone = cat.icone ? '<span class="me-1" style="' + fs + '">' + escHtml(cat.icone) + '</span>' : '';
       return '<span class="cat-dot me-1" style="background:' + cor + ';"></span>' +
-             icone + '<span style="' + fs + 'color:' + cor + ';">' + cat.nome + '</span>';
+             icone + '<span style="' + fs + 'color:' + cor + ';">' + escHtml(cat.nome) + '</span>';
   }
 
   function catBadgeHtml(key) {
       var cat = window.categoriaMap[String(key)] || window.categoriaNomes[key];
-      if (!cat) return key ? String(key) : '—';
+      if (!cat) return key ? escHtml(key) : '—';
       var cor   = cat.cor   || '#6B7280';
-      var icone = cat.icone ? '<span class="me-1">' + cat.icone + '</span>' : '';
+      var icone = cat.icone ? '<span class="me-1">' + escHtml(cat.icone) + '</span>' : '';
       return '<span style="background:' + cor + '22;color:' + cor + ';border:1px solid ' + cor + '55;' +
           'font-size:0.78rem;font-weight:500;padding:3px 10px;border-radius:20px;white-space:nowrap;display:inline-block;">' +
-          icone + cat.nome + '</span>';
+          icone + escHtml(cat.nome) + '</span>';
   }
 
   $(document).on('click', '#catSelMenu a', function (e) {
@@ -190,10 +204,10 @@ $conn = Database::getConnection();
       $('#categoria').val(id);
       if (cat) {
           var cor   = cat.cor   || '#6B7280';
-          var icone = cat.icone ? '<span class="me-1">' + cat.icone + '</span>' : '';
+          var icone = cat.icone ? '<span class="me-1">' + escHtml(cat.icone) + '</span>' : '';
           $('#catSelBtn .cat-sel-preview').html(
               '<span class="cat-dot" style="background:' + cor + ';flex-shrink:0;"></span>' +
-              icone + '<span class="ms-1" style="color:' + cor + ';">' + cat.nome + '</span>'
+              icone + '<span class="ms-1" style="color:' + cor + ';">' + escHtml(cat.nome) + '</span>'
           );
       } else {
           $('#catSelBtn .cat-sel-preview').html('<span class="text-muted">Selecione</span>');

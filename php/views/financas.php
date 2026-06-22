@@ -773,8 +773,6 @@ $(document).ready(function () {
 
     var mAbrev = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-    function getAnoAtual() { return parseInt($('#orcAnoDisplay').text()); }
-
     function mesesLabel(meses) {
         if (!meses) return 'Todos os meses';
         var nums = meses.split(',').map(Number).filter(function(n){ return n >= 1 && n <= 12; });

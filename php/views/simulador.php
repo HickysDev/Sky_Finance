@@ -740,10 +740,10 @@ function carregaCategoriasSim() {
                        '<li><hr class="dropdown-divider m-0"></li>';
             $.each(data || [], function (_, cat) {
                 var cor   = cat.cor   || '#6B7280';
-                var icone = cat.icone ? '<span class="me-1">' + cat.icone + '</span>' : '';
+                var icone = cat.icone ? '<span class="me-1">' + escHtml(cat.icone) + '</span>' : '';
                 html += '<li><a class="dropdown-item d-flex align-items-center gap-2" href="#" data-id="' + cat.id + '">' +
                         '<span class="cat-dot" style="background:' + cor + ';flex-shrink:0;"></span>' +
-                        icone + '<span style="color:' + cor + ';">' + cat.nome + '</span></a></li>';
+                        icone + '<span style="color:' + cor + ';">' + escHtml(cat.nome) + '</span></a></li>';
             });
             $('#simCatSelMenu').html(html);
         }
@@ -759,10 +759,10 @@ $(document).on('click', '#simCatSelMenu a', function (e) {
         $('#simCatSelBtn .sim-cat-preview').html('<span class="text-muted">Selecione</span>');
         return;
     }
-    var cor   = $(this).find('.cat-dot').css('background-color');
+    var cor   = $(this).find('.cat-dot').css('background-color') || '#6B7280';
     var texto = $(this).text().trim();
     $('#simCatSelBtn .sim-cat-preview').html(
-        '<span class="cat-dot" style="background:' + ($(this).find('.cat-dot').attr('style').match(/background:([^;]+)/)?.[1] || '#6B7280') + ';flex-shrink:0;"></span>' +
+        '<span class="cat-dot" style="background:' + cor + ';flex-shrink:0;"></span>' +
         '<span style="margin-left:4px;">' + texto + '</span>'
     );
     var el = document.getElementById('simCatSelBtn');

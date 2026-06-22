@@ -42,11 +42,17 @@ switch ($acao) {
             break;
         }
 
-        $tipos = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        // Mapa MIME → extensão; a extensão é derivada do conteúdo real, nunca do nome do cliente
+        $tipos = [
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/webp' => 'webp',
+            'image/gif'  => 'gif',
+        ];
         $mime  = mime_content_type($upload['tmp_name']);
-        if (!in_array($mime, $tipos)) {
+        if (!isset($tipos[$mime])) {
             http_response_code(400);
-            echo json_encode(['erro' => 'Formato inválido. Use JPG, PNG ou WEBP.']);
+            echo json_encode(['erro' => 'Formato inválido. Use JPG, PNG, WEBP ou GIF.']);
             break;
         }
         if ($upload['size'] > 3 * 1024 * 1024) {
@@ -55,7 +61,7 @@ switch ($acao) {
             break;
         }
 
-        $ext     = pathinfo($upload['name'], PATHINFO_EXTENSION) ?: 'jpg';
+        $ext     = $tipos[$mime];
         $dir     = __DIR__ . '/../../src/img/avatars/';
         if (!is_dir($dir)) mkdir($dir, 0755, true);
 

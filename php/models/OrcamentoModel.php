@@ -91,14 +91,15 @@ class OrcamentoModel {
                 SELECT gr.categoria_id, grl.valor AS valor_mes
                 FROM gastos_recorrentes_lancamentos grl
                 INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
-                WHERE gr.ativo = 'S'
+                WHERE gr.ativo = 'S' AND gr.usuario_id = 1
+                  AND (gr.mes_inicio IS NULL OR gr.mes_inicio <= grl.mes_referencia)
                   AND MONTH(grl.mes_referencia) = :m4 AND YEAR(grl.mes_referencia) = :a4
             ) g_mes ON g_mes.categoria_id = c.id
             WHERE o.usuario_id = 1
               AND (o.meses IS NULL OR FIND_IN_SET(:mes_check, o.meses) > 0)
               AND (o.anos  IS NULL OR FIND_IN_SET(:ano_check, o.anos)  > 0)
             GROUP BY c.id, c.nome, c.cor, c.icone, o.id, o.valor_limite, o.meses, o.anos
-            ORDER BY (COALESCE(SUM(g_mes.valor_mes), 0) / o.valor_limite) DESC
+            ORDER BY (COALESCE(SUM(g_mes.valor_mes), 0) / NULLIF(o.valor_limite, 0)) DESC
         ");
 
         $stmt->execute([

@@ -58,7 +58,8 @@ class ContasPessoaModel {
     public static function resumo(int $mes, int $ano): array {
         $conn = Database::getConnection();
 
-        // Busca responsáveis + totais de contas_pessoa (eu devo)
+        // Busca responsáveis + totais de contas_pessoa (eu devo) do mês selecionado.
+        // Filtro de data no ON do LEFT JOIN para não perder responsáveis sem conta no mês.
         $stmt = $conn->prepare("
             SELECT
                 r.id,
@@ -68,20 +69,43 @@ class ContasPessoaModel {
                 COALESCE(SUM(CASE WHEN cp.pago = 1 THEN cp.valor ELSE 0 END), 0) AS eu_paguei,
                 COUNT(CASE WHEN cp.pago = 0 THEN 1 END)                           AS qtd_aberto
             FROM responsaveis r
-            LEFT JOIN contas_pessoa cp ON cp.responsavel_id = r.id AND cp.usuario_id = 1
+            LEFT JOIN contas_pessoa cp
+                ON cp.responsavel_id = r.id AND cp.usuario_id = 1
+                AND MONTH(cp.data) = :mes AND YEAR(cp.data) = :ano
             WHERE r.usuario_id = 1
             GROUP BY r.id, r.nome, r.cor
             ORDER BY eu_devo DESC, r.nome
         ");
-        $stmt->execute();
+        $stmt->execute([':mes' => $mes, ':ano' => $ano]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Busca totais "ela me deve" separadamente para cada responsável
+        // Busca totais "ela me deve" separadamente para cada responsável.
+        // Crédito usa data de vencimento (igual ao restante do sistema); demais usam data_gasto.
         $stmtGastos = $conn->prepare("
-            SELECT COALESCE(SUM(g.valor), 0) AS total
-            FROM gastos g
-            WHERE g.responsavel_id = :rid AND g.usuario_id = 1
-              AND MONTH(g.data_gasto) = :mes AND YEAR(g.data_gasto) = :ano
+            SELECT COALESCE(SUM(v), 0) AS total FROM (
+                SELECT g.valor AS v
+                FROM gastos g
+                WHERE g.responsavel_id = :rid1 AND g.usuario_id = 1
+                  AND g.metodo_pagamento != 'Crédito'
+                  AND MONTH(g.data_gasto) = :mes1 AND YEAR(g.data_gasto) = :ano1
+
+                UNION ALL
+
+                SELECT g.valor AS v
+                FROM gastos g
+                WHERE g.responsavel_id = :rid2 AND g.usuario_id = 1
+                  AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'N'
+                  AND MONTH(g.dataVencimento) = :mes2 AND YEAR(g.dataVencimento) = :ano2
+
+                UNION ALL
+
+                SELECT p.valor_parcela AS v
+                FROM gastos g
+                INNER JOIN parcelas p ON p.gasto_id = g.id
+                WHERE g.responsavel_id = :rid3 AND g.usuario_id = 1
+                  AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'S'
+                  AND MONTH(p.data_vencimento) = :mes3 AND YEAR(p.data_vencimento) = :ano3
+            ) t
         ");
         $stmtRec = $conn->prepare("
             SELECT COALESCE(SUM(grl.valor), 0) AS total
@@ -92,7 +116,11 @@ class ContasPessoaModel {
         ");
 
         foreach ($rows as &$r) {
-            $stmtGastos->execute([':rid' => $r['id'], ':mes' => $mes, ':ano' => $ano]);
+            $stmtGastos->execute([
+                ':rid1' => $r['id'], ':mes1' => $mes, ':ano1' => $ano,
+                ':rid2' => $r['id'], ':mes2' => $mes, ':ano2' => $ano,
+                ':rid3' => $r['id'], ':mes3' => $mes, ':ano3' => $ano,
+            ]);
             $totalGastos = (float) $stmtGastos->fetchColumn();
 
             $stmtRec->execute([':rid' => $r['id'], ':mes' => $mes, ':ano' => $ano]);
@@ -110,6 +138,7 @@ class ContasPessoaModel {
     public static function despesasMeDeve(int $responsavelId, int $mes, int $ano): array {
         $conn = Database::getConnection();
 
+        // Não-crédito: filtra por data_gasto
         $stmt = $conn->prepare("
             SELECT g.id, g.descricao AS nome, g.valor, g.data_gasto AS data,
                    g.metodo_pagamento AS metodo, cc.nome_cartao,
@@ -118,10 +147,42 @@ class ContasPessoaModel {
             LEFT JOIN cartoes_credito cc  ON cc.id  = g.cartao_id
             LEFT JOIN categorias cat ON cat.id = g.categoria_id
             WHERE g.responsavel_id = :rid AND g.usuario_id = 1
+              AND g.metodo_pagamento != 'Crédito'
               AND MONTH(g.data_gasto) = :mes AND YEAR(g.data_gasto) = :ano
         ");
         $stmt->execute([':rid' => $responsavelId, ':mes' => $mes, ':ano' => $ano]);
         $avulsas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Crédito não parcelado: filtra por dataVencimento
+        $stmtCred = $conn->prepare("
+            SELECT g.id, g.descricao AS nome, g.valor, g.dataVencimento AS data,
+                   g.metodo_pagamento AS metodo, cc.nome_cartao,
+                   cat.nome AS categoria, cat.cor AS cat_cor, 'avulso' AS origem
+            FROM gastos g
+            LEFT JOIN cartoes_credito cc  ON cc.id  = g.cartao_id
+            LEFT JOIN categorias cat ON cat.id = g.categoria_id
+            WHERE g.responsavel_id = :rid AND g.usuario_id = 1
+              AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'N'
+              AND MONTH(g.dataVencimento) = :mes AND YEAR(g.dataVencimento) = :ano
+        ");
+        $stmtCred->execute([':rid' => $responsavelId, ':mes' => $mes, ':ano' => $ano]);
+        $avulsas = array_merge($avulsas, $stmtCred->fetchAll(PDO::FETCH_ASSOC));
+
+        // Crédito parcelado: filtra por data_vencimento da parcela
+        $stmtParc = $conn->prepare("
+            SELECT g.id, g.descricao AS nome, p.valor_parcela AS valor, p.data_vencimento AS data,
+                   g.metodo_pagamento AS metodo, cc.nome_cartao,
+                   cat.nome AS categoria, cat.cor AS cat_cor, 'avulso' AS origem
+            FROM gastos g
+            INNER JOIN parcelas p ON p.gasto_id = g.id
+            LEFT JOIN cartoes_credito cc  ON cc.id  = g.cartao_id
+            LEFT JOIN categorias cat ON cat.id = g.categoria_id
+            WHERE g.responsavel_id = :rid AND g.usuario_id = 1
+              AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'S'
+              AND MONTH(p.data_vencimento) = :mes AND YEAR(p.data_vencimento) = :ano
+        ");
+        $stmtParc->execute([':rid' => $responsavelId, ':mes' => $mes, ':ano' => $ano]);
+        $avulsas = array_merge($avulsas, $stmtParc->fetchAll(PDO::FETCH_ASSOC));
 
         $stmt2 = $conn->prepare("
             SELECT grl.id, gr.nome, grl.valor, grl.mes_referencia AS data,
