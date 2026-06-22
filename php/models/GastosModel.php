@@ -150,39 +150,52 @@ class GastosModel {
             }
         }
 
-        if ($tipo === 'credito' && $parcelado !== "N" && $num_parcelas > 0) {
+        if ($tipo === 'credito' && $parcelado !== "N" && (int) $num_parcelas > 0 && $cartao) {
             $buscaCartao = $conn->prepare("SELECT fechamento_dia, vencimento_dia FROM cartoes_credito WHERE id = ?");
             $buscaCartao->execute([(int) $cartao]);
             $cartaoDados = $buscaCartao->fetch();
 
-            $fechamentoDia = (int) $cartaoDados['fechamento_dia'];
-            $vencimentoDia = str_pad((int) $cartaoDados['vencimento_dia'], 2, '0', STR_PAD_LEFT);
-            $diaCompra = (int) date('d', strtotime($data));
-            $anoMes    = date('Y-m', strtotime($data));
+            if ($cartaoDados) {
+                $num_parcelas  = (int) $num_parcelas;
+                $fechamentoDia = (int) $cartaoDados['fechamento_dia'];
+                $vencimentoDia = (int) $cartaoDados['vencimento_dia'];
+                $diaCompra = (int) date('d', strtotime($data));
+                $anoMes    = date('Y-m', strtotime($data));
 
-            if ($diaCompra >= $fechamentoDia) {
-                $mesVenc = date('Y-m', strtotime('+1 month', strtotime($anoMes . '-01')));
-            } else {
-                $mesVenc = $anoMes;
-            }
-            $dataVenc = "{$mesVenc}-{$vencimentoDia}";
+                if ($diaCompra >= $fechamentoDia) {
+                    $mesVenc = date('Y-m', strtotime('+1 month', strtotime($anoMes . '-01')));
+                } else {
+                    $mesVenc = $anoMes;
+                }
 
-            $valor_parcela = $valor / $num_parcelas;
+                // Valor da parcela arredondado; a última absorve o resíduo
+                $valor_parcela = round($valor / $num_parcelas, 2);
+                $baseVenc      = strtotime($mesVenc . '-01');
 
-            $adicionarParcelado = $conn->prepare("
-                INSERT INTO parcelas (gasto_id, numero_parcela, valor_parcela, data_vencimento, parcelas_total)
-                VALUES (:gastoId, :parcela, :valor_parcela, :data_vencimento, :num_parcelas)
-            ");
+                $adicionarParcelado = $conn->prepare("
+                    INSERT INTO parcelas (gasto_id, numero_parcela, valor_parcela, data_vencimento, parcelas_total)
+                    VALUES (:gastoId, :parcela, :valor_parcela, :data_vencimento, :num_parcelas)
+                ");
 
-            for ($parcela = 1; $parcela <= $num_parcelas; $parcela++) {
-                $queryAdicionar = $adicionarParcelado->execute([
-                    ':gastoId'         => $gastoId,
-                    ':parcela'         => $parcela,
-                    ':valor_parcela'   => $valor_parcela,
-                    ':data_vencimento' => $dataVenc,
-                    ':num_parcelas'    => $num_parcelas,
-                ]);
-                $dataVenc = date('Y-m-d', strtotime('+1 month', strtotime($dataVenc)));
+                for ($i = 0; $i < $num_parcelas; $i++) {
+                    // Mês de vencimento = mês base + i; dia limitado ao último dia do mês
+                    $mesAtual  = strtotime("+{$i} month", $baseVenc);
+                    $ultimoDia = (int) date('t', $mesAtual);
+                    $dia       = min($vencimentoDia, $ultimoDia);
+                    $dataVenc  = date('Y-m', $mesAtual) . '-' . str_pad($dia, 2, '0', STR_PAD_LEFT);
+
+                    $valorEstaParcela = ($i === $num_parcelas - 1)
+                        ? round($valor - $valor_parcela * ($num_parcelas - 1), 2)
+                        : $valor_parcela;
+
+                    $queryAdicionar = $adicionarParcelado->execute([
+                        ':gastoId'         => $gastoId,
+                        ':parcela'         => $i + 1,
+                        ':valor_parcela'   => $valorEstaParcela,
+                        ':data_vencimento' => $dataVenc,
+                        ':num_parcelas'    => $num_parcelas,
+                    ]);
+                }
             }
         }
 
@@ -283,7 +296,7 @@ class GastosModel {
                 gr.nome AS descricao,
                 gr.valor,
                 cat.nome AS categoria,
-                NULL AS categoria_id,
+                gr.categoria_id,
                 NULL AS numero_parcela,
                 NULL AS parcelas_total,
                 NULL AS valor_parcela,
@@ -295,8 +308,10 @@ class GastosModel {
             FROM gastos_recorrentes gr
             INNER JOIN gastos_recorrentes_lancamentos grl ON grl.gasto_recorrente_id = gr.id
             INNER JOIN categorias cat ON cat.id = gr.categoria_id
-            LEFT JOIN cartoes_credito cc ON cc.id = gr.cartao_id
+            INNER JOIN cartoes_credito cc ON cc.id = gr.cartao_id
             WHERE gr.ativo = 'S'
+            AND gr.cartao_id IS NOT NULL
+            AND (gr.mes_inicio IS NULL OR gr.mes_inicio <= grl.mes_referencia)
             AND MONTH(grl.mes_referencia) = :mes
             AND YEAR(grl.mes_referencia) = :ano
             {$condicaoRecorrentes})
@@ -381,7 +396,7 @@ class GastosModel {
                 FROM gastos_recorrentes gr
                 INNER JOIN categorias c ON c.id = gr.categoria_id
                 LEFT JOIN cartoes_credito cc ON cc.id = gr.cartao_id
-                WHERE gr.id IN (SELECT MAX(id) FROM gastos_recorrentes GROUP BY id)";
+                WHERE gr.usuario_id = 1";
 
         if ($cartaoId) {
             $sql .= " AND gr.cartao_id = ?";
@@ -463,29 +478,36 @@ class GastosModel {
         $s->execute([$mes, $ano]);
         $totalDebito = (float) $s->fetchColumn();
 
-        // Total fatura crédito do mês
+        // Total fatura crédito do mês (gastos normais + recorrentes vinculados a cartão)
         $s = $conn->prepare("
-            SELECT COALESCE(SUM(
-                CASE WHEN g.parcelado = 'S' THEN p.valor_parcela ELSE g.valor END
-            ), 0)
-            FROM gastos g
-            LEFT JOIN parcelas p ON p.gasto_id = g.id
-            WHERE g.metodo_pagamento = 'Crédito' AND g.usuario_id = 1
-              AND (
-                (g.parcelado = 'S' AND MONTH(p.data_vencimento) = ? AND YEAR(p.data_vencimento) = ?)
-                OR
-                (g.parcelado = 'N' AND MONTH(g.dataVencimento)  = ? AND YEAR(g.dataVencimento)  = ?)
-              )
+            SELECT COALESCE(SUM(v), 0) FROM (
+                SELECT CASE WHEN g.parcelado = 'S' THEN p.valor_parcela ELSE g.valor END AS v
+                FROM gastos g
+                LEFT JOIN parcelas p ON p.gasto_id = g.id
+                WHERE g.metodo_pagamento = 'Crédito' AND g.usuario_id = 1
+                  AND (
+                    (g.parcelado = 'S' AND MONTH(p.data_vencimento) = ? AND YEAR(p.data_vencimento) = ?)
+                    OR
+                    (g.parcelado = 'N' AND MONTH(g.dataVencimento) = ? AND YEAR(g.dataVencimento) = ?)
+                  )
+                UNION ALL
+                SELECT grl.valor AS v
+                FROM gastos_recorrentes_lancamentos grl
+                INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
+                WHERE gr.ativo = 'S' AND gr.cartao_id IS NOT NULL
+                  AND (gr.mes_inicio IS NULL OR gr.mes_inicio <= grl.mes_referencia)
+                  AND MONTH(grl.mes_referencia) = ? AND YEAR(grl.mes_referencia) = ?
+            ) t
         ");
-        $s->execute([$mes, $ano, $mes, $ano]);
+        $s->execute([$mes, $ano, $mes, $ano, $mes, $ano]);
         $totalCredito = (float) $s->fetchColumn();
 
-        // Total recorrentes ativos no mês
+        // Total recorrentes sem cartão (recorrentes de cartão já entram no totalCredito)
         $s = $conn->prepare("
             SELECT COALESCE(SUM(grl.valor), 0)
             FROM gastos_recorrentes_lancamentos grl
             INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
-            WHERE gr.ativo = 'S'
+            WHERE gr.ativo = 'S' AND gr.cartao_id IS NULL
               AND (gr.mes_inicio IS NULL OR gr.mes_inicio <= grl.mes_referencia)
               AND MONTH(grl.mes_referencia) = ? AND YEAR(grl.mes_referencia) = ?
         ");
@@ -706,18 +728,31 @@ class GastosModel {
         $s = $conn->prepare("
             SELECT MONTH(p.data_vencimento) AS mes, COALESCE(SUM(p.valor_parcela),0) AS total
             FROM parcelas p JOIN gastos g ON g.id = p.gasto_id
-            WHERE g.usuario_id = 1 AND p.ativo = 'S' AND YEAR(p.data_vencimento) = ?
+            WHERE g.usuario_id = 1 AND YEAR(p.data_vencimento) = ?
             GROUP BY MONTH(p.data_vencimento)
         ");
         $s->execute([$ano]);
         foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) { $meses[(int)$r['mes']]['credito'] += (float)$r['total']; }
 
-        // Recorrentes por mês
+        // Recorrentes com cartão → entram em crédito
         $s = $conn->prepare("
             SELECT MONTH(grl.mes_referencia) AS mes, COALESCE(SUM(grl.valor),0) AS total
             FROM gastos_recorrentes_lancamentos grl
             INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
-            WHERE gr.ativo = 'S'
+            WHERE gr.ativo = 'S' AND gr.cartao_id IS NOT NULL
+              AND (gr.mes_inicio IS NULL OR gr.mes_inicio <= grl.mes_referencia)
+              AND YEAR(grl.mes_referencia) = ?
+            GROUP BY MONTH(grl.mes_referencia)
+        ");
+        $s->execute([$ano]);
+        foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) { $meses[(int)$r['mes']]['credito'] += (float)$r['total']; }
+
+        // Recorrentes sem cartão → entram em recorrente
+        $s = $conn->prepare("
+            SELECT MONTH(grl.mes_referencia) AS mes, COALESCE(SUM(grl.valor),0) AS total
+            FROM gastos_recorrentes_lancamentos grl
+            INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
+            WHERE gr.ativo = 'S' AND gr.cartao_id IS NULL
               AND (gr.mes_inicio IS NULL OR gr.mes_inicio <= grl.mes_referencia)
               AND YEAR(grl.mes_referencia) = ?
             GROUP BY MONTH(grl.mes_referencia)
@@ -777,12 +812,14 @@ class GastosModel {
                 UNION ALL
                 SELECT g.categoria_id, p.valor_parcela AS val
                 FROM parcelas p JOIN gastos g ON g.id = p.gasto_id
-                WHERE g.usuario_id = 1 AND p.ativo = 'S' AND YEAR(p.data_vencimento) = ?
+                WHERE g.usuario_id = 1 AND YEAR(p.data_vencimento) = ?
                 UNION ALL
                 SELECT gr.categoria_id, grl.valor AS val
                 FROM gastos_recorrentes_lancamentos grl
                 JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
-                WHERE gr.ativo = 'S' AND YEAR(grl.mes_referencia) = ?
+                WHERE gr.ativo = 'S'
+                  AND (gr.mes_inicio IS NULL OR gr.mes_inicio <= grl.mes_referencia)
+                  AND YEAR(grl.mes_referencia) = ?
                 UNION ALL
                 SELECT cp.categoria_id, cp.valor AS val
                 FROM contas_pessoa cp
@@ -898,7 +935,7 @@ class GastosModel {
                     VALUES (:gasto_id, :mes, :valor, :nome, :categoria, :cartao, 1)
                 ");
 
-                $lancamento->execute([
+                return $lancamento->execute([
                     ':gasto_id'  => $novoId,
                     ':mes'       => $mesReferencia,
                     ':valor'     => $valor,
@@ -906,8 +943,6 @@ class GastosModel {
                     ':categoria' => (int) $categoria,
                     ':cartao'    => $cartao ? (int) $cartao : null,
                 ]);
-
-                return $lancamento;
             }
 
             return false;

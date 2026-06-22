@@ -127,7 +127,7 @@ $mesAtual = date('n');
             var d = _pendingRepetirDeb;
             _pendingRepetirDeb = null;
             $('#descricao').val(d.descricao);
-            valorCleaveDeb.setRawValue(parseFloat(d.valor));
+            valorCleaveDeb.setRawValue(parseFloat(String(d.valor).replace(/\./g, '').replace(',', '.')));
             var hoje = new Date();
             var pad = function(n){ return String(n).padStart(2,'0'); };
             $('#data').val(hoje.getFullYear() + '-' + pad(hoje.getMonth()+1) + '-' + pad(hoje.getDate()));
@@ -327,7 +327,7 @@ $mesAtual = date('n');
             $('#data').val($btn.data('data').substring(0, 10));
 
             // Valor formatado
-            var valorNum = parseFloat(String($btn.data('valor')).replace('.', '').replace(',', '.'));
+            var valorNum = parseFloat(String($btn.data('valor')).replace(/\./g, '').replace(',', '.'));
             valorCleaveDeb.setRawValue(valorNum);
 
             // Método
@@ -460,8 +460,9 @@ $mesAtual = date('n');
                                 badge = '<span class="badge bg-secondary">Dinheiro</span>';
                         }
 
+                        var descEsc = escHtml(gasto.descricao);
                         tbody.append(`<tr class="linha-clicavel" data-valor="${gasto.valor}">
-                            <td><span class="linha-check"><i class="bi bi-check-circle-fill"></i></span>${gasto.descricao}</td>
+                            <td><span class="linha-check"><i class="bi bi-check-circle-fill"></i></span>${descEsc}</td>
                             <td>R$ ${gasto.valor}</td>
                             <td>${catBadgeHtml(gasto.nome)}</td>
                             <td>${badge}</td>
@@ -470,7 +471,7 @@ $mesAtual = date('n');
                                 <div class="d-flex align-items-center gap-1 justify-content-end">
                                     <button class="btn btn-sm btn-outline-secondary btn-editar-gasto py-0 px-1"
                                         data-id="${gasto.id}"
-                                        data-descricao="${gasto.descricao}"
+                                        data-descricao="${descEsc}"
                                         data-valor="${gasto.valor}"
                                         data-categoria="${gasto.categoria_id}"
                                         data-metodo="${gasto.metodo_pagamento}"
@@ -480,7 +481,7 @@ $mesAtual = date('n');
                                         <i class="bi bi-pencil-fill" style="font-size:.75rem;"></i>
                                     </button>
                                     <button class="btn btn-sm btn-outline-secondary btn-repetir-gasto-deb py-0 px-1"
-                                        data-descricao="${gasto.descricao}"
+                                        data-descricao="${descEsc}"
                                         data-valor="${gasto.valor}"
                                         data-categoria="${gasto.categoria_id}"
                                         data-metodo="${gasto.metodo_pagamento}"
@@ -551,10 +552,10 @@ $mesAtual = date('n');
             $('#categoria').val(id);
             if (cat) {
                 var cor   = cat.cor || '#6B7280';
-                var icone = cat.icone ? '<span class="me-1">' + cat.icone + '</span>' : '';
+                var icone = cat.icone ? '<span class="me-1">' + escHtml(cat.icone) + '</span>' : '';
                 $('#catSelBtn .cat-sel-preview').html(
                     '<span class="cat-dot" style="background:' + cor + ';flex-shrink:0;"></span>' +
-                    icone + '<span class="ms-1" style="color:' + cor + ';">' + cat.nome + '</span>'
+                    icone + '<span class="ms-1" style="color:' + cor + ';">' + escHtml(cat.nome) + '</span>'
                 );
             } else {
                 $('#catSelBtn .cat-sel-preview').html('<span class="text-muted">Selecione</span>');

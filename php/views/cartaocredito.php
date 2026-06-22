@@ -186,7 +186,7 @@ $mesAtual = date('n');
             var d = _pendingRepetirCC;
             _pendingRepetirCC = null;
             $('#descricao').val(d.descricao);
-            valorCleaveCC.setRawValue(parseFloat(d.valor));
+            valorCleaveCC.setRawValue(parseFloat(String(d.valor).replace(/\./g, '').replace(',', '.')));
             var hoje = new Date();
             var pad = function(n){ return String(n).padStart(2,'0'); };
             $('#data').val(hoje.getFullYear() + '-' + pad(hoje.getMonth()+1) + '-' + pad(hoje.getDate()));
@@ -477,7 +477,7 @@ $mesAtual = date('n');
                         let cor = cartao.cor || '#3B82F6';
                         html += `<div class="cartao-mini" data-id="${cartao.id}" data-vencimento="${cartao.vencimento_dia}" style="--cartao-cor:${cor};">
                             <i class="bi bi-credit-card-fill" style="color:${cor};font-size:1.6rem;"></i>
-                            <span>${cartao.nome_cartao}</span>
+                            <span>${escHtml(cartao.nome_cartao)}</span>
                         </div>`;
                     });
 
@@ -531,7 +531,7 @@ $mesAtual = date('n');
                         <div class="painel mb-4" style="border-left:4px solid ${cor};">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h2 class="titulo m-0 fs-fatura-nome" style="color:${cor};">
-                                    <i class="bi bi-credit-card-fill me-2"></i>${nomeCartao}
+                                    <i class="bi bi-credit-card-fill me-2"></i>${escHtml(nomeCartao)}
                                 </h2>
                                 <span class="titulo fs-fatura-val" style="color:${cor};">R$ ${totalCartao}</span>
                             </div>
@@ -552,6 +552,7 @@ $mesAtual = date('n');
                         $.each(valoresCartao, function (i, gasto) {
                             if (i === 'valortotal') return;
 
+                            var descEsc = escHtml(gasto.descricao);
                             let dataExib, infoParcela;
                             if (gasto.tipo === 'NORMAL') {
                                 dataExib    = moment(gasto.data_gasto).format('DD/MM/YYYY');
@@ -566,14 +567,14 @@ $mesAtual = date('n');
                                 if (gasto.parcelado === 'N') {
                                     btnEditar = `<button class="btn btn-sm btn-outline-secondary btn-editar-gasto-cc py-0 px-1 me-1"
                                         data-id="${gasto.id}"
-                                        data-descricao="${gasto.descricao}"
+                                        data-descricao="${descEsc}"
                                         data-valor="${gasto.valor_parcela}"
                                         data-categoria="${gasto.categoria_id || ''}"
                                         data-cartao="${gasto.cartao_id || ''}"
                                         data-data="${gasto.data_gasto || ''}"
                                         title="Editar"><i class="bi bi-pencil-fill" style="font-size:.75rem;"></i></button>
                                     <button class="btn btn-sm btn-outline-secondary btn-repetir-gasto-cc py-0 px-1 me-1"
-                                        data-descricao="${gasto.descricao}"
+                                        data-descricao="${descEsc}"
                                         data-valor="${gasto.valor_parcela}"
                                         data-categoria="${gasto.categoria_id || ''}"
                                         data-cartao="${gasto.cartao_id || ''}"
@@ -581,19 +582,19 @@ $mesAtual = date('n');
                                 } else {
                                     btnEditar = `<button class="btn btn-sm btn-outline-secondary btn-editar-simples py-0 px-1 me-1"
                                         data-id="${gasto.id}" data-tipo="gasto"
-                                        data-descricao="${gasto.descricao}"
+                                        data-descricao="${descEsc}"
                                         data-categoria="${gasto.categoria_id || ''}"
                                         title="Editar descrição/categoria"><i class="bi bi-pencil-fill" style="font-size:.75rem;"></i></button>`;
                                 }
                             } else if (gasto.tipo === 'RECORRENTE') {
                                 btnEditar = `<button class="btn btn-sm btn-outline-secondary btn-editar-simples py-0 px-1 me-1"
                                     data-id="${gasto.id}" data-tipo="recorrente"
-                                    data-descricao="${gasto.descricao}"
+                                    data-descricao="${descEsc}"
                                     data-categoria="${gasto.categoria_id || ''}"
                                     title="Editar nome/categoria"><i class="bi bi-pencil-fill" style="font-size:.75rem;"></i></button>`;
                             }
                             html += `<tr class="linha-clicavel" data-valor="${gasto.valor_parcela}">
-                                <td><span class="linha-check"><i class="bi bi-check-circle-fill"></i></span>${gasto.descricao}</td>
+                                <td><span class="linha-check"><i class="bi bi-check-circle-fill"></i></span>${descEsc}</td>
                                 <td>${catBadgeHtml(gasto.categoria)}</td>
                                 <td>${infoParcela}</td>
                                 <td>R$ ${gasto.valor_parcela}</td>
@@ -618,6 +619,10 @@ $mesAtual = date('n');
                     $('#totalGeral').text('R$ ' + formatarNumeroBrasileiro(totalGeral));
                     atualizaStatusFatura();
                     renderFaturaChart(data);
+
+                    $('[id^="faturaTabela_"]').each(function () {
+                        if ($.fn.DataTable.isDataTable(this)) $(this).DataTable().destroy();
+                    });
 
                     $.each(data, function (idCartao) {
                         $('#faturaTabela_' + idCartao).DataTable({
@@ -648,7 +653,7 @@ $mesAtual = date('n');
                     var catObj = window.categoriaMap ? window.categoriaMap[catId] : null;
                     var nome   = catObj ? catObj.nome : (gasto.categoria || 'Outros');
                     var cor    = catObj ? (catObj.cor || '#6B7280') : '#6B7280';
-                    var val    = parseFloat(gasto.valor_parcela || 0);
+                    var val    = parseFloat(String(gasto.valor_parcela || '0').replace(/\./g, '').replace(',', '.')) || 0;
                     if (!catTotais[nome]) catTotais[nome] = { total: 0, cor: cor };
                     catTotais[nome].total += val;
                 });
@@ -775,21 +780,16 @@ $mesAtual = date('n');
             return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
-        tippy('#removerSelecionados', {
-            content: 'Selecione despesas nas tabelas e clique para remover',
-            theme: 'dark', placement: 'top', arrow: true, duration: 300
-        });
-
         // ─── MODAL SIMPLES (parcelados) ───────────────────────────────────────
         function popularEsCatMenu() {
             if (!window.categoriaMap) return;
             var html = '<li><a class="dropdown-item text-muted py-2" href="#" data-id="">Selecione</a></li>';
             $.each(window.categoriaMap, function (id, cat) {
                 var cor   = cat.cor || '#6B7280';
-                var icone = cat.icone ? '<span class="me-1">' + cat.icone + '</span>' : '';
+                var icone = cat.icone ? '<span class="me-1">' + escHtml(cat.icone) + '</span>' : '';
                 html += '<li><a class="dropdown-item es-cat-item py-2" href="#" data-id="' + id + '">' +
                     '<span class="cat-dot me-2" style="background:' + cor + ';flex-shrink:0;"></span>' +
-                    icone + '<span style="color:' + cor + ';">' + cat.nome + '</span></a></li>';
+                    icone + '<span style="color:' + cor + ';">' + escHtml(cat.nome) + '</span></a></li>';
             });
             $('#esCatSelMenu').html(html);
         }
@@ -800,10 +800,10 @@ $mesAtual = date('n');
             $('#esCategoria').val(id);
             if (cat) {
                 var cor   = cat.cor || '#6B7280';
-                var icone = cat.icone ? '<span class="me-1">' + cat.icone + '</span>' : '';
+                var icone = cat.icone ? '<span class="me-1">' + escHtml(cat.icone) + '</span>' : '';
                 $('#esCatSelBtn .es-cat-preview').html(
                     '<span class="cat-dot" style="background:' + cor + ';flex-shrink:0;"></span>' +
-                    icone + '<span class="ms-1" style="color:' + cor + ';">' + cat.nome + '</span>'
+                    icone + '<span class="ms-1" style="color:' + cor + ';">' + escHtml(cat.nome) + '</span>'
                 );
             } else {
                 $('#esCatSelBtn .es-cat-preview').html('<span class="text-muted">Selecione</span>');
@@ -867,10 +867,10 @@ $mesAtual = date('n');
             $('#categoria').val(id);
             if (cat) {
                 var cor   = cat.cor || '#6B7280';
-                var icone = cat.icone ? '<span class="me-1">' + cat.icone + '</span>' : '';
+                var icone = cat.icone ? '<span class="me-1">' + escHtml(cat.icone) + '</span>' : '';
                 $('#catSelBtn .cat-sel-preview').html(
                     '<span class="cat-dot" style="background:' + cor + ';flex-shrink:0;"></span>' +
-                    icone + '<span class="ms-1" style="color:' + cor + ';">' + cat.nome + '</span>'
+                    icone + '<span class="ms-1" style="color:' + cor + ';">' + escHtml(cat.nome) + '</span>'
                 );
             } else {
                 $('#catSelBtn .cat-sel-preview').html('<span class="text-muted">Selecione</span>');
@@ -898,7 +898,7 @@ $mesAtual = date('n');
             var dataVal = $btn.data('data');
             $('#data').val(dataVal ? String(dataVal).substring(0, 10) : '');
 
-            var valorNum = parseFloat(String($btn.data('valor')).replace('.', '').replace(',', '.'));
+            var valorNum = parseFloat(String($btn.data('valor')).replace(/\./g, '').replace(',', '.'));
             valorCleaveCC.setRawValue(valorNum);
 
             $('#metodoWrapper').hide();

@@ -359,9 +359,9 @@ function carregaContas() {
                 html +=
                 '<div class="pessoa-card" id="card-' + p.id + '" data-id="' + p.id + '" style="--pessoa-cor:' + cor + ';">' +
                     '<div class="pessoa-card-header">' +
-                        '<div class="pessoa-avatar">' + p.nome.charAt(0).toUpperCase() + '</div>' +
+                        '<div class="pessoa-avatar">' + escHtml(p.nome.charAt(0).toUpperCase()) + '</div>' +
                         '<div class="flex-grow-1 min-w-0">' +
-                            '<div class="pessoa-nome">' + p.nome + '</div>' +
+                            '<div class="pessoa-nome">' + escHtml(p.nome) + '</div>' +
                             '<div class="pessoa-meta">Clique para ver detalhes</div>' +
                         '</div>' +
                         '<div class="pessoa-balances">' +
@@ -457,7 +457,7 @@ function renderEuDevo(respId, data) {
             rows +=
             '<div class="item-row' + (p ? ' pago' : '') + '" data-id="' + item.id + '">' +
                 '<div class="item-check" title="' + (p ? 'Reabrir' : 'Marcar pago') + '"><i class="bi bi-check-lg"></i></div>' +
-                '<div class="item-desc">' + item.descricao + (catHtml ? '<br><span class="mt-1 d-inline-block">' + catHtml + '</span>' : '') + '</div>' +
+                '<div class="item-desc">' + escHtml(item.descricao) + (catHtml ? '<br><span class="mt-1 d-inline-block">' + catHtml + '</span>' : '') + '</div>' +
                 '<div class="item-data">' + dataFmt + '</div>' +
                 '<div class="item-val">R$ ' + item.valor.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>' +
                 '<button class="item-del" data-id="' + item.id + '"><i class="bi bi-trash3"></i></button>' +
@@ -507,7 +507,7 @@ function renderMeDeve(respId, data) {
             var recBadge  = d.origem === 'recorrente' ? '<span class="medeve-origem ms-1">Recorrente</span>' : '';
             rows +=
             '<div class="medeve-row">' +
-                '<div class="medeve-desc">' + (d.nome || '—') + recBadge + '</div>' +
+                '<div class="medeve-desc">' + escHtml(d.nome || '—') + recBadge + '</div>' +
                 '<div class="medeve-cat">' + catHtml + '</div>' +
                 '<div class="medeve-data">' + dataFmt + '</div>' +
                 '<div class="medeve-val">R$ ' + d.valor.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>' +
@@ -586,7 +586,7 @@ $(document).on('click', '.btnNovoItem', function (e) {
     $sel.html('<option value="">— Sem categoria —</option>');
     Object.keys(window.categoriaMap || {}).forEach(function (k) {
         var c = window.categoriaMap[k];
-        $sel.append('<option value="' + k + '">' + (c.icone ? c.icone + ' ' : '') + c.nome + '</option>');
+        $sel.append('<option value="' + k + '">' + (c.icone ? c.icone + ' ' : '') + escHtml(c.nome) + '</option>');
     });
 
     // Método

@@ -567,7 +567,7 @@ function buscaCartoes() {
                                 </button>
                             </div>
                         </div>
-                        <div class="crt-card-nome">${c.nome_cartao}</div>
+                        <div class="crt-card-nome">${escHtml(c.nome_cartao)}</div>
                         <div class="crt-card-limite">R$ ${limite}</div>
                         <div class="crt-card-footer">
                             <div class="crt-card-info">
@@ -596,7 +596,7 @@ function renderCartoesMiniModal() {
             var cor = cartao.cor || '#3B82F6';
             var sel = selected && String(cartao.id) === selected ? ' selecionado' : '';
             html += '<div class="cartao-mini-modal' + sel + '" data-id="' + cartao.id + '" style="--cartao-cor:' + cor + ';">' +
-                    '<i class="bi bi-credit-card-fill" style="color:' + cor + ';"></i> ' + cartao.nome_cartao + '</div>';
+                    '<i class="bi bi-credit-card-fill" style="color:' + cor + ';"></i> ' + escHtml(cartao.nome_cartao) + '</div>';
         });
     }
     $('#cartaoSelectorModal').html(html);
@@ -707,15 +707,15 @@ function buscaCategorias() {
             $.each(data, function (_, cat) {
                 const cor      = cat.cor   || '#6B7280';
                 const icone    = cat.icone || '';
-                const iconeHtml = icone ? `<span class="me-1" style="font-size:1.1rem;">${icone}</span>` : '';
-                const nomeEsc  = cat.nome.replace(/"/g, '&quot;');
-                const iconeEsc = icone.replace(/"/g, '&quot;');
+                const iconeHtml = icone ? `<span class="me-1" style="font-size:1.1rem;">${escHtml(icone)}</span>` : '';
+                const nomeEsc  = escHtml(cat.nome);
+                const iconeEsc = escHtml(icone);
                 html += `
                 <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
                     <div class="cat-item-card" style="border-left:4px solid ${cor};">
                         <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
                             <div class="cat-item-icon" style="background:${cor}22;color:${cor};">${iconeHtml || `<span class="cat-dot" style="background:${cor};width:12px;height:12px;"></span>`}</div>
-                            <span class="cat-item-nome" style="color:${cor};">${cat.nome}</span>
+                            <span class="cat-item-nome" style="color:${cor};">${nomeEsc}</span>
                         </div>
                         <div class="d-flex gap-1 flex-shrink-0">
                             <button class="btn btn-sm btn-outline-warning editaCategoriaBtn"
@@ -852,10 +852,10 @@ function buscaRecorrentes() {
                     : `<button data-codigo="${r.id}" class="btn ativaRecorrenteBtn btn-sm btn-outline-success px-2" title="Reativar"><i class="bi bi-check-circle-fill"></i></button>`;
 
                 html += `<tr style="${!ativo ? 'opacity:.55;' : ''}">
-                    <td style="font-weight:500;">${r.nome}</td>
+                    <td style="font-weight:500;">${escHtml(r.nome)}</td>
                     <td style="color:#22C55E;font-weight:600;">R$ ${r.valor}</td>
                     <td>${catBadgeHtml(r.categoria)}</td>
-                    <td style="color:var(--cor-texto-off);">${r.nome_cartao ?? '—'}</td>
+                    <td style="color:var(--cor-texto-off);">${escHtml(r.nome_cartao ?? '—')}</td>
                     <td>${statusBadge}</td>
                     <td class="text-center">
                         <div class="d-flex justify-content-center gap-1">
@@ -880,9 +880,9 @@ function preencheRecorrente(arr) {
     $('#categoria').val(rec.id_categoria || '');
     if (cat) {
         const cor   = cat.cor   || '#6B7280';
-        const icone = cat.icone ? `<span class="me-1">${cat.icone}</span>` : '';
+        const icone = cat.icone ? `<span class="me-1">${escHtml(cat.icone)}</span>` : '';
         $('#catSelBtn .cat-sel-preview').html(
-            `<span class="cat-dot" style="background:${cor};flex-shrink:0;"></span>${icone}<span class="ms-1" style="color:${cor};">${cat.nome}</span>`
+            `<span class="cat-dot" style="background:${cor};flex-shrink:0;"></span>${icone}<span class="ms-1" style="color:${cor};">${escHtml(cat.nome)}</span>`
         );
     }
     $('#cartao').val(rec.id_cartao || '');
@@ -1016,16 +1016,16 @@ function buscaResponsaveis() {
                     '<div class="resp-gerenciar-card" style="border-left:4px solid ' + cor + ';">' +
                         '<div class="d-flex align-items-center gap-3">' +
                             '<div class="resp-avatar" style="background:' + cor + '22;color:' + cor + ';">' +
-                                r.nome.charAt(0).toUpperCase() +
+                                escHtml(r.nome.charAt(0).toUpperCase()) +
                             '</div>' +
-                            '<span class="resp-card-nome" style="color:' + cor + ';">' + r.nome + '</span>' +
+                            '<span class="resp-card-nome" style="color:' + cor + ';">' + escHtml(r.nome) + '</span>' +
                         '</div>' +
                         '<div class="resp-card-actions">' +
                             '<button class="btn btn-sm btn-outline-warning editarResponsavel px-2" ' +
-                                'data-id="' + r.id + '" data-nome="' + r.nome.replace(/"/g,'&quot;') + '" data-cor="' + cor + '" title="Editar">' +
+                                'data-id="' + r.id + '" data-nome="' + escHtml(r.nome) + '" data-cor="' + cor + '" title="Editar">' +
                                 '<i class="bi bi-pencil-fill"></i></button>' +
                             '<button class="btn btn-sm btn-outline-danger excluirResponsavel px-2" ' +
-                                'data-id="' + r.id + '" data-nome="' + r.nome.replace(/"/g,'&quot;') + '" title="Remover">' +
+                                'data-id="' + r.id + '" data-nome="' + escHtml(r.nome) + '" title="Remover">' +
                                 '<i class="bi bi-trash-fill"></i></button>' +
                         '</div>' +
                     '</div></div>';
@@ -1162,7 +1162,7 @@ function buscaContasFixas() {
                         '<div class="cfi-left">' +
                             '<span class="cfi-dot" style="background:' + cor + ';"></span>' +
                             '<div>' +
-                                '<div class="cfi-nome">' + cf.nome + '</div>' +
+                                '<div class="cfi-nome">' + escHtml(cf.nome) + '</div>' +
                                 '<div class="cfi-detalhe"><i class="bi bi-calendar3 me-1"></i>Vence dia ' + cf.dia_vencimento + '</div>' +
                             '</div>' +
                         '</div>' +
@@ -1174,7 +1174,7 @@ function buscaContasFixas() {
                             '<div class="d-flex gap-1">' +
                                 '<button class="btn btn-sm btn-outline-warning editarContaFixa px-2" data-id="' + cf.id + '" title="Editar"><i class="bi bi-pencil-fill"></i></button>' +
                                 toggleBtn +
-                                '<button class="btn btn-sm btn-outline-danger excluirContaFixa px-2" data-id="' + cf.id + '" data-nome="' + cf.nome.replace(/"/g, '&quot;') + '" title="Remover"><i class="bi bi-trash-fill"></i></button>' +
+                                '<button class="btn btn-sm btn-outline-danger excluirContaFixa px-2" data-id="' + cf.id + '" data-nome="' + escHtml(cf.nome) + '" title="Remover"><i class="bi bi-trash-fill"></i></button>' +
                             '</div>' +
                         '</div>' +
                     '</div>';
@@ -1326,11 +1326,11 @@ function buscaUsuarios() {
             $.each(data, function (_, u) {
                 var login = u.ultimo_login ? moment(u.ultimo_login).format('DD/MM/YY HH:mm') : '—';
                 html += '<tr>' +
-                    '<td>' + u.nome + '</td>' +
-                    '<td style="color:var(--cor-texto-off);">' + u.email + '</td>' +
+                    '<td>' + escHtml(u.nome) + '</td>' +
+                    '<td style="color:var(--cor-texto-off);">' + escHtml(u.email) + '</td>' +
                     '<td style="color:var(--cor-texto-off);">' + login + '</td>' +
                     '<td class="text-end">' +
-                        '<button class="btn btn-sm btn-outline-danger py-0 px-2 btnRemoverUsuario" data-id="' + u.id + '" data-nome="' + u.nome + '">' +
+                        '<button class="btn btn-sm btn-outline-danger py-0 px-2 btnRemoverUsuario" data-id="' + u.id + '" data-nome="' + escHtml(u.nome) + '">' +
                         '<i class="bi bi-trash3"></i></button>' +
                     '</td>' +
                 '</tr>';
