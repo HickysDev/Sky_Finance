@@ -535,6 +535,25 @@ $mesAtual = date('n');
             });
         }
 
+        var _MESES_CURTOS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+        // Calcula o dia e mês de fechamento para um cartão num dado mês/ano
+        function calcFechamento(vencDia, mes, ano) {
+            vencDia = parseInt(vencDia);
+            var fech = vencDia - 7;
+            if (fech > 0) {
+                return { dia: fech, mes: mes, ano: ano };
+            }
+            var mesPrev = mes === 1 ? 12 : mes - 1;
+            var anoPrev = mes === 1 ? ano - 1 : ano;
+            var diasPrev = new Date(ano, mes - 1, 0).getDate(); // último dia do mês anterior
+            return { dia: diasPrev + fech, mes: mesPrev, ano: anoPrev };
+        }
+
+        function fmtDiaMes(dia, mes) {
+            return String(dia).padStart(2, '0') + '/' + _MESES_CURTOS[mes - 1];
+        }
+
         function buscaFatura(mes) {
             if (window.atualizaAvisoMarco) atualizaAvisoMarco(mes, getAno());
             $('#faturasDiv').html(
@@ -563,21 +582,58 @@ $mesAtual = date('n');
                     var html = '';
                     var totalGeral = 0;
 
+                    var ano = getAno();
+
                     $.each(data, function (idCartao, valoresCartao) {
                         let nomeCartao = valoresCartao[0]?.nome_cartao || 'Cartão';
-                        let cor = (window.cartoesArray && window.cartoesArray[idCartao])
-                            ? (window.cartoesArray[idCartao].cor || '#3B82F6')
-                            : '#3B82F6';
+                        let cartaoInfo = window.cartoesArray && window.cartoesArray[idCartao];
+                        let cor = cartaoInfo ? (cartaoInfo.cor || '#3B82F6') : '#3B82F6';
 
                         let totalCartao = valoresCartao.valortotal || '0,00';
                         totalGeral += parseFloat(totalCartao.replace(/\./g, '').replace(',', '.'));
 
+                        // Período da fatura: automático (calculado) ou fixo (fechamento_dia salvo)
+                        let periodoHtml = '';
+                        if (cartaoInfo && cartaoInfo.vencimento_dia) {
+                            let vencDia = parseInt(cartaoInfo.vencimento_dia);
+                            let fech;
+                            if (cartaoInfo.fechamento_auto === 'S') {
+                                fech = calcFechamento(vencDia, mes, ano);
+                            } else {
+                                // Usa o dia fixo salvo, inferindo o mês pelo sinal
+                                let fechDia = parseInt(cartaoInfo.fechamento_dia);
+                                let fechMes = fechDia < vencDia ? mes : (mes === 1 ? 12 : mes - 1);
+                                let fechAno = (fechMes > mes) ? ano - 1 : ano;
+                                fech = { dia: fechDia, mes: fechMes, ano: fechAno };
+                            }
+                            // Melhor dia para compra = fechamento + 1 (compra cai na próxima fatura)
+                            let diasNoFechMes = new Date(fech.ano, fech.mes, 0).getDate();
+                            let melhorDia = fech.dia + 1;
+                            let melhorMes = fech.mes;
+                            let melhorAno = fech.ano;
+                            if (melhorDia > diasNoFechMes) {
+                                melhorDia = 1;
+                                melhorMes = fech.mes === 12 ? 1 : fech.mes + 1;
+                                melhorAno = fech.mes === 12 ? fech.ano + 1 : fech.ano;
+                            }
+
+                            periodoHtml = `
+                                <div class="mt-1 d-flex flex-wrap gap-3" style="font-size:0.78rem;color:var(--cor-texto-off);">
+                                    <span><i class="bi bi-calendar-x me-1"></i>Fecha <strong style="color:var(--cor-texto-sec);">${fmtDiaMes(fech.dia, fech.mes)}</strong></span>
+                                    <span><i class="bi bi-calendar-check me-1"></i>Vence <strong style="color:var(--cor-texto-sec);">${fmtDiaMes(vencDia, mes)}</strong></span>
+                                    <span><i class="bi bi-stars me-1" style="color:#F59E0B;"></i>Melhor dia <strong style="color:#F59E0B;">${fmtDiaMes(melhorDia, melhorMes)}</strong></span>
+                                </div>`;
+                        }
+
                         html += `
                         <div class="painel mb-4" style="border-left:4px solid ${cor};">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h2 class="titulo m-0 fs-fatura-nome" style="color:${cor};">
-                                    <i class="bi bi-credit-card-fill me-2"></i>${escHtml(nomeCartao)}
-                                </h2>
+                                <div>
+                                    <h2 class="titulo m-0 fs-fatura-nome" style="color:${cor};">
+                                        <i class="bi bi-credit-card-fill me-2"></i>${escHtml(nomeCartao)}
+                                    </h2>
+                                    ${periodoHtml}
+                                </div>
                                 <span class="titulo fs-fatura-val" style="color:${cor};">R$ ${totalCartao}</span>
                             </div>
                             <div class="table-responsive">
@@ -615,14 +671,14 @@ $mesAtual = date('n');
                                         data-descricao="${descEsc}"
                                         data-valor="${gasto.valor_parcela}"
                                         data-categoria="${gasto.categoria_id || ''}"
-                                        data-cartao="${gasto.cartao_id || ''}"
+                                        data-cartao="${idCartao}"
                                         data-data="${gasto.data_gasto || ''}"
                                         title="Editar"><i class="bi bi-pencil-fill" style="font-size:.75rem;"></i></button>
                                     <button class="btn btn-sm btn-outline-secondary btn-repetir-gasto-cc py-0 px-1 me-1"
                                         data-descricao="${descEsc}"
                                         data-valor="${gasto.valor_parcela}"
                                         data-categoria="${gasto.categoria_id || ''}"
-                                        data-cartao="${gasto.cartao_id || ''}"
+                                        data-cartao="${idCartao}"
                                         title="Repetir no mês atual"><i class="bi bi-arrow-repeat" style="font-size:.75rem;"></i></button>`;
                                 } else {
                                     btnEditar = `<button class="btn btn-sm btn-outline-secondary btn-editar-simples py-0 px-1 me-1"

@@ -23,7 +23,7 @@ class CofrinhoModel {
     public static function salvar(array $data, int $id = 0): bool {
         $conn    = Database::getConnection();
         $meta    = self::parseValor($data['meta_valor'] ?? '0');
-        $temCdi  = !empty($data['tem_cdi']) ? 1 : 0;
+        $temCdi  = ($data['tem_cdi'] ?? 'N') === 'S' ? 'S' : 'N';
         $pctCdi  = $temCdi ? (float) ($data['cdi_percentual'] ?? 100) : null;
         $taxaCdi = $temCdi ? (float) ($data['cdi_taxa_anual'] ?? 10.5) : null;
         $dataLim = !empty($data['data_limite']) ? $data['data_limite'] : null;

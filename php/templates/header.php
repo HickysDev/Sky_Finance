@@ -46,6 +46,14 @@ $conn = Database::getConnection();
   <!-- Custom CSS -->
   <link rel="stylesheet" href="<?= BASE_URL ?>/styles/style.css" />
 
+  <!-- Tema claro: aplica antes do render para evitar flash -->
+  <script>
+    if (localStorage.getItem('skyTheme') === 'light') {
+      document.documentElement.classList.add('light-mode');
+      document.documentElement.setAttribute('data-bs-theme', 'light');
+    }
+  </script>
+
   <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
@@ -359,7 +367,6 @@ $navGrupos = [
         ['href' => BASE_URL . '/php/views/responsaveis.php',                       'label' => 'Pessoas',      'icon' => 'bi-people-fill',         'match' => 'responsaveis.php',   'match_q' => ''],
         ['href' => BASE_URL . '/php/views/simulador.php',                          'label' => 'Simulador',    'icon' => 'bi-calculator-fill',     'match' => 'simulador.php',      'match_q' => ''],
         ['href' => BASE_URL . '/php/views/gerenciamento.php',                      'label' => 'Config.',      'icon' => 'bi-gear-fill',           'match' => 'gerenciamento.php',  'match_q' => ''],
-        ['href' => BASE_URL . '/php/views/backup.php',                              'label' => 'Backup',       'icon' => 'bi-database-down',       'match' => 'backup.php',         'match_q' => ''],
     ],
 ];
 ?>
@@ -431,22 +438,75 @@ $navGrupos = [
           $navFoto = $sNav->fetchColumn() ?: null;
         } catch (Exception $e) {}
       ?>
-      <div class="nav-sky-user">
-        <div class="nav-avatar">
+      <div class="dropdown nav-user-dropdown">
+        <button class="nav-avatar nav-avatar-toggle" id="navUserDropdown"
+                data-bs-toggle="dropdown" aria-expanded="false">
           <?php if ($navFoto): ?>
             <img src="<?= BASE_URL ?>/src/img/avatars/<?= htmlspecialchars($navFoto) ?>" alt="avatar" class="nav-avatar-img">
           <?php else: ?>
             <span><?= strtoupper(substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?></span>
           <?php endif; ?>
-        </div>
-        <span class="nav-username"><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></span>
-        <a href="<?= BASE_URL ?>/logout.php" class="btn-logout" title="Sair">
-          <i class="bi bi-box-arrow-right"></i>
-        </a>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end nav-user-menu">
+          <li class="nav-user-menu-header">
+            <strong><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></strong>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <a class="dropdown-item" href="<?= BASE_URL ?>/php/views/gerenciamento.php?tab=Conta">
+              <i class="bi bi-person-gear me-2"></i>Minha conta
+            </a>
+          </li>
+          <li>
+            <button type="button" class="dropdown-item" id="btnToggleTheme">
+              <i class="bi bi-sun-fill me-2" id="iconeTheme"></i>
+              <span id="labelTheme">Modo claro</span>
+            </button>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <a class="dropdown-item text-danger" href="<?= BASE_URL ?>/logout.php">
+              <i class="bi bi-box-arrow-right me-2"></i>Sair
+            </a>
+          </li>
+        </ul>
       </div>
     </div>
   </nav>
 </header>
+
+<script>
+(function () {
+  var html  = document.documentElement;
+  var btn   = document.getElementById('btnToggleTheme');
+  var icone = document.getElementById('iconeTheme');
+
+  var label = document.getElementById('labelTheme');
+
+  function aplicaTema(claro) {
+    if (claro) {
+      html.classList.add('light-mode');
+      html.setAttribute('data-bs-theme', 'light');
+      icone.className = 'bi bi-moon-fill me-2';
+      if (label) label.textContent = 'Modo escuro';
+    } else {
+      html.classList.remove('light-mode');
+      html.setAttribute('data-bs-theme', 'dark');
+      icone.className = 'bi bi-sun-fill me-2';
+      if (label) label.textContent = 'Modo claro';
+    }
+  }
+
+  aplicaTema(localStorage.getItem('skyTheme') === 'light');
+
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation(); // não fecha o dropdown ao clicar
+    var claro = !html.classList.contains('light-mode');
+    aplicaTema(claro);
+    localStorage.setItem('skyTheme', claro ? 'light' : 'dark');
+  });
+})();
+</script>
 
 <main>
   <div class="corpo-site">

@@ -36,7 +36,7 @@ class ContasFixasModel {
 
     public static function toggleAtivo(int $id): bool {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("UPDATE contas_fixas SET ativo = 1 - ativo WHERE id = :id AND usuario_id = 1");
+        $stmt = $conn->prepare("UPDATE contas_fixas SET ativo = IF(ativo = 'S', 'N', 'S') WHERE id = :id AND usuario_id = 1");
         return $stmt->execute([':id' => $id]);
     }
 
@@ -55,7 +55,7 @@ class ContasFixasModel {
             FROM contas_fixas cf
             LEFT JOIN contas_fixas_pagamentos cfp
                 ON cfp.conta_fixa_id = cf.id AND cfp.mes = :mes AND cfp.ano = :ano AND cfp.usuario_id = 1
-            WHERE cf.usuario_id = 1 AND cf.ativo = 1
+            WHERE cf.usuario_id = 1 AND cf.ativo = 'S'
             ORDER BY cf.dia_vencimento ASC, cf.nome ASC
         ");
         $stmt->execute([':mes' => $mes, ':ano' => $ano]);
@@ -102,7 +102,7 @@ class ContasFixasModel {
             FROM contas_fixas cf
             LEFT JOIN contas_fixas_pagamentos cfp
                 ON cfp.conta_fixa_id = cf.id AND cfp.mes = :mes AND cfp.ano = :ano AND cfp.usuario_id = 1
-            WHERE cf.usuario_id = 1 AND cf.ativo = 1 AND cfp.id IS NULL
+            WHERE cf.usuario_id = 1 AND cf.ativo = 'S' AND cfp.id IS NULL
             ORDER BY cf.dia_vencimento ASC
         ");
         $stmt->execute([':mes' => $mes, ':ano' => $ano]);

@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS `usuarios` (
   `foto`         VARCHAR(255) NULL DEFAULT NULL,
   `email`        VARCHAR(150) NOT NULL,
   `senha_hash`   VARCHAR(255) NOT NULL,
-  `ativo`        TINYINT(1)   NOT NULL DEFAULT 1,
+  `ativo`        CHAR(1)      NOT NULL DEFAULT 'S',
   `ultimo_login` DATETIME     NULL,
   `mes_inicio_controle` DATE  NULL DEFAULT NULL,
   `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -62,8 +62,9 @@ CREATE TABLE IF NOT EXISTS `cartoes_credito` (
   `usuario_id`     INT          NOT NULL,
   `nome_cartao`    VARCHAR(100) NOT NULL,
   `limite`         DECIMAL(10,2) NOT NULL,
-  `fechamento_dia` INT          NOT NULL,
-  `vencimento_dia` INT          NOT NULL,
+  `fechamento_dia`  INT          NOT NULL,
+  `vencimento_dia`  INT          NOT NULL,
+  `fechamento_auto` CHAR(1)      NOT NULL DEFAULT 'N',
   PRIMARY KEY (`id`),
   KEY `usuario_id` (`usuario_id`),
   CONSTRAINT `cartoes_credito_ibfk_1`
@@ -191,7 +192,7 @@ CREATE TABLE IF NOT EXISTS `contas_pessoa` (
   `categoria_id`     INT          NULL DEFAULT NULL,
   `metodo_pagamento` VARCHAR(20)  NOT NULL DEFAULT 'Dinheiro',
   `data`             DATE         NOT NULL,
-  `pago`             TINYINT(1)   NOT NULL DEFAULT 0,
+  `pago`             CHAR(1)      NOT NULL DEFAULT 'N',
   `created_at`       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   CONSTRAINT `contas_pessoa_ibfk_1`
@@ -208,7 +209,7 @@ CREATE TABLE IF NOT EXISTS `contas_fixas` (
   `valor`          DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   `dia_vencimento` TINYINT      NOT NULL DEFAULT 1,
   `cor`            VARCHAR(7)   NOT NULL DEFAULT '#3B82F6',
-  `ativo`          TINYINT(1)   NOT NULL DEFAULT 1,
+  `ativo`          CHAR(1)      NOT NULL DEFAULT 'S',
   `created_at`     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -258,7 +259,7 @@ CREATE TABLE IF NOT EXISTS `cofrinhos` (
   `meta_valor`     DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   `valor_atual`    DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   `data_limite`    DATE         NULL DEFAULT NULL,
-  `tem_cdi`        TINYINT(1)   NOT NULL DEFAULT 0,
+  `tem_cdi`        CHAR(1)      NOT NULL DEFAULT 'N',
   `cdi_percentual` DECIMAL(5,2) NULL DEFAULT NULL,
   `cdi_taxa_anual` DECIMAL(5,2) NULL DEFAULT NULL,
   `cor`            VARCHAR(7)   NOT NULL DEFAULT '#3B82F6',

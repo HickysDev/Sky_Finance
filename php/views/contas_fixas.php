@@ -140,7 +140,7 @@ $(document).ready(function () {
                     '</div>' +
                     '<div class="cfi-center">' + statusHtml + '</div>' +
                     '<div class="cfi-right">' +
-                        '<span class="cfi-valor">' + fmtR(c.valor) + '</span>' +
+                        '<span class="cfi-valor">' + fmtR(pago ? (c.valor_pago || c.valor) : c.valor) + '</span>' +
                         actionHtml +
                     '</div>' +
                 '</div>';

@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $s->execute([$email]);
             $usuario = $s->fetch(PDO::FETCH_ASSOC);
 
-            if ($usuario && $usuario['ativo'] && password_verify($senha, $usuario['senha_hash'])) {
+            if ($usuario && $usuario['ativo'] === 'S' && password_verify($senha, $usuario['senha_hash'])) {
                 try { $conn->prepare("DELETE FROM login_tentativas WHERE ip = ?")->execute([$ip]); } catch (Exception $e) {}
 
                 session_regenerate_id(true);

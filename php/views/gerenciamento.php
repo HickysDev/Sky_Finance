@@ -33,8 +33,14 @@ $tipoDespesa = 'recorrente';
         <button class="gtab-btn" data-tab="Responsaveis">
             <i class="bi bi-people-fill"></i> Responsáveis
         </button>
+        <button class="gtab-btn" data-tab="ContasFixas">
+            <i class="bi bi-receipt-cutoff"></i> Contas Fixas
+        </button>
         <button class="gtab-btn" data-tab="Conta">
             <i class="bi bi-person-gear"></i> Conta
+        </button>
+        <button class="gtab-btn" data-tab="Backup">
+            <i class="bi bi-database-down"></i> Backup
         </button>
     </div>
 
@@ -258,6 +264,79 @@ $tipoDespesa = 'recorrente';
 
     </div>
 
+    <!-- ── BACKUP ──────────────────────────────────────────────── -->
+    <div id="tabBackup" class="tab-section" style="display:none;">
+        <div class="row g-4">
+
+            <div class="col-12 col-md-6">
+                <div class="painel h-100 d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div style="width:44px;height:44px;border-radius:10px;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="bi bi-cloud-download-fill" style="font-size:1.3rem;color:var(--cor-azul);"></i>
+                        </div>
+                        <div>
+                            <h6 class="titulo mb-0">Exportar dados</h6>
+                            <small style="color:var(--cor-texto-off);">Gera um .sql com todos os seus registros</small>
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-2">
+                        <form method="POST" action="../controllers/BackupController.php">
+                            <input type="hidden" name="acao" value="exportar">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-download me-2"></i>Baixar backup (.sql)
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <div class="painel h-100 d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div style="width:44px;height:44px;border-radius:10px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="bi bi-cloud-upload-fill" style="font-size:1.3rem;color:#10B981;"></i>
+                        </div>
+                        <div>
+                            <h6 class="titulo mb-0">Importar dados</h6>
+                            <small style="color:var(--cor-texto-off);">Restaura um backup exportado por este sistema</small>
+                        </div>
+                    </div>
+                    <div class="alert mb-3" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:0.78rem;color:#F59E0B;padding:0.55rem 0.9rem;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        Isso <strong>substitui todos os dados</strong> do banco atual.
+                    </div>
+                    <div class="mt-auto">
+                        <input type="file" class="form-control mb-2" id="arquivoImportGer" accept=".sql">
+                        <button type="button" class="btn btn-success w-100" id="btnImportarGer">
+                            <i class="bi bi-upload me-2"></i>Importar backup
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="painel">
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <div style="width:44px;height:44px;border-radius:10px;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="bi bi-database-fill-gear" style="font-size:1.3rem;color:#8B5CF6;"></i>
+                        </div>
+                        <div>
+                            <h6 class="titulo mb-0">Criar banco do zero</h6>
+                            <small style="color:var(--cor-texto-off);">Script SQL completo com banco e todas as tabelas — use no phpMyAdmin em uma instalação nova</small>
+                        </div>
+                    </div>
+                    <form method="POST" action="../controllers/BackupController.php" style="max-width:260px;">
+                        <input type="hidden" name="acao" value="estrutura">
+                        <button type="submit" class="btn btn-sm w-100" style="background:rgba(139,92,246,0.15);border:1px solid #8B5CF6;color:#8B5CF6;">
+                            <i class="bi bi-download me-2"></i>Baixar setup_completo.sql
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
 </div>
 
 <!-- MODAL NOVO USUÁRIO -->
@@ -323,12 +402,22 @@ $tipoDespesa = 'recorrente';
                     </div>
                 </div>
 
-                <div class="row g-3 mb-3">
+                <div class="row g-3 mb-1">
                     <div class="col-6">
-                        <label class="form-label">Dia de fechamento</label>
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <label class="form-label mb-0">Dia de fechamento</label>
+                            <div class="form-check form-switch mb-0" style="font-size:0.78rem;">
+                                <input class="form-check-input" type="checkbox" id="fechamentoAuto" checked>
+                                <label class="form-check-label" for="fechamentoAuto" style="color:var(--cor-texto-off);">Automático</label>
+                            </div>
+                        </div>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-calendar-x-fill"></i></span>
                             <input type="number" class="form-control" id="dataFechamento" placeholder="Ex: 10" min="1" max="31">
+                        </div>
+                        <div id="fechamentoHint" style="display:none;font-size:0.78rem;color:var(--cor-texto-off);margin-top:5px;padding-left:2px;">
+                            <i class="bi bi-magic me-1" style="color:var(--cor-azul);"></i>
+                            <span id="fechamentoHintNote">calculado automaticamente</span>
                         </div>
                     </div>
                     <div class="col-6">
@@ -337,8 +426,15 @@ $tipoDespesa = 'recorrente';
                             <span class="input-group-text"><i class="bi bi-calendar-check-fill"></i></span>
                             <input type="number" class="form-control" id="dataVencimento" placeholder="Ex: 5" min="1" max="31">
                         </div>
+                        <div id="mesRefWrapper" style="display:none;margin-top:6px;">
+                            <label style="font-size:0.78rem;color:var(--cor-texto-off);">
+                                <i class="bi bi-info-circle me-1"></i>Mês de referência
+                            </label>
+                            <select id="mesRefSelect" class="form-select form-select-sm" style="font-size:0.82rem;"></select>
+                        </div>
                     </div>
                 </div>
+                <div class="mb-3"></div>
 
                 <div class="mb-2">
                     <label class="form-label">Cor do cartão</label>
@@ -503,6 +599,66 @@ $('#modalAdiciona').on('show.bs.modal', function () {
 });
 
 // ── CARTÕES ─────────────────────────────────────────────────────
+
+// ── Fechamento automático ────────────────────────────────────────
+var _MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+              'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+// Popula o select de mês de referência (default = mês atual)
+function buildMesRefSelect(mesAtivo) {
+    var mesAtual = mesAtivo || (new Date().getMonth() + 1);
+    var html = '';
+    _MESES.forEach(function (nome, i) {
+        var sel = (i + 1 === mesAtual) ? ' selected' : '';
+        html += '<option value="' + (i + 1) + '"' + sel + '>' + nome + '</option>';
+    });
+    $('#mesRefSelect').html(html);
+}
+
+function recalcFechamento() {
+    var venc = parseInt($('#dataVencimento').val());
+    var auto = $('#fechamentoAuto').is(':checked');
+
+    if (!venc || venc < 1 || venc > 31 || !auto) {
+        $('#fechamentoHint').hide();
+        $('#mesRefWrapper').hide();
+        // Libera o campo para edição manual
+        $('#dataFechamento').prop('readonly', false).css('opacity', '');
+        return;
+    }
+
+    var fech = venc - 7;
+    if (fech > 0) {
+        $('#dataFechamento').val(fech);
+        $('#fechamentoHintNote').text('calculado automaticamente');
+        $('#fechamentoHint').show();
+        $('#mesRefWrapper').hide();
+    } else {
+        var mesRef   = parseInt($('#mesRefSelect').val()) || (new Date().getMonth() + 1);
+        var ano      = new Date().getFullYear();
+        var diasPrev = new Date(ano, mesRef - 1, 0).getDate();
+        var fechCalc = diasPrev + fech;
+        $('#dataFechamento').val(fechCalc);
+        var nomeMesAnterior = _MESES[(mesRef - 2 + 12) % 12];
+        $('#fechamentoHintNote').text('dia ' + fechCalc + ' (' + nomeMesAnterior + ' tem ' + diasPrev + ' dias)');
+        $('#fechamentoHint').show();
+        $('#mesRefWrapper').show();
+    }
+}
+
+$(document).on('input', '#dataVencimento', recalcFechamento);
+$(document).on('change', '#mesRefSelect', recalcFechamento);
+
+// Ao ligar o automático, recalcula; ao desligar, libera o campo
+$(document).on('change', '#fechamentoAuto', function () {
+    if ($(this).is(':checked')) {
+        recalcFechamento();
+    } else {
+        $('#fechamentoHint').hide();
+        $('#mesRefWrapper').hide();
+    }
+});
+
 $(document).on('click', '#adicionarCartao', function () {
     $('#tipoAlteracao').val('criar');
     $('#idCartao').val('');
@@ -510,6 +666,10 @@ $(document).on('click', '#adicionarCartao', function () {
     $('#limite').val('');
     $('#dataFechamento').val('');
     $('#dataVencimento').val('');
+    $('#fechamentoHint').hide();
+    $('#mesRefWrapper').hide();
+    $('#fechamentoAuto').prop('checked', true);
+    buildMesRefSelect();
     $('#corCartao').val('#3B82F6');
     $('.cor-swatch:not(.cat-cor-swatch)').removeClass('selecionado');
     $('.cor-swatch:not(.cat-cor-swatch)[data-cor="#3B82F6"]').addClass('selecionado');
@@ -528,6 +688,9 @@ $(document).on('click', '.editarCartao', function () {
     $('#limite').val(c.limite.replace('.', ','));
     $('#dataFechamento').val(c.fechamento_dia);
     $('#dataVencimento').val(c.vencimento_dia);
+    $('#fechamentoAuto').prop('checked', c.fechamento_auto === 'S');
+    $('#fechamentoHint').hide();
+    $('#mesRefWrapper').hide();
     const cor = c.cor || '#3B82F6';
     $('#corCartao').val(cor);
     $('.cor-swatch:not(.cat-cor-swatch)').removeClass('selecionado');
@@ -544,11 +707,12 @@ $(document).on('click', '.cor-swatch:not(.cat-cor-swatch)', function () {
 
 function salvaCartaoHandler() {
     const cartaoArray = {
-        nomeCartao:    $('#nomeCartao').val(),
-        limite:        $('#limite').val(),
-        dataFechamento:$('#dataFechamento').val(),
-        dataVencimento:$('#dataVencimento').val(),
-        cor:           $('#corCartao').val() || '#3B82F6'
+        nomeCartao:     $('#nomeCartao').val(),
+        limite:         $('#limite').val(),
+        dataFechamento: $('#dataFechamento').val(),
+        dataVencimento: $('#dataVencimento').val(),
+        cor:            $('#corCartao').val() || '#3B82F6',
+        fechamentoAuto: $('#fechamentoAuto').is(':checked') ? 'S' : 'N',
     };
     const tipo = $('#tipoAlteracao').val();
     const id   = $('#idCartao').val();
@@ -1124,7 +1288,7 @@ function buscaResponsaveis() {
 
     $(document).on('click', '.toggleContaFixa', function () {
         var id    = $(this).data('id');
-        var ativo = $(this).data('ativo') == 1;
+        var ativo = $(this).data('ativo') === 'S';
         $.ajax({
             type: 'POST', url: App.ctrl.contasFixas,
             data: { acao: 'toggleAtivo', id: id }, dataType: 'json',
@@ -1174,11 +1338,11 @@ function buscaContasFixas() {
             $.each(data, function (_, cf) {
                 window.contasFixasArray[cf.id] = cf;
                 var cor    = cf.cor || '#3B82F6';
-                var ativo  = cf.ativo == 1;
+                var ativo  = cf.ativo === 'S';
                 var valor  = parseFloat(cf.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
                 var toggleBtn = ativo
-                    ? '<button class="btn btn-sm btn-outline-warning toggleContaFixa px-2" data-id="' + cf.id + '" data-ativo="1" title="Desativar"><i class="bi bi-pause-fill"></i></button>'
-                    : '<button class="btn btn-sm btn-outline-success toggleContaFixa px-2" data-id="' + cf.id + '" data-ativo="0" title="Ativar"><i class="bi bi-play-fill"></i></button>';
+                    ? '<button class="btn btn-sm btn-outline-warning toggleContaFixa px-2" data-id="' + cf.id + '" data-ativo="S" title="Desativar"><i class="bi bi-pause-fill"></i></button>'
+                    : '<button class="btn btn-sm btn-outline-success toggleContaFixa px-2" data-id="' + cf.id + '" data-ativo="N" title="Ativar"><i class="bi bi-play-fill"></i></button>';
                 html +=
                     '<div class="cfi-row" style="border-left-color:' + cor + ';' + (!ativo ? 'opacity:.5;' : '') + '">' +
                         '<div class="cfi-left">' +
@@ -1500,6 +1664,31 @@ $('#btnResetDados').click(function () {
                 }
             });
         });
+    });
+});
+
+// ── BACKUP ──────────────────────────────────────────────────────
+$('#btnImportarGer').on('click', function () {
+    var arquivo = $('#arquivoImportGer')[0].files[0];
+    if (!arquivo) { toastr.warning('Selecione um arquivo .sql primeiro.'); return; }
+    var $btn = $(this);
+    $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Importando...');
+    var fd = new FormData();
+    fd.append('acao', 'importar');
+    fd.append('arquivo', arquivo);
+    $.ajax({
+        type: 'POST', url: '../controllers/BackupController.php',
+        data: fd, processData: false, contentType: false, dataType: 'json',
+        success: function (res) {
+            if (res.ok) {
+                toastr.success(res.msg, 'Importação concluída', { timeOut: 5000 });
+                $('#arquivoImportGer').val('');
+            } else {
+                Swal.fire({ icon: 'error', title: 'Erro na importação', html: res.msg, confirmButtonColor: '#3B82F6' });
+            }
+        },
+        error: function () { toastr.error('Erro na requisição.'); },
+        complete: function () { $btn.prop('disabled', false).html('<i class="bi bi-upload me-2"></i>Importar backup'); }
     });
 });
 

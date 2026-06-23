@@ -564,16 +564,23 @@ $(document).ready(function () {
                 var total = data.reduce(function (s, g) { return s + g.valor; }, 0);
                 var rows  = '';
                 data.forEach(function (g) {
-                    var mc   = _metodoCor[g.metodo] || '#6B7280';
                     var dtFmt = g.data ? moment(g.data.substring(0, 10)).format('DD/MM') : '—';
-                    var parcelaHtml = g.parcela_info
-                        ? '<span style="font-size:0.7rem;color:var(--cor-texto-off);margin-left:5px;">' + escHtml(g.parcela_info) + '</span>'
-                        : '';
+                    var metodoBadge, parcelaHtml = '';
+                    if (g.tipo === 'EU_DEVO') {
+                        var label = g.parcela_info ? 'Eu devo · ' + escHtml(g.parcela_info) : 'Eu devo';
+                        metodoBadge = '<span class="badge" style="background:#EF444422;color:#EF4444;border:1px solid #EF444444;font-size:0.75rem;">' + label + '</span>';
+                    } else {
+                        var mc = _metodoCor[g.metodo] || '#6B7280';
+                        metodoBadge = '<span class="badge" style="background:' + mc + '22;color:' + mc + ';border:1px solid ' + mc + '44;font-size:0.75rem;">' + escHtml(g.metodo) + '</span>';
+                        if (g.parcela_info) {
+                            parcelaHtml = '<span style="font-size:0.75rem;color:var(--cor-texto-off);margin-left:5px;">' + escHtml(g.parcela_info) + '</span>';
+                        }
+                    }
                     rows += '<tr>' +
                         '<td>' + escHtml(g.descricao) + parcelaHtml + '</td>' +
-                        '<td><span class="badge" style="background:' + mc + '22;color:' + mc + ';border:1px solid ' + mc + '44;font-size:0.7rem;">' + escHtml(g.metodo) + '</span></td>' +
+                        '<td>' + metodoBadge + '</td>' +
                         '<td class="text-end" style="font-weight:600;color:var(--cor-azul);white-space:nowrap;">R$ ' + formatBR(g.valor) + '</td>' +
-                        '<td style="color:var(--cor-texto-off);font-size:0.8rem;white-space:nowrap;">' + dtFmt + '</td>' +
+                        '<td style="color:var(--cor-texto-off);white-space:nowrap;">' + dtFmt + '</td>' +
                     '</tr>';
                 });
                 $('#modalCatDetalheBody').html(

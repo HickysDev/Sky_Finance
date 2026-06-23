@@ -1344,7 +1344,7 @@ $(document).ready(function () {
                 needHtml = '<div class="cof-info-row"><i class="bi bi-check-circle-fill" style="color:#22C55E;"></i>' +
                     '<span style="color:#22C55E;font-weight:600;">Meta atingida!</span></div>';
             } else if (c.data_limite && mesesR !== null && mesesR > 0) {
-                var nec = parseInt(c.tem_cdi) && parseFloat(c.cdi_taxa_anual) > 0
+                var nec = c.tem_cdi === 'S' && parseFloat(c.cdi_taxa_anual) > 0
                     ? pmtComCDI(meta, atual, parseFloat(c.cdi_taxa_anual), parseFloat(c.cdi_percentual), mesesR)
                     : falta / mesesR;
                 needHtml = '<div class="cof-info-row"><i class="bi bi-piggy-bank" style="color:#10B981;"></i>' +
@@ -1353,7 +1353,7 @@ $(document).ready(function () {
 
             // CDI rendimento
             var cdiHtml = '';
-            if (parseInt(c.tem_cdi) && parseFloat(c.cdi_taxa_anual) > 0 && atual > 0) {
+            if (c.tem_cdi === 'S' && parseFloat(c.cdi_taxa_anual) > 0 && atual > 0) {
                 var rend = cdiRendimentoMensal(atual, parseFloat(c.cdi_taxa_anual), parseFloat(c.cdi_percentual));
                 cdiHtml = '<div class="cof-info-row"><i class="bi bi-graph-up-arrow" style="color:#F59E0B;"></i>' +
                     '<span>CDI ' + parseFloat(c.cdi_percentual).toFixed(0) + '% &nbsp;·&nbsp; ~R$ ' + fmtBR(rend) + '/mês</span></div>';
@@ -1408,7 +1408,7 @@ $(document).ready(function () {
                                 'data-meta="' + meta + '" ' +
                                 'data-imagem="' + escHtml(c.imagem_url || '') + '" ' +
                                 'data-datalimite="' + (c.data_limite ? c.data_limite.substring(0, 10) : '') + '" ' +
-                                'data-temcdi="' + (c.tem_cdi || 0) + '" ' +
+                                'data-temcdi="' + (c.tem_cdi || 'N') + '" ' +
                                 'data-cdipct="' + (c.cdi_percentual || 100) + '" ' +
                                 'data-cditaxa="' + (c.cdi_taxa_anual || 13.15) + '" ' +
                                 'data-cor="' + cor + '" title="Editar">' +
@@ -1469,7 +1469,7 @@ $(document).ready(function () {
             $('#cofImagemImg').attr('src', $b.data('imagem'));
             $('#cofImagemPreview').show();
         }
-        if (parseInt($b.data('temcdi'))) {
+        if ($b.data('temcdi') === 'S') {
             $('#cofTemCDI').prop('checked', true);
             $('#cofCDIPctWrap, #cofTaxaWrap').show();
             $('#cofCDIPct').val($b.data('cdipct'));
@@ -1511,7 +1511,7 @@ $(document).ready(function () {
                 imagem_url:     $('#cofImagem').val().trim(),
                 meta_valor:     meta,
                 data_limite:    $('#cofDataLimite').val(),
-                tem_cdi:        $('#cofTemCDI').is(':checked') ? 1 : 0,
+                tem_cdi:        $('#cofTemCDI').is(':checked') ? 'S' : 'N',
                 cdi_percentual: $('#cofCDIPct').val(),
                 cdi_taxa_anual: $('#cofCDITaxa').val(),
                 cor:            $('#cofCor').val()
