@@ -450,7 +450,7 @@ function renderEuDevo(respId, data) {
         rows = '<div class="empty-panel"><i class="bi bi-inbox me-2"></i>Nenhum item registrado.</div>';
     } else {
         $.each(data, function (_, item) {
-            var p = item.pago == 1;
+            var p = item.pago === 'S';
             totalAberto += p ? 0 : item.valor;
             totalPago   += p ? item.valor : 0;
             var dataFmt  = item.data ? moment(item.data).format('DD/MM/YY') : '';

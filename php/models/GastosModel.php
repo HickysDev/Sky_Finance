@@ -302,7 +302,7 @@ class GastosModel {
             (SELECT
                 gr.cartao_id,
                 gr.nome AS descricao,
-                gr.valor,
+                grl.valor,
                 cat.nome AS categoria,
                 gr.categoria_id,
                 NULL AS numero_parcela,
@@ -701,7 +701,7 @@ class GastosModel {
             $s = $conn->prepare("
                 SELECT COALESCE(SUM(valor), 0)
                 FROM contas_fixas
-                WHERE usuario_id = 1 AND ativo = 1
+                WHERE usuario_id = 1 AND ativo = 'S'
             ");
             $s->execute();
             $totalContasFixas = (float) $s->fetchColumn();
@@ -741,7 +741,7 @@ class GastosModel {
 
         // Contas fixas ativas (valor igual em todos os meses)
         try {
-            $s = $conn->prepare("SELECT COALESCE(SUM(valor),0) FROM contas_fixas WHERE usuario_id = 1 AND ativo = 1");
+            $s = $conn->prepare("SELECT COALESCE(SUM(valor),0) FROM contas_fixas WHERE usuario_id = 1 AND ativo = 'S'");
             $s->execute();
             $totalFixas = (float) $s->fetchColumn();
             for ($m = 1; $m <= 12; $m++) { $meses[$m]['fixas'] = $totalFixas; }
@@ -1086,6 +1086,18 @@ class GastosModel {
             INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
             WHERE gr.usuario_id = 1 AND gr.categoria_id = :cat AND gr.ativo = 'S'
               AND MONTH(grl.mes_referencia) = :mes AND YEAR(grl.mes_referencia) = :ano
+        ");
+        $s->execute([':cat' => $catId, ':mes' => $mes, ':ano' => $ano]);
+        foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) { $r['valor'] = (float)$r['valor']; $result[] = $r; }
+
+        // Contas pessoa (eu devo a alguém)
+        $s = $conn->prepare("
+            SELECT cp.descricao, cp.valor, cp.data, cp.metodo_pagamento AS metodo,
+                   'EU_DEVO' AS tipo, r.nome AS parcela_info
+            FROM contas_pessoa cp
+            INNER JOIN responsaveis r ON r.id = cp.responsavel_id
+            WHERE cp.usuario_id = 1 AND cp.categoria_id = :cat
+              AND MONTH(cp.data) = :mes AND YEAR(cp.data) = :ano
         ");
         $s->execute([':cat' => $catId, ':mes' => $mes, ':ano' => $ano]);
         foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) { $r['valor'] = (float)$r['valor']; $result[] = $r; }

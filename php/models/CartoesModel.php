@@ -29,8 +29,8 @@ class CartaoModel {
         $conn = Database::getConnection();
 
         $sql = $conn->prepare("
-            INSERT INTO cartoes_credito (usuario_id, nome_cartao, limite, fechamento_dia, vencimento_dia, cor)
-            VALUES (:id, :nome, :limite, :fechamento, :vencimento, :cor)
+            INSERT INTO cartoes_credito (usuario_id, nome_cartao, limite, fechamento_dia, vencimento_dia, cor, fechamento_auto)
+            VALUES (:id, :nome, :limite, :fechamento, :vencimento, :cor, :auto)
         ");
 
         return $sql->execute([
@@ -40,6 +40,7 @@ class CartaoModel {
             ':fechamento'=> (int) $cartao['dataFechamento'],
             ':vencimento'=> (int) $cartao['dataVencimento'],
             ':cor'       => $this->parseCor($cartao['cor'] ?? '#3B82F6'),
+            ':auto'      => isset($cartao['fechamentoAuto']) && $cartao['fechamentoAuto'] ? 'S' : 'N',
         ]);
     }
 
@@ -48,7 +49,8 @@ class CartaoModel {
 
         $sql = $conn->prepare("
             UPDATE cartoes_credito
-            SET nome_cartao = :nome, limite = :limite, fechamento_dia = :fechamento, vencimento_dia = :vencimento, cor = :cor
+            SET nome_cartao = :nome, limite = :limite, fechamento_dia = :fechamento,
+                vencimento_dia = :vencimento, cor = :cor, fechamento_auto = :auto
             WHERE id = :cartaoId
         ");
 
@@ -58,6 +60,7 @@ class CartaoModel {
             ':fechamento'=> (int) $cartao['dataFechamento'],
             ':vencimento'=> (int) $cartao['dataVencimento'],
             ':cor'       => $this->parseCor($cartao['cor'] ?? '#3B82F6'),
+            ':auto'      => isset($cartao['fechamentoAuto']) && $cartao['fechamentoAuto'] ? 'S' : 'N',
             ':cartaoId'  => $this->getId(),
         ]);
     }

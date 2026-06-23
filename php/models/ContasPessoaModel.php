@@ -47,7 +47,7 @@ class ContasPessoaModel {
     public static function marcarPago(int $id, bool $pago): bool {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("UPDATE contas_pessoa SET pago = :pago WHERE id = :id AND usuario_id = 1");
-        return $stmt->execute([':pago' => (int) $pago, ':id' => $id]);
+        return $stmt->execute([':pago' => $pago ? 'S' : 'N', ':id' => $id]);
     }
 
     public static function remover(int $id): bool {
@@ -67,9 +67,9 @@ class ContasPessoaModel {
                 r.id,
                 r.nome,
                 r.cor,
-                COALESCE(SUM(CASE WHEN cp.pago = 0 THEN cp.valor ELSE 0 END), 0) AS eu_devo,
-                COALESCE(SUM(CASE WHEN cp.pago = 1 THEN cp.valor ELSE 0 END), 0) AS eu_paguei,
-                COUNT(CASE WHEN cp.pago = 0 THEN 1 END)                           AS qtd_aberto
+                COALESCE(SUM(CASE WHEN cp.pago = 'N' THEN cp.valor ELSE 0 END), 0) AS eu_devo,
+                COALESCE(SUM(CASE WHEN cp.pago = 'S' THEN cp.valor ELSE 0 END), 0) AS eu_paguei,
+                COUNT(CASE WHEN cp.pago = 'N' THEN 1 END)                           AS qtd_aberto
             FROM responsaveis r
             LEFT JOIN contas_pessoa cp
                 ON cp.responsavel_id = r.id AND cp.usuario_id = 1
