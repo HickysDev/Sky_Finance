@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../models/Database.php';
+require_once __DIR__ . '/../../conn/conn.php';
 
 $acao = $_POST['acao'] ?? $_GET['acao'] ?? '';
 
@@ -102,9 +102,10 @@ if ($acao === 'importar') {
     $ok    = 0;
     $erros = [];
 
-    foreach ($stmts as $stmt) {
-        $stmt = trim($stmt);
-        if ($stmt === '' || str_starts_with($stmt, '--')) continue;
+    foreach ($stmts as $raw) {
+        // Remove linhas de comentário (-- ...) antes de decidir se executa
+        $stmt = trim(preg_replace('/^--[^\n]*(\n|$)/m', '', $raw));
+        if ($stmt === '') continue;
         try {
             $conn->exec($stmt);
             $ok++;
