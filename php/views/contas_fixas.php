@@ -68,6 +68,7 @@ $(document).ready(function () {
 
     // ── CARREGAR ─────────────────────────────────────────────────────
     function carregar() {
+        if (window.atualizaAvisoMarco) atualizaAvisoMarco($('#mes').val(), getAno());
         $('#listaContas').html('<div class="text-center py-5"><div class="spinner-border" style="color:var(--cor-azul);" role="status"></div></div>');
         $.ajax({
             type: 'POST',
@@ -182,10 +183,7 @@ $(document).ready(function () {
             confirmButtonColor: '#22C55E',
             cancelButtonColor: '#6B7280',
             didOpen: function () {
-                new Cleave('#swalValorPago', {
-                    numeral: true, numeralThousandsGroupStyle: 'thousand',
-                    numeralDecimalMark: ',', delimiter: '.'
-                });
+                bancInput(document.getElementById('swalValorPago'), valorPadrao);
             },
             preConfirm: function () {
                 return {

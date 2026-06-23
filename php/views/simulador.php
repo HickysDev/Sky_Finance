@@ -147,7 +147,8 @@
                                 <th>Mês</th>
                                 <th class="text-end">Fatura Atual</th>
                                 <th class="text-end" style="color:var(--cor-azul);">+ Esta Compra</th>
-                                <th class="text-end">Total Projetado</th>
+                                <th class="text-end">Fatura Projetada</th>
+                                <th class="text-end" style="color:#10B981;">Gasto Total do Mês</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -280,11 +281,7 @@ var _simProjecao    = null;
 var _simProjecaoB   = null;
 
 // ── VALOR CLEAVE ────────────────────────────────────────────────
-new Cleave('#simValor', {
-    numeral: true, numeralThousandsGroupStyle: 'thousand',
-    prefix: 'R$ ', noImmediatePrefix: true,
-    delimiter: '.', decimal: ',', numeralDecimalMark: ',', stripLeadingZeroes: true
-});
+bancInput(document.getElementById('simValor'));
 
 // ── DATA padrão = hoje ──────────────────────────────────────────
 (function () {
@@ -493,7 +490,12 @@ function buscarFaturasEProjetarCompar(parcelasA, parcelasB, cartaoId) {
             dataType: 'json',
             success: function(data) {
                 var t = 0;
-                if (data && data.length) { data.forEach(function(g){ t += parseFloat(g.valor_parcela||0); }); }
+                if (data && !$.isEmptyObject(data)) {
+                    $.each(data, function(_, gastos) {
+                        var vt = parseFloat(String(gastos.valortotal || '0').replace(/\./g, '').replace(',', '.'));
+                        t += isNaN(vt) ? 0 : vt;
+                    });
+                }
                 totais[key] = t;
             },
             error: function() { totais[key] = 0; },
@@ -602,13 +604,14 @@ function buscarFaturasEProjetar(parcelas, cartaoId) {
         mesesUnicos[p.ano + '-' + String(p.mes).padStart(2,'0')] = { mes: p.mes, ano: p.ano };
     });
 
-    var keys    = Object.keys(mesesUnicos).sort();
-    var totais  = {};
-    var pending = keys.length;
+    var keys      = Object.keys(mesesUnicos).sort();
+    var totais    = {};
+    var totaisMes = {};
+    var pending   = keys.length * 2;
 
     function onDone() {
         $('#simLoadingFaturas').hide();
-        renderTabelaProjecao(parcelas, totais);
+        renderTabelaProjecao(parcelas, totais, totaisMes);
         $('#simTabelaWrap').fadeIn(200);
     }
 
@@ -620,25 +623,34 @@ function buscarFaturasEProjetar(parcelas, cartaoId) {
             dataType: 'json',
             success: function (data) {
                 var total = 0;
-                if (data && data.length) {
-                    data.forEach(function (g) { total += parseFloat(g.valor_parcela || 0); });
+                if (data && !$.isEmptyObject(data)) {
+                    $.each(data, function (_, gastos) {
+                        var vt = parseFloat(String(gastos.valortotal || '0').replace(/\./g, '').replace(',', '.'));
+                        total += isNaN(vt) ? 0 : vt;
+                    });
                 }
                 totais[key] = total;
             },
-            error: function () {
-                totais[key] = 0;
+            error: function () { totais[key] = 0; },
+            complete: function () { if (--pending === 0) onDone(); }
+        });
+        $.ajax({
+            type: 'POST', url: App.ctrl.gastos,
+            data: { acao: 'dashboard', mes: m.mes, ano: m.ano },
+            dataType: 'json',
+            success: function (data) {
+                totaisMes[key] = data ? (parseFloat(data.totalGasto) || 0) : 0;
             },
-            complete: function () {
-                pending--;
-                if (pending === 0) onDone();
-            }
+            error: function () { totaisMes[key] = 0; },
+            complete: function () { if (--pending === 0) onDone(); }
         });
     });
 }
 
-function renderTabelaProjecao(parcelas, totais) {
+function renderTabelaProjecao(parcelas, totais, totaisMes) {
     var mesesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                       'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    totaisMes = totaisMes || {};
 
     // Calcula maior total projetado (para barra proporcional)
     var maxProjetado = 0;
@@ -652,12 +664,13 @@ function renderTabelaProjecao(parcelas, totais) {
     var html = '';
 
     parcelas.forEach(function (p, i) {
-        var key       = p.ano + '-' + String(p.mes).padStart(2,'0');
-        var atual     = totais[key] || 0;
-        var projetado = atual + p.parcela;
-        var largura   = maxProjetado > 0 ? Math.round((projetado / maxProjetado) * 120) : 20;
-        var isUltima  = (i === ultimaIdx && parcelas.length > 1);
-        var label     = parcelas.length > 1 ? 'Parcela ' + p.idx + '/' + parcelas.length : 'À Vista';
+        var key        = p.ano + '-' + String(p.mes).padStart(2,'0');
+        var atual      = totais[key] || 0;
+        var projetado  = atual + p.parcela;
+        var gastoTotal = (totaisMes[key] || 0) + p.parcela;
+        var largura    = maxProjetado > 0 ? Math.round((projetado / maxProjetado) * 120) : 20;
+        var isUltima   = (i === ultimaIdx && parcelas.length > 1);
+        var label      = parcelas.length > 1 ? 'Parcela ' + p.idx + '/' + parcelas.length : 'À Vista';
 
         html += '<tr class="' + (isUltima ? 'sim-ultima-parcela' : '') + '">' +
                 '<td>' +
@@ -670,6 +683,7 @@ function renderTabelaProjecao(parcelas, totais) {
                   fmtBRL(projetado) +
                   '<span class="sim-barra" style="width:' + largura + 'px;"></span>' +
                 '</td>' +
+                '<td class="text-end" style="color:#10B981;font-weight:600;">' + fmtBRL(gastoTotal) + '</td>' +
                 '<td style="width:24px;">' +
                   (isUltima ? '<i class="bi bi-flag-fill" style="color:var(--cor-azul);font-size:0.85rem;" title="Última parcela"></i>' : '') +
                 '</td>' +

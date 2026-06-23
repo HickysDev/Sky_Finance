@@ -44,7 +44,7 @@ $mesAtual = date('n');
         </div>
     </div>
 
-    <!-- AVISOS -->
+    <!-- AVISOS / ALERTAS FINANCEIROS -->
     <div id="avisosSection" class="mb-3" style="display:none;"></div>
 
     <!-- KPI CARDS — 3 principais -->
@@ -227,6 +227,25 @@ $mesAtual = date('n');
 
 </div>
 
+<!-- MODAL GASTOS POR CATEGORIA -->
+<div class="modal fade" id="modalCatDetalhe" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#2C2C44;border-bottom:1px solid #3F3F46;">
+                <h5 class="modal-title" id="modalCatDetalheTitle" style="color:#F0F0F5;">
+                    <i class="bi bi-tag-fill titulo-azul me-2"></i>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalCatDetalheBody" style="padding:1.5rem;min-height:160px;">
+                <div class="text-center py-4">
+                    <div class="spinner-border" style="color:var(--cor-azul);" role="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 $(document).ready(function () {
 
@@ -264,8 +283,89 @@ $(document).ready(function () {
     $('#anoDireita').click(function ()  { $('#anoDisplay').text(getAno() + 1); carregaDashboard($('#mes').val(), getAno()); });
     $('#mes').change(function () { carregaDashboard($(this).val(), getAno()); });
 
+    // ─── ALERTAS FINANCEIROS ──────────────────────────────────────────────
+    function alertasDashboard(mes, ano) {
+        var alertas = [];
+        var done = 0;
+
+        function onDone() {
+            done++;
+            if (done < 2) return;
+            if (!alertas.length) return;
+            var count = alertas.length;
+            var html = '<div class="alertas-fin-section">' +
+                '<div class="alertas-fin-header">' +
+                    '<i class="bi bi-bell-fill" style="color:#F59E0B;"></i>' +
+                    'Alertas e Lembretes' +
+                    '<span class="ms-auto" style="font-size:0.72rem;color:var(--cor-texto-off);">' + count + ' aviso' + (count !== 1 ? 's' : '') + '</span>' +
+                '</div>' +
+                alertas.join('') +
+            '</div>';
+            $('#avisosSection').html(html).show();
+        }
+
+        // Alertas de orçamento para o mês visualizado
+        $.ajax({
+            type: 'POST', url: 'php/controllers/OrcamentoController.php',
+            data: { acao: 'buscar', mes: mes, ano: ano }, dataType: 'json',
+            success: function(data) {
+                if (data) $.each(data, function(_, o) {
+                    var limite = parseFloat(o.valor_limite);
+                    var gasto  = parseFloat(o.gasto_mes);
+                    var pct    = limite > 0 ? (gasto / limite) * 100 : 0;
+                    if (pct < 80) return;
+                    var cor   = pct >= 100 ? '#EF4444' : '#F59E0B';
+                    var icone = pct >= 100 ? 'bi-exclamation-triangle-fill' : 'bi-exclamation-circle-fill';
+                    var msg   = pct >= 100
+                        ? 'Limite excedido! ' + pct.toFixed(0) + '% — gastou R$ ' + formatBR(gasto) + ' / R$ ' + formatBR(limite)
+                        : pct.toFixed(0) + '% do limite usado — R$ ' + formatBR(gasto) + ' / R$ ' + formatBR(limite);
+                    alertas.push(
+                        '<div class="alerta-fin" style="border-left:3px solid ' + cor + ';">' +
+                            '<div class="alerta-fin-icon"><i class="bi ' + icone + '" style="color:' + cor + ';font-size:1.1rem;"></i></div>' +
+                            '<div class="alerta-fin-body">' +
+                                '<div class="alerta-fin-titulo" style="color:' + cor + ';">Orçamento: ' + escHtml(o.nome) + '</div>' +
+                                '<div class="alerta-fin-msg">' + msg + '</div>' +
+                            '</div>' +
+                            '<a href="' + App.base + '/php/views/financas.php" class="alerta-fin-btn" style="color:' + cor + ';border-color:' + cor + '44;">Ver</a>' +
+                        '</div>'
+                    );
+                });
+            },
+            complete: onDone, error: onDone
+        });
+
+        // Lembretes de contas fixas baseados na data real de hoje
+        $.ajax({
+            type: 'POST', url: 'php/controllers/ContasFixasController.php',
+            data: { acao: 'proximosVencimentos', dias: 7 }, dataType: 'json',
+            success: function(data) {
+                if (data && data.length) $.each(data, function(_, cf) {
+                    var diff  = cf.dias_restantes;
+                    var cor   = diff < 0 ? '#EF4444' : (diff <= 2 ? '#F59E0B' : '#3B82F6');
+                    var icone = diff < 0 ? 'bi-exclamation-triangle-fill' : 'bi-bell-fill';
+                    var msgDia = diff < 0
+                        ? 'Venceu há ' + Math.abs(diff) + ' dia' + (Math.abs(diff) !== 1 ? 's' : '') + ' (em atraso!)'
+                        : diff === 0 ? 'Vence hoje!'
+                        : 'Vence em ' + diff + ' dia' + (diff !== 1 ? 's' : '');
+                    alertas.push(
+                        '<div class="alerta-fin" style="border-left:3px solid ' + cor + ';">' +
+                            '<div class="alerta-fin-icon"><i class="bi ' + icone + '" style="color:' + cor + ';font-size:1.1rem;"></i></div>' +
+                            '<div class="alerta-fin-body">' +
+                                '<div class="alerta-fin-titulo" style="color:' + cor + ';">' + escHtml(cf.nome) + '</div>' +
+                                '<div class="alerta-fin-msg">' + msgDia + ' — R$ ' + formatBR(cf.valor) + '</div>' +
+                            '</div>' +
+                            '<a href="' + App.base + '/php/views/contas_fixas.php" class="alerta-fin-btn" style="color:' + cor + ';border-color:' + cor + '44;">Pagar</a>' +
+                        '</div>'
+                    );
+                });
+            },
+            complete: onDone, error: onDone
+        });
+    }
+
     // ─── CARREGA TUDO ─────────────────────────────────────────────────────
     function carregaDashboard(mes, ano) {
+        if (window.atualizaAvisoMarco) atualizaAvisoMarco(mes, ano);
         $('#kpiRow').html('<div class="col-12 text-center py-4"><div class="spinner-border" style="color:var(--cor-azul);" role="status"></div></div>');
         $('#loaderRecentes').show();
         $('#listaRecentes').empty();
@@ -280,6 +380,8 @@ $(document).ready(function () {
 
         $('#arContasFixas, #arFaturas').html('<div class="ar-empty">Carregando…</div>');
         $('#avisosSection').hide().empty();
+
+        alertasDashboard(mes, ano);
 
         $.ajax({
             type: 'POST', url: 'php/controllers/GastosController.php',
@@ -341,10 +443,17 @@ $(document).ready(function () {
 
         // ── Linha 2: todos os cards menores ──
         const base = App.base + '/php/views/';
+        // Recorrentes: card mostra o total de TODOS (com + sem cartão), só informativo.
+        // Os que estão no cartão também aparecem em "Fatura crédito" (não somam 2x no total).
+        const recorrTodos    = d.totalRecorrenteTodos != null ? d.totalRecorrenteTodos : d.totalRecorrente;
+        const recorrNoCredito = recorrTodos > (d.totalRecorrente || 0) + 0.005;
+        const recorrSub      = recorrNoCredito ? 'serviços · inclusos no crédito' : 'serviços e assinaturas';
+        const creditoSub     = recorrNoCredito ? 'vencimento no mês · inclui recorrentes' : 'vencimento no mês';
+
         const sub = [
             { icon: 'bi-wallet-fill',      cor: '#F59E0B', label: 'À vista',        sub: 'débito · pix · dinheiro', valor: d.totalDebito,        href: base + 'debito.php' },
-            { icon: 'bi-credit-card-fill', cor: '#3B82F6', label: 'Fatura crédito', sub: 'vencimento no mês',       valor: d.totalCredito,       href: base + 'cartaocredito.php' },
-            { icon: 'bi-arrow-clockwise',  cor: '#8B5CF6', label: 'Recorrentes',    sub: 'serviços e assinaturas',  valor: d.totalRecorrente,    href: base + 'gerenciamento.php?tab=Recorrentes' },
+            { icon: 'bi-credit-card-fill', cor: '#3B82F6', label: 'Fatura crédito', sub: creditoSub,               valor: d.totalCredito,       href: base + 'cartaocredito.php' },
+            { icon: 'bi-arrow-clockwise',  cor: '#8B5CF6', label: 'Recorrentes',    sub: recorrSub,                valor: recorrTodos,          href: base + 'gerenciamento.php?tab=Recorrentes' },
             { icon: 'bi-house-fill',       cor: '#F97316', label: 'Contas fixas',   sub: 'luz · água · internet',   valor: d.totalContasFixas || 0, href: base + 'contas_fixas.php' },
             { icon: 'bi-people-fill',      cor: '#EC4899', label: 'A pagar',        sub: 'devo a responsáveis',     valor: d.totalContas || 0,   href: base + 'responsaveis.php' },
         ];
@@ -413,7 +522,7 @@ $(document).ready(function () {
             const cat  = window.categoriaNomes[d.nome] || {};
             const icon = cat.icone ? '<span class="me-1">' + cat.icone + '</span>' : '';
 
-            listHtml += '<tr>' +
+            listHtml += '<tr class="cat-list-row" data-cat="' + escHtml(d.nome) + '" style="cursor:pointer;">' +
                 '<td class="cat-list-td-dot"><div class="cat-list-dot" style="background:' + cor + ';"></div></td>' +
                 '<td class="cat-list-td-nome" style="color:' + cor + ';">' + icon + d.nome + '</td>' +
                 '<td class="cat-list-td-pct">' + pct.toFixed(0) + '%</td>' +
@@ -422,6 +531,67 @@ $(document).ready(function () {
         });
         listHtml += '</table>';
         $('#listaCategorias').html(listHtml);
+    }
+
+    // ─── MODAL DETALHE CATEGORIA ──────────────────────────────────────────
+    var _mesesNome = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    var _metodoCor = { 'Dinheiro':'#6B7280','Débito':'#F59E0B','Pix':'#10B981','Crédito':'#3B82F6','Recorrente':'#8B5CF6' };
+
+    $(document).on('click', '.cat-list-row', function () {
+        abreModalCategoria($(this).data('cat'), parseInt($('#mes').val()), getAno());
+    });
+
+    function abreModalCategoria(catNome, mes, ano) {
+        var catObj = window.categoriaNomes ? (window.categoriaNomes[catNome] || {}) : {};
+        var cor    = catObj.cor || 'var(--cor-azul)';
+        var icon   = catObj.icone ? catObj.icone + ' ' : '';
+        $('#modalCatDetalheTitle').html(
+            '<span style="color:' + cor + ';">' + icon + escHtml(catNome) + '</span>' +
+            '<span style="font-size:0.8rem;color:var(--cor-texto-off);font-weight:400;margin-left:10px;">' + _mesesNome[mes] + '/' + ano + '</span>'
+        );
+        $('#modalCatDetalheBody').html('<div class="text-center py-4"><div class="spinner-border" style="color:var(--cor-azul);" role="status"></div></div>');
+        $('#modalCatDetalhe').modal('show');
+
+        $.ajax({
+            type: 'POST', url: 'php/controllers/GastosController.php',
+            data: { acao: 'gastosPorCategoria', categoria: catNome, mes: mes, ano: ano },
+            dataType: 'json',
+            success: function (data) {
+                if (!data || !data.length) {
+                    $('#modalCatDetalheBody').html('<div class="text-center py-5" style="color:var(--cor-texto-off);"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:8px;"></i>Nenhum lançamento encontrado.</div>');
+                    return;
+                }
+                var total = data.reduce(function (s, g) { return s + g.valor; }, 0);
+                var rows  = '';
+                data.forEach(function (g) {
+                    var mc   = _metodoCor[g.metodo] || '#6B7280';
+                    var dtFmt = g.data ? moment(g.data.substring(0, 10)).format('DD/MM') : '—';
+                    var parcelaHtml = g.parcela_info
+                        ? '<span style="font-size:0.7rem;color:var(--cor-texto-off);margin-left:5px;">' + escHtml(g.parcela_info) + '</span>'
+                        : '';
+                    rows += '<tr>' +
+                        '<td>' + escHtml(g.descricao) + parcelaHtml + '</td>' +
+                        '<td><span class="badge" style="background:' + mc + '22;color:' + mc + ';border:1px solid ' + mc + '44;font-size:0.7rem;">' + escHtml(g.metodo) + '</span></td>' +
+                        '<td class="text-end" style="font-weight:600;color:var(--cor-azul);white-space:nowrap;">R$ ' + formatBR(g.valor) + '</td>' +
+                        '<td style="color:var(--cor-texto-off);font-size:0.8rem;white-space:nowrap;">' + dtFmt + '</td>' +
+                    '</tr>';
+                });
+                $('#modalCatDetalheBody').html(
+                    '<div class="d-flex justify-content-between align-items-center mb-3">' +
+                        '<span style="font-size:0.82rem;color:var(--cor-texto-off);">' + data.length + ' lançamento' + (data.length !== 1 ? 's' : '') + '</span>' +
+                        '<span class="titulo" style="color:var(--cor-azul);font-size:1.05rem;">Total: R$ ' + formatBR(total) + '</span>' +
+                    '</div>' +
+                    '<div class="table-responsive">' +
+                    '<table class="table table-hover mb-0" style="font-size:0.85rem;">' +
+                        '<thead><tr><th>Descrição</th><th>Método</th><th class="text-end">Valor</th><th>Data</th></tr></thead>' +
+                        '<tbody>' + rows + '</tbody>' +
+                    '</table></div>'
+                );
+            },
+            error: function () {
+                $('#modalCatDetalheBody').html('<div class="text-center py-4 text-danger">Erro ao carregar lançamentos.</div>');
+            }
+        });
     }
 
     // ─── COFRINHOS ───────────────────────────────────────────────────────
@@ -962,6 +1132,7 @@ $(document).ready(function () {
 .cat-list-td-nome { font-size: 0.76rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
 .cat-list-td-pct  { font-size: 0.7rem; color: var(--cor-texto-off); white-space: nowrap; padding-left: 8px !important; }
 .cat-list-td-val  { font-size: 0.76rem; font-weight: 600; color: var(--cor-texto); white-space: nowrap; padding-left: 8px !important; }
+.cat-list-row:hover td { background: rgba(255,255,255,.04); }
 
 /* scrollbar fina na lista de categorias */
 #listaCategorias::-webkit-scrollbar { width: 3px; }

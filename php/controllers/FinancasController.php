@@ -30,6 +30,15 @@ switch ($acao) {
         $retorno = $Financas->removerRenda((int) ($_POST['id'] ?? 0));
         break;
 
+    case 'registrarMudancaRenda':
+        $id    = (int) ($_POST['id']  ?? 0);
+        $mes   = (int) ($_POST['mes'] ?? date('n'));
+        $ano   = (int) ($_POST['ano'] ?? date('Y'));
+        $valor = $_POST['valor'] ?? '0';
+        if (!$id) { http_response_code(400); echo json_encode(['erro' => 'ID inválido']); exit; }
+        $retorno = $Financas->registrarMudancaRenda($id, $valor, $mes, $ano);
+        break;
+
     case 'totalGastosMes':
         $mes     = (int) ($_POST['mes'] ?? date('n'));
         $ano     = (int) ($_POST['ano'] ?? date('Y'));

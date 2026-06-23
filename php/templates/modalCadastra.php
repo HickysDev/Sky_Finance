@@ -75,16 +75,24 @@
 
                     <!-- Método de pagamento (visível apenas em débito) -->
                     <div class="mb-3" id="metodoWrapper">
-                        <label for="metodo" class="form-label">Método de pagamento</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-wallet2"></i></span>
-                            <select class="form-select" id="metodo">
-                                <option value="">Selecione</option>
-                                <option value="Débito">Débito</option>
-                                <option value="Dinheiro">Dinheiro</option>
-                                <option value="Pix">Pix</option>
-                            </select>
+                        <label class="form-label">Método de pagamento</label>
+                        <div class="d-flex gap-2" id="metodoBtnsWrap">
+                            <button type="button" class="btn btn-outline-secondary metodo-btn flex-fill" data-metodo="Débito">
+                                <i class="bi bi-credit-card me-1"></i>Débito
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary metodo-btn flex-fill" data-metodo="Dinheiro">
+                                <i class="bi bi-cash me-1"></i>Dinheiro
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary metodo-btn flex-fill" data-metodo="Pix">
+                                <i class="bi bi-qr-code me-1"></i>Pix
+                            </button>
                         </div>
+                        <select id="metodo" style="display:none;">
+                            <option value="">Selecione</option>
+                            <option value="Débito">Débito</option>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Pix">Pix</option>
+                        </select>
                     </div>
 
                     <!-- Cartão (thumbnails para crédito, select para débito) -->
@@ -109,26 +117,39 @@
                         <div class="d-flex gap-2 flex-wrap" id="responsavelSelector"></div>
                     </div>
 
-                    <!-- Switches -->
-                    <div class="d-flex gap-4 mb-2">
-                        <div class="form-check form-switch" id="parceladoWrapper">
-                            <input class="form-check-input" type="checkbox" id="parcelado" name="parcelado">
-                            <label class="form-check-label" for="parcelado">Parcelado</label>
+                    <!-- Tipo de lançamento -->
+                    <div class="mb-3" id="tipoLancamentoWrapper">
+                        <label class="form-label">Tipo de lançamento</label>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-secondary tipo-lanc-btn active flex-fill" data-tipo="normal">
+                                <i class="bi bi-check2 me-1"></i>Normal
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary tipo-lanc-btn flex-fill" data-tipo="parcelado">
+                                <i class="bi bi-layout-split me-1"></i>Parcelado
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary tipo-lanc-btn flex-fill" data-tipo="recorrente">
+                                <i class="bi bi-arrow-repeat me-1"></i>Recorrente
+                            </button>
                         </div>
-                        <div class="form-check form-switch" id="recorrenteWrapper">
-                            <input class="form-check-input" type="checkbox" id="recorrente" name="recorrente">
-                            <label class="form-check-label" for="recorrente">Recorrente</label>
-                        </div>
+                        <input type="checkbox" id="parcelado" name="parcelado" style="display:none;">
+                        <input type="checkbox" id="recorrente" name="recorrente" style="display:none;">
                     </div>
 
                     <!-- Nº parcelas (aparece quando parcelado ativo) -->
                     <div class="mb-2 border-parcelado" style="display:none;">
-                        <label for="num_parcelas" class="form-label">Nº de parcelas</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-list-ol"></i></span>
-                            <input type="number" class="form-control" id="num_parcelas"
-                                placeholder="Ex: 6" min="2" max="48">
+                        <label class="form-label">Nº de parcelas</label>
+                        <div class="d-flex align-items-center gap-3" id="numParcelasControl">
+                            <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btnParcelasMenos">
+                                <i class="bi bi-dash-lg"></i>
+                            </button>
+                            <span id="numParcelasDisplay" class="fs-5 fw-bold" style="min-width:2rem;text-align:center;">2</span>
+                            <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btnParcelasMais">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                            <span style="font-size:0.82rem;color:var(--cor-texto-off);">parcelas</span>
                         </div>
+                        <div id="numParcelasPreview" class="mt-2" style="font-size:0.82rem;color:var(--cor-texto-off);"></div>
+                        <input type="hidden" id="num_parcelas" value="2">
                     </div>
 
                 </div><!-- /criaDespesaForm -->

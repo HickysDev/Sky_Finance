@@ -107,6 +107,13 @@ switch ($acao) {
         $retorno = GastosModel::resumoAnual((int) ($ano ?? date('Y')));
         break;
 
+    case 'gastosPorCategoria':
+        $catNome = trim($_POST['categoria'] ?? '');
+        $mesNum  = (int) ($mes ?? date('n'));
+        if (!$catNome) { echo json_encode([]); exit; }
+        $retorno = GastosModel::gastosPorCategoria($mesNum, $ano, $catNome);
+        break;
+
     default:
         http_response_code(400);
         $retorno = ['erro' => 'Ação inválida'];

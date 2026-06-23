@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../../conn/conn.php';
+include_once __DIR__ . '/ConfigModel.php';
 
 class OrcamentoModel {
 
@@ -47,6 +48,7 @@ class OrcamentoModel {
     }
 
     public static function buscarComGasto(int $mes, int $ano): array {
+        if (ConfigModel::antesDoMarco($mes, $ano)) return [];
         $conn = Database::getConnection();
 
         $stmt = $conn->prepare("

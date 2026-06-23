@@ -155,6 +155,13 @@ $mesAtual = date('n');
 
     $(document).ready(function () {
 
+        var _cartoesOk    = false;
+        var _categoriasOk = false;
+
+        function _verificaECarrega() {
+            if (_cartoesOk && _categoriasOk) buscaFatura($('#mes').val());
+        }
+
         buscaCartoes();
         buscaCategorias();
 
@@ -168,11 +175,15 @@ $mesAtual = date('n');
             $('#metodoWrapper').hide();
             $('#cartaoWrapper').show();
             $('#cartaoSelect').hide();
-            $('#parceladoWrapper').show();
-            $('#recorrenteWrapper').show();
+            $('#tipoLancamentoWrapper').show();
+            $('.tipo-lanc-btn').removeClass('active');
+            $('.tipo-lanc-btn[data-tipo="normal"]').addClass('active');
             $('.border-parcelado').hide();
             $('#parcelado').prop('checked', false);
             $('#recorrente').prop('checked', false);
+            $('#num_parcelas').val(2);
+            $('#numParcelasDisplay').text(2);
+            $('#numParcelasPreview').html('');
             $('#cartao').val('');
             $('.cartao-mini-modal').removeClass('selecionado');
             renderCartoesMiniModal();
@@ -186,7 +197,7 @@ $mesAtual = date('n');
             var d = _pendingRepetirCC;
             _pendingRepetirCC = null;
             $('#descricao').val(d.descricao);
-            valorCleaveCC.setRawValue(parseFloat(String(d.valor).replace(/\./g, '').replace(',', '.')));
+            valorCleaveCC.setValue(parseFloat(String(d.valor).replace(/\./g, '').replace(',', '.')));
             var hoje = new Date();
             var pad = function(n){ return String(n).padStart(2,'0'); };
             $('#data').val(hoje.getFullYear() + '-' + pad(hoje.getMonth()+1) + '-' + pad(hoje.getDate()));
@@ -243,7 +254,6 @@ $mesAtual = date('n');
                 // "Todos" — usa menor vencimento entre os cartões
                 ajustaMesPorVencimento(vencimentoMinimo(window.cartoesArray || {}));
             }
-
             buscaFatura($('#mes').val());
         });
 
@@ -315,27 +325,60 @@ $mesAtual = date('n');
             });
         });
 
-        // ─── PARCELADO / RECORRENTE TOGGLE ───────────────────────────────────
-        $('#parcelado').change(function () {
-            if ($(this).prop('checked')) {
+        // ─── TIPO DE LANÇAMENTO (Normal / Parcelado / Recorrente) ────────────
+        $(document).on('click', '.tipo-lanc-btn', function () {
+            $('.tipo-lanc-btn').removeClass('active');
+            $(this).addClass('active');
+            var tipo = $(this).data('tipo');
+            $('#parcelado').prop('checked', tipo === 'parcelado');
+            $('#recorrente').prop('checked', tipo === 'recorrente');
+            if (tipo === 'parcelado') {
                 $('.border-parcelado').slideDown();
-                $('#recorrente').prop('checked', false);
+                atualizaPreviewParcelas();
             } else {
                 $('.border-parcelado').slideUp();
             }
         });
 
-        $('#recorrente').change(function () {
-            if ($(this).prop('checked')) {
-                $('#parcelado').prop('checked', false);
-                $('.border-parcelado').slideUp();
+        function atualizaPreviewParcelas() {
+            var raw = $('#valor').val().replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.');
+            var v   = parseFloat(raw) || 0;
+            var n   = parseInt($('#num_parcelas').val()) || 2;
+            if (v > 0) {
+                var parcela = (v / n).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+                $('#numParcelasPreview').html(n + 'x de <strong>R$ ' + parcela + '</strong>');
+            } else {
+                $('#numParcelasPreview').html('');
             }
+        }
+
+        $(document).on('click', '#btnParcelasMenos', function () {
+            var n = parseInt($('#num_parcelas').val()) || 2;
+            if (n > 2) {
+                n--;
+                $('#num_parcelas').val(n);
+                $('#numParcelasDisplay').text(n);
+                atualizaPreviewParcelas();
+            }
+        });
+
+        $(document).on('click', '#btnParcelasMais', function () {
+            var n = parseInt($('#num_parcelas').val()) || 2;
+            if (n < 48) {
+                n++;
+                $('#num_parcelas').val(n);
+                $('#numParcelasDisplay').text(n);
+                atualizaPreviewParcelas();
+            }
+        });
+
+        $(document).on('input', '#valor', function () {
+            if ($('#parcelado').is(':checked')) atualizaPreviewParcelas();
         });
 
         function limpaErrosModalCC() {
             $('#descricao, #valor, #data').removeClass('is-invalid');
-            $('#catSelWrapper, #cartaoSelectorModal, #num_parcelas').removeClass('borda-erro');
-            $('#num_parcelas').removeClass('is-invalid');
+            $('#catSelWrapper, #cartaoSelectorModal, #numParcelasControl').removeClass('borda-erro');
         }
 
         function validaFormCredito() {
@@ -368,7 +411,7 @@ $mesAtual = date('n');
             if (isParcelado && !isRecorrente) {
                 var np = parseInt($('#num_parcelas').val());
                 if (!np || np < 2) {
-                    $('#num_parcelas').addClass('is-invalid');
+                    $('#numParcelasControl').addClass('borda-erro');
                     erros.push('Nº de parcelas (mínimo 2)');
                 }
             }
@@ -485,13 +528,15 @@ $mesAtual = date('n');
 
                     // Ajusta para próximo mês se já passou do menor vencimento
                     ajustaMesPorVencimento(vencimentoMinimo(data));
-                    buscaFatura($('#mes').val());
+                    _cartoesOk = true;
+                    _verificaECarrega();
                 },
                 error: function () { toastr.error('Erro ao buscar cartões!'); }
             });
         }
 
         function buscaFatura(mes) {
+            if (window.atualizaAvisoMarco) atualizaAvisoMarco(mes, getAno());
             $('#faturasDiv').html(
                 '<div class="text-center py-5"><div class="spinner-border" role="status" style="color:#3B82F6;"></div></div>'
             );
@@ -593,12 +638,15 @@ $mesAtual = date('n');
                                     data-categoria="${gasto.categoria_id || ''}"
                                     title="Editar nome/categoria"><i class="bi bi-pencil-fill" style="font-size:.75rem;"></i></button>`;
                             }
+                            var _vOrd = parseFloat(String(gasto.valor_parcela).replace(/\./g,'').replace(',','.')) || 0;
+                            var _dOrd = gasto.tipo === 'NORMAL' ? (gasto.data_gasto || '0') : '0';
+                            var _pOrd = gasto.tipo === 'NORMAL' ? (gasto.numero_parcela ?? 0) : 0;
                             html += `<tr class="linha-clicavel" data-valor="${gasto.valor_parcela}">
                                 <td><span class="linha-check"><i class="bi bi-check-circle-fill"></i></span>${descEsc}</td>
                                 <td>${catBadgeHtml(gasto.categoria)}</td>
-                                <td>${infoParcela}</td>
-                                <td>R$ ${gasto.valor_parcela}</td>
-                                <td>${dataExib}</td>
+                                <td data-order="${_pOrd}">${infoParcela}</td>
+                                <td data-order="${_vOrd}">R$ ${gasto.valor_parcela}</td>
+                                <td data-order="${_dOrd}">${dataExib}</td>
                                 <td>
                                     <div class="d-flex align-items-center gap-1 justify-content-end">
                                         ${btnEditar}
@@ -631,6 +679,8 @@ $mesAtual = date('n');
                             lengthChange: false,
                             searching: true,
                             ordering: true,
+                            order: [[4, 'asc']],
+                            columnDefs: [{ orderable: false, targets: -1 }],
                             language: {
                                 search: 'Pesquisar:',
                                 zeroRecords: 'Nenhum registro encontrado',
@@ -714,7 +764,11 @@ $mesAtual = date('n');
                 url: '../controllers/CategoriaController.php',
                 data: { acao: 'busca' },
                 dataType: 'json',
-                success: function (data) { popularCatSelect(data); }
+                success: function (data) {
+                    popularCatSelect(data);
+                    _categoriasOk = true;
+                    _verificaECarrega();
+                }
             });
         }
 
@@ -849,16 +903,7 @@ $mesAtual = date('n');
             });
         });
 
-        var valorCleaveCC = new Cleave('#valor', {
-            numeral: true,
-            numeralThousandsGroupStyle: 'thousand',
-            prefix: 'R$ ',
-            noImmediatePrefix: true,
-            delimiter: '.',
-            decimal: ',',
-            numeralDecimalMark: ',',
-            stripLeadingZeroes: true
-        });
+        var valorCleaveCC = bancInput(document.getElementById('valor'));
 
         // ─── EDITAR DESPESA DE CRÉDITO ────────────────────────────────────────
         function setCatSelecionadaCC(catId) {
@@ -899,10 +944,17 @@ $mesAtual = date('n');
             $('#data').val(dataVal ? String(dataVal).substring(0, 10) : '');
 
             var valorNum = parseFloat(String($btn.data('valor')).replace(/\./g, '').replace(',', '.'));
-            valorCleaveCC.setRawValue(valorNum);
+            valorCleaveCC.setValue(valorNum);
 
             $('#metodoWrapper').hide();
-            $('#cartaoWrapper').hide();
+            $('#tipoLancamentoWrapper').hide();
+            $('#cartaoWrapper').show();
+            $('#cartaoSelect').hide();
+            renderCartoesMiniModal();
+            var cartaoAtualId = String($btn.data('cartao') || '');
+            $('.cartao-mini-modal').removeClass('selecionado');
+            $('.cartao-mini-modal[data-id="' + cartaoAtualId + '"]').addClass('selecionado');
+            $('#cartao').val(cartaoAtualId);
 
             setCatSelecionadaCC($btn.data('categoria'));
 
@@ -930,7 +982,7 @@ $mesAtual = date('n');
                     valor:     $('#valor').val(),
                     categoria: $('#categoria').val(),
                     metodo:    'Crédito',
-                    cartao:    '',
+                    cartao:    $('#cartao').val(),
                     data:      $('#data').val(),
                 },
                 dataType: 'json',

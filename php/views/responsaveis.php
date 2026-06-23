@@ -319,6 +319,7 @@ function atualizaDisplay() {
 
 // ── Carregar resumo ────────────────────────────────────────────
 function carregaContas() {
+    if (window.atualizaAvisoMarco) atualizaAvisoMarco(mesSel, anoSel);
     $('#listaContas').html('<div class="text-center py-5"><div class="spinner-border" style="color:var(--cor-azul);" role="status"></div></div>');
     $.ajax({
         type: 'POST', url: App.ctrl.responsaveis,
@@ -712,16 +713,8 @@ $('#btnMesSeguinte').click(function () {
     atualizaDisplay(); carregaContas();
 });
 
-new Cleave('#itemValor', {
-    numeral: true, numeralThousandsGroupStyle: 'thousand',
-    prefix: 'R$ ', noImmediatePrefix: true,
-    delimiter: '.', decimal: ',', numeralDecimalMark: ',', stripLeadingZeroes: true
-});
-new Cleave('#itemValorTotal', {
-    numeral: true, numeralThousandsGroupStyle: 'thousand',
-    prefix: 'R$ ', noImmediatePrefix: true,
-    delimiter: '.', decimal: ',', numeralDecimalMark: ',', stripLeadingZeroes: true
-});
+bancInput(document.getElementById('itemValor'));
+bancInput(document.getElementById('itemValorTotal'));
 
 atualizaDisplay();
 carregaContas();

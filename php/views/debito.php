@@ -110,11 +110,11 @@ $mesAtual = date('n');
         $('#modalAdiciona').on('show.bs.modal', function () {
             if (_modoEditDeb) return;
             $('#metodoWrapper').show();
+            $('#tipoLancamentoWrapper').hide();
             $('#cartaoWrapper').hide();
-            $('#parceladoWrapper').hide();
-            $('#recorrenteWrapper').hide();
             $('.border-parcelado').hide();
             $('#metodo').val('');
+            $('.metodo-btn').removeClass('active');
             $('#cartao').val('');
             $('#cartaoSelectorModal').html('');
             resetCatSelect();
@@ -127,14 +127,15 @@ $mesAtual = date('n');
             var d = _pendingRepetirDeb;
             _pendingRepetirDeb = null;
             $('#descricao').val(d.descricao);
-            valorCleaveDeb.setRawValue(parseFloat(String(d.valor).replace(/\./g, '').replace(',', '.')));
+            valorCleaveDeb.setValue(parseFloat(String(d.valor).replace(/\./g, '').replace(',', '.')));
             var hoje = new Date();
             var pad = function(n){ return String(n).padStart(2,'0'); };
             $('#data').val(hoje.getFullYear() + '-' + pad(hoje.getMonth()+1) + '-' + pad(hoje.getDate()));
             setCatSelecionada(d.categoria);
-            $('.metodo-mini').removeClass('selecionado');
-            $('.metodo-mini[data-metodo="' + d.metodo + '"]').addClass('selecionado');
+            $('.metodo-btn').removeClass('active');
+            $('.metodo-btn[data-metodo="' + d.metodo + '"]').addClass('active');
             $('#metodo').val(d.metodo);
+            if (d.metodo === 'Débito') { $('#cartaoWrapper').show(); renderCartoesMiniModal(); }
         });
 
         // ─── SELETOR DE MÊS / ANO ────────────────────────────────────────────
@@ -160,8 +161,12 @@ $mesAtual = date('n');
         });
 
         // ─── MÉTODO → MOSTRAR CARTÃO SE DÉBITO ───────────────────────────────
-        $('#metodo').change(function () {
-            if ($(this).val() === 'Débito') {
+        $(document).on('click', '.metodo-btn', function () {
+            $('.metodo-btn').removeClass('active');
+            $(this).addClass('active');
+            var metodo = $(this).data('metodo');
+            $('#metodo').val(metodo);
+            if (metodo === 'Débito') {
                 $('#cartaoWrapper').slideDown();
                 renderCartoesMiniModal();
             } else {
@@ -232,9 +237,8 @@ $mesAtual = date('n');
 
         // ─── ADICIONAR DESPESA ────────────────────────────────────────────────
         function limpaErrosModal() {
-            $('#descricao, #valor, #data, #metodo').removeClass('is-invalid');
-            $('#catSelWrapper').removeClass('borda-erro');
-            $('#cartaoSelectorModal').removeClass('borda-erro');
+            $('#descricao, #valor, #data').removeClass('is-invalid');
+            $('#catSelWrapper, #cartaoSelectorModal, #metodoBtnsWrap').removeClass('borda-erro');
         }
 
         function validaFormDebito() {
@@ -255,7 +259,7 @@ $mesAtual = date('n');
                 erros.push('Categoria');
             }
             if (!$('#metodo').val()) {
-                $('#metodo').addClass('is-invalid');
+                $('#metodoBtnsWrap').addClass('borda-erro');
                 erros.push('Método de pagamento');
             }
             if ($('#metodo').val() === 'Débito' && !$('#cartao').val()) {
@@ -328,11 +332,13 @@ $mesAtual = date('n');
 
             // Valor formatado
             var valorNum = parseFloat(String($btn.data('valor')).replace(/\./g, '').replace(',', '.'));
-            valorCleaveDeb.setRawValue(valorNum);
+            valorCleaveDeb.setValue(valorNum);
 
             // Método
             var metodo = $btn.data('metodo');
             $('#metodo').val(metodo);
+            $('.metodo-btn').removeClass('active');
+            $('.metodo-btn[data-metodo="' + metodo + '"]').addClass('active');
             if (metodo === 'Débito') {
                 $('#cartaoWrapper').show();
                 renderCartoesMiniModal();
@@ -419,6 +425,7 @@ $mesAtual = date('n');
         }
 
         function buscaTabela(mes) {
+            if (window.atualizaAvisoMarco) atualizaAvisoMarco(mes, getAno());
             if ($.fn.DataTable.isDataTable('#gastosMes')) {
                 $('#gastosMes').DataTable().destroy();
             }
@@ -461,12 +468,13 @@ $mesAtual = date('n');
                         }
 
                         var descEsc = escHtml(gasto.descricao);
+                        var _vOrdDeb = parseFloat(String(gasto.valor).replace(/\./g,'').replace(',','.')) || 0;
                         tbody.append(`<tr class="linha-clicavel" data-valor="${gasto.valor}">
                             <td><span class="linha-check"><i class="bi bi-check-circle-fill"></i></span>${descEsc}</td>
-                            <td>R$ ${gasto.valor}</td>
+                            <td data-order="${_vOrdDeb}">R$ ${gasto.valor}</td>
                             <td>${catBadgeHtml(gasto.nome)}</td>
                             <td>${badge}</td>
-                            <td>${moment(gasto.data_gasto).format('DD/MM/YYYY')}</td>
+                            <td data-order="${gasto.data_gasto}">${moment(gasto.data_gasto).format('DD/MM/YYYY')}</td>
                             <td>
                                 <div class="d-flex align-items-center gap-1 justify-content-end">
                                     <button class="btn btn-sm btn-outline-secondary btn-editar-gasto py-0 px-1"
@@ -510,6 +518,7 @@ $mesAtual = date('n');
                         lengthChange: false,
                         searching: true,
                         ordering: true,
+                        order: [[4, 'asc']],
                         columnDefs: [{ orderable: false, targets: 5 }],
                         language: {
                             search: 'Pesquisar:',
@@ -535,16 +544,7 @@ $mesAtual = date('n');
             });
         }
 
-        var valorCleaveDeb = new Cleave('#valor', {
-            numeral: true,
-            numeralThousandsGroupStyle: 'thousand',
-            prefix: 'R$ ',
-            noImmediatePrefix: true,
-            delimiter: '.',
-            decimal: ',',
-            numeralDecimalMark: ',',
-            stripLeadingZeroes: true
-        });
+        var valorCleaveDeb = bancInput(document.getElementById('valor'));
 
         function setCatSelecionada(catId) {
             var id  = String(catId || '');
