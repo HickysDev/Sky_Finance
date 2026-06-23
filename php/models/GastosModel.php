@@ -1,10 +1,14 @@
 <?php
 
 include_once __DIR__ . '/../../conn/conn.php';
+include_once __DIR__ . '/ConfigModel.php';
 
 class GastosModel {
 
     public static function buscarGastosPorMes($mes, $ano, $cartaoId, $tipo) {
+        if (ConfigModel::antesDoMarco($mes, $ano)) {
+            return ['valortotal' => number_format(0, 2, ',', '.')];
+        }
         $conn = Database::getConnection();
 
         $params = [(int) $mes, (int) ($ano ?: date("Y"))];
@@ -239,8 +243,9 @@ class GastosModel {
 
         if (!$pendentes) return;
 
+        // INSERT IGNORE + índice único (gasto_recorrente_id, mes_referencia) evita duplicatas em corrida
         $ins = $conn->prepare("
-            INSERT INTO gastos_recorrentes_lancamentos
+            INSERT IGNORE INTO gastos_recorrentes_lancamentos
             (gasto_recorrente_id, mes_referencia, valor, nome, categoria_id, cartao_id, usuario_id)
             VALUES (?, ?, ?, ?, ?, ?, 1)
         ");
@@ -251,6 +256,9 @@ class GastosModel {
 
     public static function buscarFatura($mes, $ano, $cartaoId) {
         $ano_atual = (int) ($ano ?: date("Y"));
+        if (ConfigModel::antesDoMarco($mes, $ano_atual)) {
+            return [];
+        }
         self::gerarLancamentosParaMes($mes, $ano_atual);
         $conn = Database::getConnection();
 
@@ -281,8 +289,8 @@ class GastosModel {
                 'NORMAL' as tipo
             FROM gastos g
             LEFT JOIN parcelas p ON p.gasto_id = g.id
-            INNER JOIN categorias c ON c.id = g.categoria_id
-            INNER JOIN cartoes_credito cc ON cc.id = g.cartao_id
+            LEFT JOIN categorias c ON c.id = g.categoria_id
+            LEFT JOIN cartoes_credito cc ON cc.id = g.cartao_id
             WHERE g.metodo_pagamento = 'Crédito'
             {$condicaoGastos}
             AND (
@@ -307,7 +315,7 @@ class GastosModel {
                 'RECORRENTE' as tipo
             FROM gastos_recorrentes gr
             INNER JOIN gastos_recorrentes_lancamentos grl ON grl.gasto_recorrente_id = gr.id
-            INNER JOIN categorias cat ON cat.id = gr.categoria_id
+            LEFT JOIN categorias cat ON cat.id = gr.categoria_id
             INNER JOIN cartoes_credito cc ON cc.id = gr.cartao_id
             WHERE gr.ativo = 'S'
             AND gr.cartao_id IS NOT NULL
@@ -336,8 +344,11 @@ class GastosModel {
     }
 
     public static function buscarCredito($mes, $ano, $cartaoId) {
-        $conn = Database::getConnection();
         $ano_atual = (int) ($ano ?: date("Y"));
+        if (ConfigModel::antesDoMarco($mes, $ano_atual)) {
+            return ['valortotal' => number_format(0, 2, ',', '.')];
+        }
+        $conn = Database::getConnection();
 
         $params = [(int) $mes, $ano_atual];
 
@@ -464,6 +475,14 @@ class GastosModel {
     }
 
     public static function buscarResumoMes($mes, $ano) {
+        if (ConfigModel::antesDoMarco($mes, $ano)) {
+            return [
+                'totalDebito' => 0, 'totalCredito' => 0, 'totalRecorrente' => 0,
+                'totalRecorrenteTodos' => 0, 'totalContas' => 0, 'totalContasFixas' => 0,
+                'totalGasto' => 0, 'totalRenda' => 0, 'saldo' => 0,
+                'porCategoria' => [], 'recentes' => [], 'antesDoMarco' => true,
+            ];
+        }
         self::gerarLancamentosParaMes($mes, $ano);
         $conn = Database::getConnection();
 
@@ -502,7 +521,8 @@ class GastosModel {
         $s->execute([$mes, $ano, $mes, $ano, $mes, $ano]);
         $totalCredito = (float) $s->fetchColumn();
 
-        // Total recorrentes sem cartão (recorrentes de cartão já entram no totalCredito)
+        // Total recorrentes SEM cartão — usado na soma do totalGasto
+        // (os com cartão já entram no totalCredito, não podem contar duas vezes)
         $s = $conn->prepare("
             SELECT COALESCE(SUM(grl.valor), 0)
             FROM gastos_recorrentes_lancamentos grl
@@ -513,6 +533,18 @@ class GastosModel {
         ");
         $s->execute([$mes, $ano]);
         $totalRecorrente = (float) $s->fetchColumn();
+
+        // Total de TODOS os recorrentes do mês (com + sem cartão) — apenas para exibição no card
+        $s = $conn->prepare("
+            SELECT COALESCE(SUM(grl.valor), 0)
+            FROM gastos_recorrentes_lancamentos grl
+            INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
+            WHERE gr.ativo = 'S'
+              AND (gr.mes_inicio IS NULL OR gr.mes_inicio <= grl.mes_referencia)
+              AND MONTH(grl.mes_referencia) = ? AND YEAR(grl.mes_referencia) = ?
+        ");
+        $s->execute([$mes, $ano]);
+        $totalRecorrenteTodos = (float) $s->fetchColumn();
 
         // Gastos por categoria — todos os tipos, filtro pelo mês de competência correto
         $s = $conn->prepare("
@@ -625,11 +657,21 @@ class GastosModel {
         $s->execute([$mes, $ano, $mes, $ano, $mes, $ano, $mes, $ano, $mes, $ano]);
         $recentes = $s->fetchAll(PDO::FETCH_ASSOC);
 
-        // Total renda mensal ativa (considera recorrência)
+        // Total renda mensal ativa (respeita vigência)
         $totalRenda = 0;
         try {
-            $s = $conn->prepare("SELECT valor, recorrencia FROM renda_mensal WHERE usuario_id = 1 AND ativo = 'S'");
-            $s->execute();
+            $targetRenda = sprintf('%04d-%02d-01', $ano, (int) $mes);
+            $s = $conn->prepare("
+                SELECT valor, recorrencia FROM renda_mensal
+                WHERE usuario_id = 1 AND ativo = 'S'
+                  AND (
+                    (mes IS NULL
+                      AND (vigencia_inicio IS NULL OR vigencia_inicio <= :target)
+                      AND (vigencia_fim    IS NULL OR vigencia_fim    >  :target))
+                    OR (mes = :mes AND ano = :ano)
+                  )
+            ");
+            $s->execute([':target' => $targetRenda, ':mes' => (int) $mes, ':ano' => $ano]);
             $mult = ['Mensal' => 1, 'Quinzenal' => 2, 'Semanal' => 4.33, 'Anual' => 1/12, 'Único' => 0];
             foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $totalRenda += (float) $r['valor'] * ($mult[$r['recorrencia']] ?? 1);
@@ -670,12 +712,13 @@ class GastosModel {
         $totalGasto = $totalDebito + $totalCredito + $totalRecorrente + $totalContas + $totalContasFixas;
 
         return [
-            'totalDebito'      => $totalDebito,
-            'totalCredito'     => $totalCredito,
-            'totalRecorrente'  => $totalRecorrente,
-            'totalContas'      => $totalContas,
-            'totalContasFixas' => $totalContasFixas,
-            'totalGasto'       => $totalGasto,
+            'totalDebito'           => $totalDebito,
+            'totalCredito'          => $totalCredito,
+            'totalRecorrente'       => $totalRecorrente,
+            'totalRecorrenteTodos'  => $totalRecorrenteTodos,
+            'totalContas'           => $totalContas,
+            'totalContasFixas'      => $totalContasFixas,
+            'totalGasto'            => $totalGasto,
             'totalRenda'       => $totalRenda,
             'saldo'            => $totalRenda - $totalGasto,
             'porCategoria'     => $porCategoria,
@@ -772,26 +815,50 @@ class GastosModel {
             foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) { $meses[(int)$r['mes']]['contas'] += (float)$r['total']; }
         } catch (Exception $e) {}
 
-        // Renda por mês
+        // Renda por mês (respeita vigência de cada entrada)
         try {
             $mult = ['Mensal' => 1, 'Quinzenal' => 2, 'Semanal' => 4.33, 'Anual' => 1/12, 'Único' => 0];
             $s = $conn->prepare("
-                SELECT valor, recorrencia, MONTH(data_registro) AS mes_reg
+                SELECT valor, recorrencia, mes, ano,
+                       MONTH(data_registro) AS mes_reg,
+                       vigencia_inicio, vigencia_fim
                 FROM renda_mensal
                 WHERE usuario_id = 1 AND ativo = 'S'
-                  AND (recorrencia != 'Único' OR YEAR(data_registro) = ?)
             ");
-            $s->execute([$ano]);
+            $s->execute();
             foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $val = (float) $r['valor'];
-                if ($r['recorrencia'] === 'Único') {
-                    $meses[(int)$r['mes_reg']]['renda'] += $val;
+                if ($r['mes'] !== null) {
+                    // Entrada específica de um mês/ano
+                    if ((int) $r['ano'] === $ano) {
+                        $meses[(int) $r['mes']]['renda'] += $val * ($mult[$r['recorrencia']] ?? 1);
+                    }
                 } else {
-                    $mensal = $val * ($mult[$r['recorrencia']] ?? 1);
-                    for ($m = 1; $m <= 12; $m++) { $meses[$m]['renda'] += $mensal; }
+                    // Recorrente — aplica apenas aos meses dentro da vigência
+                    $mensal  = $val * ($mult[$r['recorrencia']] ?? 1);
+                    $vigIni  = $r['vigencia_inicio'];
+                    $vigFim  = $r['vigencia_fim'];
+                    for ($m = 1; $m <= 12; $m++) {
+                        $d = sprintf('%04d-%02d-01', $ano, $m);
+                        if (($vigIni === null || $vigIni <= $d) && ($vigFim === null || $vigFim > $d)) {
+                            $meses[$m]['renda'] += $mensal;
+                        }
+                    }
                 }
             }
         } catch (Exception $e) {}
+
+        // Zera meses anteriores ao marco inicial (ignora dados antes do início do controle)
+        $marcoAnual = ConfigModel::getMesInicio();
+        if ($marcoAnual) {
+            foreach ($meses as $mn => &$mv) {
+                if (sprintf('%04d-%02d-01', $ano, $mn) < $marcoAnual) {
+                    $mv['debito'] = $mv['credito'] = $mv['recorrente'] = 0.0;
+                    $mv['contas'] = $mv['fixas']   = $mv['renda']      = 0.0;
+                }
+            }
+            unset($mv);
+        }
 
         // Gasto e saldo por mês
         foreach ($meses as &$m) {
@@ -800,30 +867,40 @@ class GastosModel {
         }
         unset($m);
 
+        // Limite inferior do marco para o resumo por categoria (marco em formato seguro 'YYYY-MM-01')
+        $mDG = $mVE = $mPA = $mRE = $mCP = '';
+        if ($marcoAnual && preg_match('/^\d{4}-\d{2}-01$/', $marcoAnual)) {
+            $mDG = " AND data_gasto >= '$marcoAnual'";
+            $mVE = " AND dataVencimento >= '$marcoAnual'";
+            $mPA = " AND p.data_vencimento >= '$marcoAnual'";
+            $mRE = " AND grl.mes_referencia >= '$marcoAnual'";
+            $mCP = " AND cp.data >= '$marcoAnual'";
+        }
+
         // Por categoria (ano inteiro)
         $s = $conn->prepare("
             SELECT cat.nome, cat.cor, cat.icone, SUM(sub.val) AS total
             FROM (
                 SELECT categoria_id, valor AS val FROM gastos
-                WHERE usuario_id = 1 AND metodo_pagamento IN ('Dinheiro','Débito','Pix') AND YEAR(data_gasto) = ?
+                WHERE usuario_id = 1 AND metodo_pagamento IN ('Dinheiro','Débito','Pix') AND YEAR(data_gasto) = ?{$mDG}
                 UNION ALL
                 SELECT categoria_id, valor AS val FROM gastos
-                WHERE usuario_id = 1 AND metodo_pagamento = 'Crédito' AND parcelado = 'N' AND YEAR(dataVencimento) = ?
+                WHERE usuario_id = 1 AND metodo_pagamento = 'Crédito' AND parcelado = 'N' AND YEAR(dataVencimento) = ?{$mVE}
                 UNION ALL
                 SELECT g.categoria_id, p.valor_parcela AS val
                 FROM parcelas p JOIN gastos g ON g.id = p.gasto_id
-                WHERE g.usuario_id = 1 AND YEAR(p.data_vencimento) = ?
+                WHERE g.usuario_id = 1 AND YEAR(p.data_vencimento) = ?{$mPA}
                 UNION ALL
                 SELECT gr.categoria_id, grl.valor AS val
                 FROM gastos_recorrentes_lancamentos grl
                 JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
                 WHERE gr.ativo = 'S'
                   AND (gr.mes_inicio IS NULL OR gr.mes_inicio <= grl.mes_referencia)
-                  AND YEAR(grl.mes_referencia) = ?
+                  AND YEAR(grl.mes_referencia) = ?{$mRE}
                 UNION ALL
                 SELECT cp.categoria_id, cp.valor AS val
                 FROM contas_pessoa cp
-                WHERE cp.usuario_id = 1 AND cp.categoria_id IS NOT NULL AND YEAR(cp.data) = ?
+                WHERE cp.usuario_id = 1 AND cp.categoria_id IS NOT NULL AND YEAR(cp.data) = ?{$mCP}
             ) sub
             JOIN categorias cat ON cat.id = sub.categoria_id
             GROUP BY sub.categoria_id, cat.nome, cat.cor, cat.icone
@@ -858,14 +935,15 @@ class GastosModel {
 
     public static function editarGastoSimples($id, $descricao, $categoriaId) {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("UPDATE gastos SET descricao = ?, categoria_id = ? WHERE id = ?");
+        // COALESCE: se nenhuma categoria for enviada, mantém a atual (não zera)
+        $stmt = $conn->prepare("UPDATE gastos SET descricao = ?, categoria_id = COALESCE(?, categoria_id) WHERE id = ?");
         $stmt->execute([$descricao, $categoriaId ?: null, (int) $id]);
         return ['success' => true];
     }
 
     public static function editarRecorrenteSimples($id, $nome, $categoriaId) {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("UPDATE gastos_recorrentes SET nome = ?, categoria_id = ? WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE gastos_recorrentes SET nome = ?, categoria_id = COALESCE(?, categoria_id) WHERE id = ?");
         $stmt->execute([$nome, $categoriaId ?: null, (int) $id]);
         return ['success' => true];
     }
@@ -874,7 +952,7 @@ class GastosModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             UPDATE gastos
-            SET descricao = ?, valor = ?, categoria_id = ?, metodo_pagamento = ?, cartao_id = ?, data_gasto = ?
+            SET descricao = ?, valor = ?, categoria_id = COALESCE(?, categoria_id), metodo_pagamento = ?, cartao_id = ?, data_gasto = ?
             WHERE id = ?
         ");
         $stmt->execute([
@@ -950,5 +1028,70 @@ class GastosModel {
 
         $sql = $conn->prepare("UPDATE gastos_recorrentes SET categoria_id = ?, nome = ?, ativo = 'S' WHERE id = ?");
         return $sql->execute([(int) $categoria, $nome, (int) $id]);
+    }
+
+    public static function gastosPorCategoria(int $mes, int $ano, string $catNome): array {
+        $conn = Database::getConnection();
+
+        $stmtCat = $conn->prepare("SELECT id FROM categorias WHERE nome = :nome AND ativo = 'S' LIMIT 1");
+        $stmtCat->execute([':nome' => $catNome]);
+        $cat = $stmtCat->fetch(PDO::FETCH_ASSOC);
+        if (!$cat) return [];
+        $catId = (int) $cat['id'];
+
+        $result = [];
+
+        // À vista (débito, pix, dinheiro)
+        $s = $conn->prepare("
+            SELECT g.descricao, g.valor, g.data_gasto AS data, g.metodo_pagamento AS metodo,
+                   'NORMAL' AS tipo, NULL AS parcela_info
+            FROM gastos g
+            WHERE g.usuario_id = 1 AND g.categoria_id = :cat
+              AND g.metodo_pagamento IN ('Dinheiro','Débito','Pix')
+              AND MONTH(g.data_gasto) = :mes AND YEAR(g.data_gasto) = :ano
+        ");
+        $s->execute([':cat' => $catId, ':mes' => $mes, ':ano' => $ano]);
+        foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) { $r['valor'] = (float)$r['valor']; $result[] = $r; }
+
+        // Crédito não parcelado
+        $s = $conn->prepare("
+            SELECT g.descricao, g.valor, g.data_gasto AS data, 'Crédito' AS metodo,
+                   'NORMAL' AS tipo, NULL AS parcela_info
+            FROM gastos g
+            WHERE g.usuario_id = 1 AND g.categoria_id = :cat
+              AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'N'
+              AND MONTH(g.dataVencimento) = :mes AND YEAR(g.dataVencimento) = :ano
+        ");
+        $s->execute([':cat' => $catId, ':mes' => $mes, ':ano' => $ano]);
+        foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) { $r['valor'] = (float)$r['valor']; $result[] = $r; }
+
+        // Parcelas de crédito
+        $s = $conn->prepare("
+            SELECT g.descricao, p.valor_parcela AS valor, g.data_gasto AS data, 'Crédito' AS metodo,
+                   'PARCELADO' AS tipo, CONCAT(p.numero_parcela,'/',p.parcelas_total) AS parcela_info
+            FROM gastos g
+            INNER JOIN parcelas p ON p.gasto_id = g.id
+            WHERE g.usuario_id = 1 AND g.categoria_id = :cat
+              AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'S'
+              AND MONTH(p.data_vencimento) = :mes AND YEAR(p.data_vencimento) = :ano
+        ");
+        $s->execute([':cat' => $catId, ':mes' => $mes, ':ano' => $ano]);
+        foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) { $r['valor'] = (float)$r['valor']; $result[] = $r; }
+
+        // Recorrentes
+        $s = $conn->prepare("
+            SELECT grl.nome AS descricao, grl.valor, grl.mes_referencia AS data, 'Recorrente' AS metodo,
+                   'RECORRENTE' AS tipo, NULL AS parcela_info
+            FROM gastos_recorrentes_lancamentos grl
+            INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
+            WHERE gr.usuario_id = 1 AND gr.categoria_id = :cat AND gr.ativo = 'S'
+              AND MONTH(grl.mes_referencia) = :mes AND YEAR(grl.mes_referencia) = :ano
+        ");
+        $s->execute([':cat' => $catId, ':mes' => $mes, ':ano' => $ano]);
+        foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) { $r['valor'] = (float)$r['valor']; $result[] = $r; }
+
+        usort($result, function ($a, $b) { return strcmp($b['data'] ?? '', $a['data'] ?? ''); });
+
+        return $result;
     }
 }

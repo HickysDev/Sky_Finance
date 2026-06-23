@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../../conn/conn.php';
+include_once __DIR__ . '/ConfigModel.php';
 
 class CofrinhoModel {
 
@@ -107,6 +108,11 @@ class CofrinhoModel {
         $stmt->execute([':mes' => $mes, ':ano' => $ano]);
         $totais = $stmt->fetch(PDO::FETCH_ASSOC);
 
+        // Aportes do mês zerados se o mês for anterior ao marco inicial
+        if (ConfigModel::antesDoMarco($mes, $ano)) {
+            $totais['aportes_mes'] = 0;
+        }
+
         $stmt2 = $conn->prepare("
             SELECT id, nome, cor, valor_atual, meta_valor, data_limite
             FROM cofrinhos WHERE usuario_id = 1 ORDER BY created_at DESC LIMIT 10
@@ -117,6 +123,7 @@ class CofrinhoModel {
     }
 
     public static function totalAportesMes(int $mes, int $ano): float {
+        if (ConfigModel::antesDoMarco($mes, $ano)) return 0.0;
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             SELECT COALESCE(SUM(ca.valor), 0)

@@ -1,6 +1,7 @@
 <?php
 
 include_once __DIR__ . '/../../conn/conn.php';
+include_once __DIR__ . '/ConfigModel.php';
 
 class ContasPessoaModel {
 
@@ -56,6 +57,7 @@ class ContasPessoaModel {
     }
 
     public static function resumo(int $mes, int $ano): array {
+        if (ConfigModel::antesDoMarco($mes, $ano)) return [];
         $conn = Database::getConnection();
 
         // Busca responsáveis + totais de contas_pessoa (eu devo) do mês selecionado.
@@ -136,6 +138,7 @@ class ContasPessoaModel {
     }
 
     public static function despesasMeDeve(int $responsavelId, int $mes, int $ano): array {
+        if (ConfigModel::antesDoMarco($mes, $ano)) return [];
         $conn = Database::getConnection();
 
         // Não-crédito: filtra por data_gasto

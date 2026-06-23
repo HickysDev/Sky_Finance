@@ -1,6 +1,7 @@
 <?php
 
 include_once __DIR__ . '/../../conn/conn.php';
+include_once __DIR__ . '/ConfigModel.php';
 
 class FinancasModel {
 
@@ -10,16 +11,50 @@ class FinancasModel {
     }
 
     public function buscarRendas(int $mes, int $ano): array {
-        $conn = Database::getConnection();
-        $stmt = $conn->prepare("
+        if (ConfigModel::antesDoMarco($mes, $ano)) return [];
+        $conn   = Database::getConnection();
+        $target = sprintf('%04d-%02d-01', $ano, $mes);
+        $stmt   = $conn->prepare("
             SELECT *, (mes IS NULL) AS recorrente
             FROM renda_mensal
             WHERE usuario_id = 1
-              AND (mes IS NULL OR (mes = :mes AND ano = :ano))
-            ORDER BY (mes IS NULL) DESC, ativo DESC, id DESC
+              AND (
+                (mes IS NULL
+                  AND (vigencia_inicio IS NULL OR vigencia_inicio <= :target)
+                  AND (vigencia_fim    IS NULL OR vigencia_fim    >  :target))
+                OR (mes = :mes AND ano = :ano)
+              )
+            ORDER BY (mes IS NULL) DESC, vigencia_inicio DESC, ativo DESC, id DESC
         ");
-        $stmt->execute([':mes' => $mes, ':ano' => $ano]);
+        $stmt->execute([':mes' => $mes, ':ano' => $ano, ':target' => $target]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function registrarMudancaRenda(int $id, string $novoValor, int $mesMudanca, int $anoMudanca): bool {
+        $conn   = Database::getConnection();
+        $target = sprintf('%04d-%02d-01', $anoMudanca, $mesMudanca);
+
+        $old = $conn->prepare("SELECT * FROM renda_mensal WHERE id = :id AND usuario_id = 1");
+        $old->execute([':id' => $id]);
+        $entry = $old->fetch(PDO::FETCH_ASSOC);
+        if (!$entry) return false;
+
+        // Fecha vigência do registro atual
+        $conn->prepare("UPDATE renda_mensal SET vigencia_fim = :fim WHERE id = :id AND usuario_id = 1")
+             ->execute([':fim' => $target, ':id' => $id]);
+
+        // Cria novo registro com novo valor
+        return $conn->prepare("
+            INSERT INTO renda_mensal
+                (usuario_id, descricao, tipo, recorrencia, valor, mes, ano, data_registro, vigencia_inicio)
+            VALUES (1, :desc, :tipo, :rec, :valor, NULL, NULL, CURDATE(), :vinicio)
+        ")->execute([
+            ':desc'    => $entry['descricao'],
+            ':tipo'    => $entry['tipo'],
+            ':rec'     => $entry['recorrencia'],
+            ':valor'   => $this->parseValor($novoValor),
+            ':vinicio' => $target,
+        ]);
     }
 
     public function adicionarRenda(array $data): bool {
@@ -82,6 +117,7 @@ class FinancasModel {
     }
 
     public function totalGastosMes(int $mes, int $ano): float {
+        if (ConfigModel::antesDoMarco($mes, $ano)) return 0.0;
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             SELECT COALESCE(SUM(v), 0) FROM (

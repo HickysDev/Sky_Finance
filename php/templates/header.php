@@ -3,6 +3,7 @@ include_once __DIR__ . '/../../conn/conn.php';
 include_once __DIR__ . '/../../conn/config.php';
 require_once __DIR__ . '/../middleware/auth.php';
 include_once __DIR__ . '/../services/RecorrentesService.php';
+include_once __DIR__ . '/../models/ConfigModel.php';
 
 RecorrentesService::lancarRecorrentesDoMes();
 
@@ -74,6 +75,7 @@ $conn = Database::getConnection();
   <script>
   window.App = {
       base: '<?= BASE_URL ?>',
+      marcoInicio: '<?= ConfigModel::getMesInicio() ?? '' ?>',
       ctrl: {
           gastos:    '<?= CTRL_GASTOS ?>',
           categoria: '<?= CTRL_CATEGORIA ?>',
@@ -100,6 +102,128 @@ $conn = Database::getConnection();
           .replace(/'/g, '&#39;');
   }
   window.escHtml = escHtml;
+
+  // ── Marco inicial: avisa quando o mês visto é anterior ao início do controle ──
+  window.antesDoMarco = function (mes, ano) {
+      if (!window.App || !App.marcoInicio) return false;
+      var alvo = ('0000' + ano).slice(-4) + '-' + ('00' + mes).slice(-2) + '-01';
+      return alvo < App.marcoInicio;
+  };
+
+  window.atualizaAvisoMarco = function (mes, ano) {
+      var $b = $('#avisoMarcoBanner');
+      if (window.antesDoMarco(mes, ano)) {
+          if (!$b.length) {
+              $('.corpo-site').first().prepend(
+                  '<div id="avisoMarcoBanner" class="aviso-marco animate__animated animate__fadeIn">' +
+                  '<i class="bi bi-flag-fill me-2"></i>' +
+                  'Mês anterior ao início do controle — os dados aparecem zerados.</div>'
+              );
+          }
+      } else {
+          $b.remove();
+      }
+  };
+
+  // ── Input monetário estilo app de banco ──────────────────────────
+  // Os dígitos entram pelos centavos e "empurram" para a esquerda.
+  // Retorna { getValue(), setValue(v) } como substituto do Cleave.
+  window.bancInput = function (el, valorInicial) {
+      if (typeof el === 'string') el = document.querySelector(el);
+      if (!el) return { getValue: function () { return 0; }, setValue: function () {} };
+
+      var digits = '';
+
+      function parseToDigits(v) {
+          if (v === null || v === undefined || v === '') return '';
+          if (typeof v === 'number') {
+              if (isNaN(v) || v <= 0) return '';
+              return String(Math.round(v * 100)).replace(/^0+/, '') || '';
+          }
+          var s = String(v).replace(/R\$\s?/g, '').trim();
+          if (s.indexOf(',') !== -1) {
+              return s.replace(/[^\d]/g, '').replace(/^0+/, '') || '';
+          }
+          if (s.indexOf('.') !== -1) {
+              var p = s.split('.');
+              var intPart = p[0].replace(/\D/g, '');
+              var decPart = (p[1] || '00').substring(0, 2).padEnd(2, '0');
+              return (intPart + decPart).replace(/^0+/, '') || '';
+          }
+          return s.replace(/\D/g, '').replace(/^0+/, '') || '';
+      }
+
+      function render() {
+          var n = digits || '';
+          while (n.length < 3) n = '0' + n;
+          var intPart = n.slice(0, -2).replace(/^0+/, '') || '0';
+          var decPart = n.slice(-2);
+          el.value = 'R$ ' + intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + decPart;
+      }
+
+      digits = parseToDigits(valorInicial);
+      render();
+
+      el.addEventListener('keydown', function (e) {
+          if (e.key >= '0' && e.key <= '9') {
+              e.preventDefault();
+              if (digits.length < 13) digits += e.key;
+              render();
+          } else if (e.key === 'Backspace') {
+              e.preventDefault();
+              digits = digits.slice(0, -1);
+              render();
+          } else if (e.key === 'Delete') {
+              e.preventDefault();
+              digits = '';
+              render();
+          }
+      });
+
+      el.addEventListener('focus', function () {
+          setTimeout(function () { el.select(); }, 10);
+      });
+
+      el.addEventListener('paste', function (e) {
+          e.preventDefault();
+          var text = (e.clipboardData || window.clipboardData).getData('text');
+          digits = parseToDigits(text);
+          render();
+      });
+
+      return {
+          getValue: function () {
+              if (!digits) return 0;
+              var n = digits;
+              while (n.length < 3) n = '0' + n;
+              return parseFloat(n.slice(0, -2) + '.' + n.slice(-2));
+          },
+          setValue: function (v) {
+              digits = parseToDigits(v);
+              render();
+          }
+      };
+  };
+  </script>
+
+  <!-- Fix: modais empilhadas (modal dentro de modal) -->
+  <script>
+  // Cada nova modal que abre enquanto outra já está aberta recebe z-index maior,
+  // e seu backdrop fica entre a modal anterior e a nova.
+  $(document).on('show.bs.modal', '.modal', function () {
+      var abertas = $('.modal.show').length;
+      if (abertas === 0) return;
+      var baseZ = 1055 + (abertas * 15);
+      $(this).css('z-index', baseZ + 5);
+      setTimeout(function () {
+          $('.modal-backdrop').last().css('z-index', baseZ);
+      }, 10);
+  });
+  // Quando uma modal fecha mas outra ainda está aberta, mantém modal-open no body
+  // (sem isso Bootstrap remove o classe e o scroll volta antes da hora).
+  $(document).on('hidden.bs.modal', '.modal', function () {
+      if ($('.modal.show').length) $('body').addClass('modal-open');
+  });
   </script>
 
   <!-- Responsáveis global -->
@@ -235,6 +359,7 @@ $navGrupos = [
         ['href' => BASE_URL . '/php/views/responsaveis.php',                       'label' => 'Pessoas',      'icon' => 'bi-people-fill',         'match' => 'responsaveis.php',   'match_q' => ''],
         ['href' => BASE_URL . '/php/views/simulador.php',                          'label' => 'Simulador',    'icon' => 'bi-calculator-fill',     'match' => 'simulador.php',      'match_q' => ''],
         ['href' => BASE_URL . '/php/views/gerenciamento.php',                      'label' => 'Config.',      'icon' => 'bi-gear-fill',           'match' => 'gerenciamento.php',  'match_q' => ''],
+        ['href' => BASE_URL . '/php/views/backup.php',                              'label' => 'Backup',       'icon' => 'bi-database-down',       'match' => 'backup.php',         'match_q' => ''],
     ],
 ];
 ?>

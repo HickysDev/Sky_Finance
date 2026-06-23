@@ -543,8 +543,15 @@ $(document).ready(function () {
 
                     if (!inativo) totalMes += parseFloat(r.valor);
 
+                    var vigLabel = '';
+                    if (isRec && r.vigencia_inicio) {
+                        var vi = r.vigencia_inicio.substring(0,7).split('-');
+                        vigLabel = ' <span class="badge" style="background:#10B98122;color:#10B981;font-size:0.7rem;" title="Vigência">'
+                                 + '<i class="bi bi-calendar-check me-1"></i>A partir de '
+                                 + mNomesRenda[parseInt(vi[1])] + '/' + vi[0] + '</span>';
+                    }
                     const aplicBadge = isRec
-                        ? '<span class="badge" style="background:#3B82F622;color:#3B82F6;"><i class="bi bi-arrow-repeat me-1"></i>Todo mês</span>'
+                        ? '<span class="badge" style="background:#3B82F622;color:#3B82F6;"><i class="bi bi-arrow-repeat me-1"></i>Todo mês</span>' + vigLabel
                         : '<span class="badge" style="background:#8B5CF622;color:#8B5CF6;"><i class="bi bi-calendar-event me-1"></i>' + mNomesRenda[parseInt(r.mes)] + '/' + r.ano + '</span>';
 
                     html += `
@@ -568,6 +575,12 @@ $(document).ready(function () {
                                 + R$ ${formatarBR(r.valor)}
                             </span>
                             <div class="d-flex gap-1">
+                                ${isRec && !inativo ? `
+                                <button class="btn btn-sm btn-outline-success btnMudancaRenda"
+                                        data-id="${r.id}" data-desc="${escHtml(r.descricao)}" data-valor="${r.valor}"
+                                        title="Registrar aumento / mudança de valor">
+                                    <i class="bi bi-graph-up-arrow"></i>
+                                </button>` : ''}
                                 <button class="btn btn-sm btn-outline-secondary btnToggleRenda"
                                         data-id="${r.id}" title="${inativo ? 'Ativar' : 'Inativar'}">
                                     <i class="bi ${inativo ? 'bi-play-fill' : 'bi-pause-fill'}"></i>
@@ -720,6 +733,77 @@ $(document).ready(function () {
                     error: function () { toastr.error('Erro ao remover!'); }
                 });
             }
+        });
+    });
+
+    // ─── REGISTRAR MUDANÇA DE RENDA (aumento/redução) ────────────────────
+    $(document).on('click', '.btnMudancaRenda', function () {
+        const id   = $(this).data('id');
+        const desc = $(this).data('desc');
+        const hoje = new Date();
+        const mesHoje = String(hoje.getMonth() + 1).padStart(2, '0');
+        const anoHoje = hoje.getFullYear();
+
+        Swal.fire({
+            title: '<i class="bi bi-graph-up-arrow me-2" style="color:#22C55E;"></i>Registrar mudança de renda',
+            html: `
+                <div class="text-start mb-3">
+                    <small class="text-muted">Fonte: <strong>${desc}</strong></small>
+                </div>
+                <div class="mb-3 text-start">
+                    <label class="form-label">Novo valor mensal</label>
+                    <input id="swalNovoValor" class="form-control" placeholder="R$ 0,00">
+                </div>
+                <div class="row g-2 text-start">
+                    <div class="col-6">
+                        <label class="form-label">A partir do mês</label>
+                        <select id="swalMudMes" class="form-select">
+                            ${['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+                              .map((m, i) => `<option value="${i+1}" ${i+1 == hoje.getMonth()+1 ? 'selected' : ''}>${m}</option>`)
+                              .join('')}
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Ano</label>
+                        <input id="swalMudAno" type="number" class="form-control"
+                               value="${anoHoje}" min="2000" max="2099">
+                    </div>
+                </div>
+                <div class="mt-3 p-2 rounded" style="background:#10B98122;font-size:0.8rem;color:#10B981;">
+                    <i class="bi bi-info-circle me-1"></i>
+                    O histórico anterior continuará com o valor antigo. A partir do mês escolhido usará o novo valor.
+                </div>`,
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-check-lg me-1"></i>Confirmar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#22C55E',
+            cancelButtonColor: '#6B7280',
+            didOpen: function () {
+                bancInput(document.getElementById('swalNovoValor'));
+            },
+            preConfirm: function () {
+                const valor = $('#swalNovoValor').val();
+                const mes   = parseInt($('#swalMudMes').val());
+                const ano   = parseInt($('#swalMudAno').val());
+                const raw   = parseFloat(valor.replace(/R\$\s?/g,'').replace(/\./g,'').replace(',','.'));
+                if (!raw || raw <= 0) { Swal.showValidationMessage('Informe o novo valor.'); return false; }
+                if (!mes || !ano)     { Swal.showValidationMessage('Informe mês e ano.'); return false; }
+                return { valor, mes, ano };
+            }
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+            $.ajax({
+                type: 'POST', url: App.ctrl.financas,
+                data: { acao: 'registrarMudancaRenda', id, valor: result.value.valor,
+                        mes: result.value.mes, ano: result.value.ano },
+                dataType: 'json',
+                success: function (ok) {
+                    if (ok) { toastr.success('Mudança registrada! Histórico preservado.'); buscaRendas(); }
+                    else    { toastr.error('Erro ao registrar mudança.'); }
+                },
+                error: function () { toastr.error('Erro na requisição.'); }
+            });
         });
     });
 
@@ -927,7 +1011,10 @@ $(document).ready(function () {
     buscaOrcamentos();
 
     // ─── NAVEGAÇÃO GLOBAL ────────────────────────────────────────────────
-    function atualizarTudo() { buscaRendas(); buscaOrcamentos(); }
+    function atualizarTudo() {
+        if (window.atualizaAvisoMarco) atualizaAvisoMarco(getFinMes(), getFinAno());
+        buscaRendas(); buscaOrcamentos();
+    }
 
     $('#mesFin').change(function () { atualizarTudo(); });
     $('#finLeft').click(function () {
@@ -1029,12 +1116,7 @@ $(document).ready(function () {
         });
     });
 
-    new Cleave('#orcLimite', {
-        numeral: true, numeralThousandsGroupStyle: 'thousand',
-        prefix: 'R$ ', noImmediatePrefix: true,
-        delimiter: '.', decimal: ',', numeralDecimalMark: ',',
-        stripLeadingZeroes: true
-    });
+    bancInput(document.getElementById('orcLimite'));
 
     // ─── UTILITÁRIO ───────────────────────────────────────────────────────
     function formatarBR(n) {
@@ -1042,16 +1124,7 @@ $(document).ready(function () {
     }
 
     // Máscara monetária no campo do modal
-    new Cleave('#rendaValor', {
-        numeral: true,
-        numeralThousandsGroupStyle: 'thousand',
-        prefix: 'R$ ',
-        noImmediatePrefix: true,
-        delimiter: '.',
-        decimal: ',',
-        numeralDecimalMark: ',',
-        stripLeadingZeroes: true
-    });
+    bancInput(document.getElementById('rendaValor'));
 
 });
 </script>
@@ -1370,7 +1443,7 @@ $(document).ready(function () {
         $('#cofCDIPctWrap, #cofTaxaWrap').hide();
         $('#cofCDIPct').val('100');
         $('#cofCDITaxa').val('13.15');
-        if (cleaveCofMeta) cleaveCofMeta.setRawValue(''); else $('#cofMeta').val('');
+        if (cleaveCofMeta) cleaveCofMeta.setValue(0); else $('#cofMeta').val('');
     }
 
     $('#btnNovoCof').click(function () {
@@ -1402,7 +1475,7 @@ $(document).ready(function () {
             $('#cofCDIPct').val($b.data('cdipct'));
             $('#cofCDITaxa').val($b.data('cditaxa'));
         }
-        if (cleaveCofMeta) cleaveCofMeta.setRawValue($b.data('meta'));
+        if (cleaveCofMeta) cleaveCofMeta.setValue($b.data('meta'));
         else $('#cofMeta').val($b.data('meta'));
 
         $('#modalCofrinho').modal('show');
@@ -1496,7 +1569,7 @@ $(document).ready(function () {
         } else {
             $('#aporteAtualWrap').hide();
         }
-        if (cleaveAporte) cleaveAporte.setRawValue(''); else $('#aporteValor').val('');
+        if (cleaveAporte) cleaveAporte.setValue(0); else $('#aporteValor').val('');
         var hoje = new Date();
         $('#aporteData').val(hoje.getFullYear() + '-' +
             String(hoje.getMonth() + 1).padStart(2, '0') + '-' +
@@ -1588,17 +1661,9 @@ $(document).ready(function () {
 
     // ─── MÁSCARAS ────────────────────────────────────────────────
 
-    cleaveCofMeta = new Cleave('#cofMeta', {
-        numeral: true, numeralThousandsGroupStyle: 'thousand',
-        prefix: 'R$ ', noImmediatePrefix: true,
-        delimiter: '.', decimal: ',', numeralDecimalMark: ',', stripLeadingZeroes: true
-    });
+    cleaveCofMeta = bancInput(document.getElementById('cofMeta'));
 
-    cleaveAporte = new Cleave('#aporteValor', {
-        numeral: true, numeralThousandsGroupStyle: 'thousand',
-        prefix: 'R$ ', noImmediatePrefix: true,
-        delimiter: '.', decimal: ',', numeralDecimalMark: ',', stripLeadingZeroes: true
-    });
+    cleaveAporte = bancInput(document.getElementById('aporteValor'));
 
     // ─── UTILS ───────────────────────────────────────────────────
 

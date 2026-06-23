@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS `usuarios` (
   `senha_hash`   VARCHAR(255) NOT NULL,
   `ativo`        TINYINT(1)   NOT NULL DEFAULT 1,
   `ultimo_login` DATETIME     NULL,
+  `mes_inicio_controle` DATE  NULL DEFAULT NULL,
   `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_email` (`email`)
@@ -157,6 +158,7 @@ CREATE TABLE IF NOT EXISTS `gastos_recorrentes_lancamentos` (
   `criado_em`           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `gasto_recorrente_id` (`gasto_recorrente_id`),
+  UNIQUE KEY `uk_rec_mes` (`gasto_recorrente_id`, `mes_referencia`),
   CONSTRAINT `gastos_recorrentes_lancamentos_ibfk_1`
     FOREIGN KEY (`gasto_recorrente_id`) REFERENCES `gastos_recorrentes`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -166,10 +168,12 @@ CREATE TABLE IF NOT EXISTS `gastos_recorrentes_lancamentos` (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `renda_mensal` (
   `id`             INT          NOT NULL AUTO_INCREMENT,
-  `valor`          DECIMAL(10,2) NOT NULL,
-  `descricao`      VARCHAR(255) NOT NULL,
-  `data_registro`  DATE         NOT NULL DEFAULT (CURDATE()),
-  `usuario_id`     INT          NOT NULL,
+  `valor`           DECIMAL(10,2) NOT NULL,
+  `descricao`       VARCHAR(255) NOT NULL,
+  `data_registro`   DATE         NOT NULL DEFAULT (CURDATE()),
+  `vigencia_inicio` DATE         NULL DEFAULT NULL,
+  `vigencia_fim`    DATE         NULL DEFAULT NULL,
+  `usuario_id`      INT          NOT NULL,
   PRIMARY KEY (`id`),
   KEY `usuario_id` (`usuario_id`),
   CONSTRAINT `renda_mensal_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios`(`id`)

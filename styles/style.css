@@ -564,15 +564,50 @@ h1, h2, h3, h4, h5 {
 .linha-check { display: none; color: var(--cor-azul); margin-right: .35rem; font-size: .78rem; vertical-align: middle; }
 .linha-selecionada .linha-check { display: inline; }
 
-.barra-selecao {
+.aviso-marco {
   display: flex;
   align-items: center;
-  padding: .5rem .75rem;
-  border-radius: var(--radius-sm);
-  background: rgba(59,130,246,.08);
-  border: 1px solid rgba(59,130,246,.25);
+  gap: .25rem;
+  padding: .7rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(245, 158, 11, .12);
+  border: 1px solid rgba(245, 158, 11, .4);
+  color: #F59E0B;
   font-size: .85rem;
+  font-weight: 500;
+}
+
+.barra-selecao {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  padding: .7rem 1rem;
+  border-radius: 50px;
+  background: #26273a;
+  border: 1px solid rgba(59,130,246,.45);
+  box-shadow: 0 10px 34px rgba(0,0,0,.5), 0 0 0 1px rgba(59,130,246,.08);
+  font-size: .9rem;
   color: var(--cor-texto);
+  backdrop-filter: blur(8px);
+  animation: barraSelIn .22s ease;
+}
+
+@keyframes barraSelIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 575px) {
+  .barra-selecao {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+    justify-content: center;
+  }
 }
 
 table.dataTable thead th,
@@ -1162,3 +1197,165 @@ table.dataTable td.dt-type-date {
 .resumo-cf.pago    { border-color: rgba(34,197,94,.4);  color: #22C55E; background: rgba(34,197,94,.08); }
 .resumo-cf.aberto  { border-color: rgba(59,130,246,.4); color: #3B82F6; background: rgba(59,130,246,.08); }
 .resumo-cf.vencido { border-color: rgba(239,68,68,.4);  color: #EF4444; background: rgba(239,68,68,.08); }
+
+/* ─── SWEETALERT2 — TEMA ESCURO ─────────────────── */
+.swal2-popup {
+    background: #2B2C3B !important;
+    color: #F0F0F5 !important;
+    border: 1px solid #3F3F46 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,.55) !important;
+}
+.swal2-title {
+    color: #F0F0F5 !important;
+    font-size: 1.1rem !important;
+}
+.swal2-html-container {
+    color: #9CA3AF !important;
+}
+.swal2-icon {
+    border-color: #3F3F46 !important;
+}
+.swal2-icon.swal2-warning {
+    border-color: #F59E0B !important;
+    color: #F59E0B !important;
+}
+.swal2-icon.swal2-error {
+    border-color: #EF4444 !important;
+    color: #EF4444 !important;
+}
+.swal2-icon.swal2-success {
+    border-color: #22C55E !important;
+    color: #22C55E !important;
+}
+.swal2-icon.swal2-info {
+    border-color: #3B82F6 !important;
+    color: #3B82F6 !important;
+}
+.swal2-icon.swal2-question {
+    border-color: #8B5CF6 !important;
+    color: #8B5CF6 !important;
+}
+.swal2-icon.swal2-success [class^='swal2-success-line'] {
+    background: #22C55E !important;
+}
+.swal2-icon.swal2-success .swal2-success-ring {
+    border-color: rgba(34,197,94,.3) !important;
+}
+.swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+    background: #EF4444 !important;
+}
+.swal2-input,
+.swal2-select,
+.swal2-textarea {
+    background: #1E1E2F !important;
+    color: #F0F0F5 !important;
+    border: 1px solid #3F3F46 !important;
+    border-radius: 8px !important;
+}
+.swal2-input:focus,
+.swal2-select:focus,
+.swal2-textarea:focus {
+    border-color: #3B82F6 !important;
+    box-shadow: 0 0 0 3px rgba(59,130,246,.2) !important;
+}
+.swal2-input::placeholder,
+.swal2-textarea::placeholder {
+    color: #6B7280 !important;
+}
+.swal2-select option {
+    background: #2B2C3B;
+    color: #F0F0F5;
+}
+.swal2-validation-message {
+    background: rgba(239,68,68,.12) !important;
+    color: #EF4444 !important;
+    border-color: rgba(239,68,68,.3) !important;
+}
+.swal2-validation-message::before {
+    background: #EF4444 !important;
+}
+.swal2-actions {
+    gap: 0.5rem;
+}
+.swal2-close {
+    color: #9CA3AF !important;
+}
+.swal2-close:hover {
+    color: #F0F0F5 !important;
+}
+.swal2-backdrop-show {
+    background: rgba(0,0,0,.6) !important;
+}
+
+/* ── Alertas Financeiros (dashboard) ──────────────────── */
+.alertas-fin-section {
+    background: var(--cor-painel);
+    border: 1px solid var(--cor-borda);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.alertas-fin-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(245,158,11,.06);
+    border-bottom: 1px solid var(--cor-borda);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--cor-texto-off);
+}
+
+.alerta-fin {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--cor-borda);
+    background: var(--cor-painel);
+    transition: background .15s;
+}
+.alerta-fin:last-child { border-bottom: none; }
+.alerta-fin:hover { background: rgba(255,255,255,.03); }
+
+.alerta-fin-icon { flex-shrink: 0; }
+
+.alerta-fin-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.alerta-fin-titulo {
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.alerta-fin-msg {
+    font-size: 0.75rem;
+    color: var(--cor-texto-off);
+    margin-top: 1px;
+}
+
+.alerta-fin-btn {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    padding: 3px 12px;
+    border-radius: 20px;
+    border: 1px solid;
+    text-decoration: none;
+    white-space: nowrap;
+    background: transparent;
+    font-weight: 500;
+}
+.alerta-fin-btn:hover { opacity: .75; }
+
+/* ── Botões tipo de lançamento e método (modal adicionar despesa) ── */
+.tipo-lanc-btn.active,
+.metodo-btn.active {
+    background: var(--cor-azul);
+    border-color: var(--cor-azul);
+    color: #fff;
+}

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../conn/conn.php';
 require_once __DIR__ . '/../middleware/auth.php';
+require_once __DIR__ . '/../models/ConfigModel.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -11,9 +12,16 @@ $meuId = (int) $_SESSION['usuario_id'];
 switch ($acao) {
 
     case 'meu_perfil':
-        $stmt = $conn->prepare("SELECT id, nome, email, foto FROM usuarios WHERE id = ?");
+        $stmt = $conn->prepare("SELECT id, nome, email, foto, mes_inicio_controle FROM usuarios WHERE id = ?");
         $stmt->execute([$meuId]);
         echo json_encode($stmt->fetch(PDO::FETCH_ASSOC));
+        break;
+
+    case 'salvar_marco':
+        // 'YYYY-MM' para definir, vazio para limpar
+        $marco = trim($_POST['marco'] ?? '');
+        ConfigModel::setMesInicio($marco !== '' ? $marco : null);
+        echo json_encode(['ok' => true, 'marco' => ConfigModel::getMesInicio()]);
         break;
 
     case 'atualizar_perfil':

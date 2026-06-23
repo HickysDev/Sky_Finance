@@ -72,6 +72,11 @@ switch ($acao) {
         $retorno = ContasFixasModel::desmarcarPago($id, $mes, $ano);
         break;
 
+    case 'proximosVencimentos':
+        $dias    = (int) ($_POST['dias'] ?? 7);
+        $retorno = ContasFixasModel::proximosVencimentos($dias);
+        break;
+
     default:
         http_response_code(400);
         $retorno = ['erro' => 'Ação inválida'];

@@ -1,6 +1,7 @@
 <?php
 
 include_once __DIR__ . '/../../conn/conn.php';
+include_once __DIR__ . '/ConfigModel.php';
 
 class ContasFixasModel {
 
@@ -46,6 +47,7 @@ class ContasFixasModel {
     }
 
     public static function resumoMes(int $mes, int $ano): array {
+        if (ConfigModel::antesDoMarco($mes, $ano)) return [];
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             SELECT cf.id, cf.nome, cf.valor, cf.dia_vencimento, cf.cor, cf.ativo,
@@ -87,5 +89,33 @@ class ContasFixasModel {
             WHERE conta_fixa_id = :cid AND mes = :mes AND ano = :ano AND usuario_id = 1
         ");
         return $stmt->execute([':cid' => $contaFixaId, ':mes' => $mes, ':ano' => $ano]);
+    }
+
+    public static function proximosVencimentos(int $dias = 7): array {
+        $conn = Database::getConnection();
+        $mes  = (int) date('n');
+        $ano  = (int) date('Y');
+        $hoje = (int) date('j');
+
+        $stmt = $conn->prepare("
+            SELECT cf.id, cf.nome, cf.valor, cf.dia_vencimento, cf.cor
+            FROM contas_fixas cf
+            LEFT JOIN contas_fixas_pagamentos cfp
+                ON cfp.conta_fixa_id = cf.id AND cfp.mes = :mes AND cfp.ano = :ano AND cfp.usuario_id = 1
+            WHERE cf.usuario_id = 1 AND cf.ativo = 1 AND cfp.id IS NULL
+            ORDER BY cf.dia_vencimento ASC
+        ");
+        $stmt->execute([':mes' => $mes, ':ano' => $ano]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $result = [];
+        foreach ($rows as $r) {
+            $diff = (int) $r['dia_vencimento'] - $hoje;
+            if ($diff > $dias) continue;
+            $r['dias_restantes'] = $diff;
+            $r['valor']          = (float) $r['valor'];
+            $result[] = $r;
+        }
+        return $result;
     }
 }

@@ -182,6 +182,28 @@ $tipoDespesa = 'recorrente';
             </div>
         </div>
 
+        <!-- Início do controle (marco) -->
+        <div class="painel mb-3">
+            <h6 class="titulo mb-2"><i class="bi bi-flag-fill titulo-azul me-2"></i>Início do controle</h6>
+            <p class="mb-3" style="font-size:0.82rem;color:var(--cor-texto-off);">
+                Defina a partir de qual mês o sistema começa a contar. Tudo antes desse mês aparece
+                zerado em todas as telas (útil para ignorar dados antigos importados).
+            </p>
+            <div class="d-flex align-items-end gap-2 flex-wrap" style="max-width:440px;">
+                <div class="flex-grow-1">
+                    <label class="form-label">Mês inicial</label>
+                    <input type="month" class="form-control" id="marcoInput">
+                </div>
+                <button class="btn btn-primary btn-sm" id="btnSalvarMarco">
+                    <i class="bi bi-check-lg me-1"></i>Salvar
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="btnLimparMarco">
+                    <i class="bi bi-x-lg me-1"></i>Limpar
+                </button>
+            </div>
+            <div id="marcoStatus" class="mt-2" style="font-size:0.8rem;color:var(--cor-texto-off);"></div>
+        </div>
+
         <!-- Trocar senha -->
         <div class="painel mb-3">
             <h6 class="titulo mb-3"><i class="bi bi-key-fill titulo-azul me-2"></i>Alterar senha</h6>
@@ -875,7 +897,7 @@ function preencheRecorrente(arr) {
     const rec = arr[id];
     if (!rec) return;
     $('#descricao').val(rec.nome);
-    $('#valor').val(rec.valor);
+    if (bancValorGest) bancValorGest.setValue(rec.valor); else $('#valor').val(rec.valor);
     const cat = window.categoriaMap[String(rec.id_categoria || '')];
     $('#categoria').val(rec.id_categoria || '');
     if (cat) {
@@ -1182,11 +1204,7 @@ function buscaContasFixas() {
             html += '</div>';
             $('#listaContasFixas').html(html);
 
-            new Cleave('.cf-real', {
-                numeral: true, numeralThousandsGroupStyle: 'thousand',
-                prefix: 'R$ ', noImmediatePrefix: true,
-                delimiter: '.', decimal: ',', numeralDecimalMark: ',', stripLeadingZeroes: true
-            });
+            document.querySelectorAll('.cf-real').forEach(function (el) { bancInput(el, el.value); });
         },
         error: function (xhr) {
             $('#listaContasFixas').html('<div class="alert alert-danger">Erro: ' + xhr.responseText + '</div>');
@@ -1214,17 +1232,9 @@ function buscaContasFixas() {
 
 carregarResponsaveis();
 
-new Cleave('.real', {
-    numeral: true, numeralThousandsGroupStyle: 'thousand',
-    prefix: 'R$ ', delimiter: '.', decimal: ',',
-    numeralDecimalMark: ',', stripLeadingZeroes: true
-});
+document.querySelectorAll('.real').forEach(function (el) { bancInput(el, el.value); });
 
-new Cleave('#valor', {
-    numeral: true, numeralThousandsGroupStyle: 'thousand',
-    prefix: 'R$ ', noImmediatePrefix: true,
-    delimiter: '.', decimal: ',', numeralDecimalMark: ',', stripLeadingZeroes: true
-});
+var bancValorGest = bancInput(document.getElementById('valor'));
 
 // ── Perfil ──────────────────────────────────────────────────────
 function carregaPerfil() {
@@ -1235,9 +1245,53 @@ function carregaPerfil() {
             $('#perfilNome').val(u.nome || '');
             $('#perfilEmail').val(u.email || '');
             renderAvatar(u.foto, u.nome);
+            // Marco inicial (mes_inicio_controle vem como YYYY-MM-DD)
+            var marco = u.mes_inicio_controle ? String(u.mes_inicio_controle).substring(0, 7) : '';
+            $('#marcoInput').val(marco);
+            renderMarcoStatus(marco);
         }
     });
 }
+
+function renderMarcoStatus(marco) {
+    if (!marco) {
+        $('#marcoStatus').html('<i class="bi bi-info-circle me-1"></i>Sem marco definido — todos os dados são contados.');
+        return;
+    }
+    var p = marco.split('-');
+    var nomes = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    $('#marcoStatus').html('<i class="bi bi-flag-fill me-1" style="color:var(--cor-azul);"></i>Contando a partir de <strong>' +
+        nomes[parseInt(p[1])] + '/' + p[0] + '</strong>. Meses anteriores aparecem zerados.');
+}
+
+$('#btnSalvarMarco').click(function () {
+    var marco = $('#marcoInput').val();
+    if (!marco) { toastr.warning('Selecione um mês.'); return; }
+    $.ajax({
+        type: 'POST', url: App.ctrl.usuarios,
+        data: { acao: 'salvar_marco', marco: marco }, dataType: 'json',
+        success: function (r) {
+            toastr.success('Início do controle definido!');
+            App.marcoInicio = r.marco || '';
+            renderMarcoStatus(marco);
+        },
+        error: function () { toastr.error('Erro ao salvar.'); }
+    });
+});
+
+$('#btnLimparMarco').click(function () {
+    $.ajax({
+        type: 'POST', url: App.ctrl.usuarios,
+        data: { acao: 'salvar_marco', marco: '' }, dataType: 'json',
+        success: function () {
+            toastr.success('Marco removido.');
+            App.marcoInicio = '';
+            $('#marcoInput').val('');
+            renderMarcoStatus('');
+        },
+        error: function () { toastr.error('Erro ao remover.'); }
+    });
+});
 
 function renderAvatar(foto, nome) {
     var $el = $('#avatarDisplay');
