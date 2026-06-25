@@ -7,7 +7,7 @@
 </h1>
 
 <p align="center">
-  Sistema pessoal de gestão financeira com interface moderna, autenticação segura e controle completo de despesas, cartões, cofrinhos e orçamentos.
+  Sistema pessoal de gestão financeira com interface moderna (tema claro/escuro), autenticação segura e controle completo de despesas, cartões, cofrinhos, orçamentos, simulador de compras e backup/restauração dos dados.
 </p>
 
 <p align="center">
@@ -63,10 +63,17 @@
 
 ---
 
-### Responsáveis
-> _Adicione aqui uma screenshot da tela de responsáveis_
+### Pessoas (Responsáveis)
+> _Adicione aqui uma screenshot da tela de pessoas_
 
-![Responsáveis](docs/screenshots/responsaveis.png)
+![Pessoas](docs/screenshots/responsaveis.png)
+
+---
+
+### Simulador de Compras
+> _Adicione aqui uma screenshot do simulador_
+
+![Simulador](docs/screenshots/simulador.png)
 
 ---
 
@@ -89,26 +96,30 @@
 ### Dashboard
 - Saudação personalizada com nome do usuário e horário do dia
 - Resumo financeiro do mês: total de gastos, renda cadastrada e saldo
-- Gráfico de pizza com gastos por categoria
+- Gráfico de pizza com gastos por categoria (clique para ver o detalhamento dos lançamentos daquela categoria)
 - Lista dos lançamentos mais recentes
+- Avisos de contas fixas a vencer e faturas em aberto
 - Painel de progresso de orçamentos por categoria
 - Cofrinhos (metas de economia) com barra de progresso
 
 ### Cartão de Crédito
-- Cadastro de múltiplos cartões com limite, dia de fechamento e vencimento
+- Cadastro de múltiplos cartões com cor, limite, dia de fechamento e vencimento
+- **Fechamento automático**: calcula o dia de fechamento de cada mês a partir da data de vencimento (ajustando para meses de 28/30/31 dias)
+- Cabeçalho da fatura mostra o período: **Fecha · Vence · Melhor dia de compra**
 - Lançamento de gastos avulsos e parcelados
-- Controle de faturas por mês
-- Marcação de fatura como paga
-- Gastos recorrentes que são lançados automaticamente todo mês
+- Edição e repetição de despesas direto na linha da fatura
+- Controle de faturas por mês e marcação de fatura como paga
+- Gastos recorrentes lançados automaticamente todo mês (preservando o valor histórico de cada mês)
 
-### Débito
+### À Vista (Débito)
 - Registro de gastos com débito, dinheiro, Pix ou outros métodos
 - Categorização de cada lançamento
 - Filtro por mês/ano
 
 ### Contas Fixas
 - Cadastro de contas fixas mensais (aluguel, internet, água, etc.)
-- Marcação de pagamento mensal
+- Marcação de pagamento mensal com valor pago individual
+- Histórico preserva o valor pago de cada mês, mesmo que o valor da conta seja alterado depois
 - Controle de contas vencidas e a vencer
 
 ### Finanças
@@ -122,10 +133,15 @@
 - Gráfico de barras comparativo por mês
 - Breakdown por categoria em cada mês
 
-### Responsáveis
-- Registro de valores que outras pessoas devem a você
-- Suporte a lançamentos parcelados por responsável
-- Badge com categoria e método de pagamento por item
+### Pessoas (Responsáveis)
+- Registro de valores que outras pessoas devem a você (ou que você deve a alguém)
+- Suporte a lançamentos parcelados por pessoa
+- Categoria e método de pagamento por item — itens "eu devo" também entram no detalhamento por categoria do dashboard
+
+### Simulador de Compras
+- Simula o impacto de uma nova compra (à vista ou parcelada) nas faturas, antes de confirmar
+- Mostra em qual fatura cada parcela cairia, considerando o fechamento do cartão escolhido
+- Ajuda a decidir o melhor cartão e número de parcelas
 
 ### Cofrinhos
 - Criação de metas de economia com nome, cor e valor-alvo
@@ -135,10 +151,21 @@
 ### Gerenciamento
 - Cadastro e edição de categorias com cor e ícone personalizados
 - Configuração de gastos recorrentes
+- Cadastro e edição de contas fixas
 - Gerenciamento de usuários do sistema (adicionar, remover)
 - Perfil do usuário: edição de nome, e-mail e foto
 - Troca de senha
-- Reset completo dos dados (exclusivo para o usuário administrador)
+- **Marco inicial**: define o mês/ano a partir do qual o sistema passa a contar os dados — tudo anterior aparece zerado em todas as telas
+- **Backup**: exportar todos os dados em `.sql`, importar um backup e baixar o script de estrutura completo (`setup_completo.sql`)
+
+### Backup e Restauração
+- Exporta todos os dados do usuário em um único arquivo `.sql`
+- Importa um backup gerado pelo sistema, substituindo os dados atuais (limpa e reinsere por tabela)
+- Download do `setup_completo.sql` para montar a estrutura do banco do zero em uma instalação nova
+
+### Tema Claro / Escuro
+- Alternância de tema pelo menu do avatar na navbar
+- Preferência salva no navegador (`localStorage`) e aplicada antes da renderização (sem flash)
 
 ### Autenticação
 - Login seguro com bcrypt (cost 12)
@@ -165,7 +192,7 @@
 | Datas | Moment.js |
 | Ícones | Bootstrap Icons |
 | Fontes | Google Fonts (Roboto, Bebas Neue) |
-| Design | Glassmorphism + Aurora animada (CSS puro) |
+| Design | Glassmorphism + Aurora animada (CSS puro), tema claro/escuro |
 
 ---
 
@@ -178,25 +205,36 @@ Sky_Finance/
 │   └── config.php            # BASE_URL e constantes dos controllers
 ├── php/
 │   ├── controllers/          # Endpoints AJAX (cada feature tem o seu)
+│   │   └── BackupController.php  # Exportar / importar / estrutura do banco
 │   ├── middleware/
 │   │   └── auth.php          # Proteção de rota (redireciona se não logado)
 │   ├── models/               # Queries SQL encapsuladas por entidade
+│   │   └── ConfigModel.php   # Marco inicial (mês a partir do qual conta os dados)
 │   ├── services/
 │   │   └── RecorrentesService.php  # Lança gastos recorrentes automaticamente
 │   ├── templates/
-│   │   ├── header.php        # Navbar, aurora, scripts globais
+│   │   ├── header.php        # Navbar + dropdown do avatar, tema claro/escuro, aurora
 │   │   ├── footer.php        # Scripts finais
 │   │   ├── modalCadastra.php # Modal de lançamento de gastos
 │   │   └── modalCategoria.php
 │   └── views/                # Páginas do sistema
+│       ├── cartaocredito.php # Faturas e gastos de crédito
+│       ├── debito.php        # Gastos à vista
+│       ├── contas_fixas.php  # Contas fixas mensais
+│       ├── financas.php      # Renda e orçamentos
+│       ├── resumo_anual.php  # Visão ano a ano
+│       ├── responsaveis.php  # Pessoas (quem deve / a quem você deve)
+│       ├── simulador.php     # Simulador de compras
+│       └── gerenciamento.php # Categorias, recorrentes, contas fixas, conta, backup
 ├── src/
 │   └── img/
 │       ├── logo.png
 │       └── avatars/          # Fotos de perfil dos usuários
 ├── styles/
-│   └── style.css             # Estilos globais + aurora + glassmorphism
-├── sql/                      # Scripts SQL auxiliares (ALTER TABLE, etc.)
-├── DB_FINANCAS.sql            # Dump completo do banco de dados
+│   └── style.css             # Estilos globais + aurora + glassmorphism + tema claro
+├── sql/
+│   ├── setup_completo.sql    # Estrutura completa do banco (criar do zero)
+│   └── *.sql                 # Scripts legados de ALTER TABLE
 ├── index.php                 # Dashboard
 ├── login.php                 # Tela de login / criação da conta inicial
 └── logout.php                # Logout e destruição de sessão
@@ -221,29 +259,18 @@ cd Sky_Finance
 
 **2. Crie o banco de dados:**
 
-Acesse o phpMyAdmin ou MySQL CLI e importe o arquivo principal:
+Acesse o phpMyAdmin (ou o MySQL CLI) e importe o script de estrutura completo — ele cria o banco `projeto` e todas as tabelas:
 ```sql
-source DB_FINANCAS.sql
+source sql/setup_completo.sql
 ```
 
-Em seguida, rode os scripts complementares na ordem:
-```sql
-source sql/usuarios.sql
-source sql/usuarios_foto.sql
-source sql/responsaveis.sql
-source sql/contas_fixas.sql
-source sql/faturas_pagas.sql
-source sql/contas_pessoa_alter.sql
-```
+> Já tem um banco em outra máquina? Use a aba **Config. → Backup** para exportar os dados e importar aqui depois de rodar o `setup_completo.sql`.
 
 **3. Configure a conexão:**
 
-Edite o arquivo `conn/conn.php` com suas credenciais:
+Edite o arquivo `conn/conn.php` com suas credenciais (host, banco, usuário e senha):
 ```php
-private static string $host = '127.0.0.1';
-private static string $db   = 'projeto';
-private static string $user = 'root';
-private static string $pass = '';
+self::$conn = new PDO("mysql:host=localhost;dbname=projeto;charset=utf8mb4", "root", "");
 ```
 
 **4. Acesse no navegador:**
