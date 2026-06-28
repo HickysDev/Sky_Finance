@@ -17,7 +17,7 @@ class FinancasModel {
         $stmt   = $conn->prepare("
             SELECT *, (mes IS NULL) AS recorrente
             FROM renda_mensal
-            WHERE usuario_id = 1
+            WHERE usuario_id = @uid
               AND (
                 (mes IS NULL
                   AND (vigencia_inicio IS NULL OR vigencia_inicio <= :target)
@@ -34,20 +34,20 @@ class FinancasModel {
         $conn   = Database::getConnection();
         $target = sprintf('%04d-%02d-01', $anoMudanca, $mesMudanca);
 
-        $old = $conn->prepare("SELECT * FROM renda_mensal WHERE id = :id AND usuario_id = 1");
+        $old = $conn->prepare("SELECT * FROM renda_mensal WHERE id = :id AND usuario_id = @uid");
         $old->execute([':id' => $id]);
         $entry = $old->fetch(PDO::FETCH_ASSOC);
         if (!$entry) return false;
 
         // Fecha vigência do registro atual
-        $conn->prepare("UPDATE renda_mensal SET vigencia_fim = :fim WHERE id = :id AND usuario_id = 1")
+        $conn->prepare("UPDATE renda_mensal SET vigencia_fim = :fim WHERE id = :id AND usuario_id = @uid")
              ->execute([':fim' => $target, ':id' => $id]);
 
         // Cria novo registro com novo valor
         return $conn->prepare("
             INSERT INTO renda_mensal
                 (usuario_id, descricao, tipo, recorrencia, valor, mes, ano, data_registro, vigencia_inicio)
-            VALUES (1, :desc, :tipo, :rec, :valor, NULL, NULL, CURDATE(), :vinicio)
+            VALUES (@uid, :desc, :tipo, :rec, :valor, NULL, NULL, CURDATE(), :vinicio)
         ")->execute([
             ':desc'    => $entry['descricao'],
             ':tipo'    => $entry['tipo'],
@@ -63,7 +63,7 @@ class FinancasModel {
         $ano  = isset($data['ano']) && $data['ano'] !== '' ? (int) $data['ano'] : null;
         $stmt = $conn->prepare("
             INSERT INTO renda_mensal (usuario_id, descricao, tipo, recorrencia, valor, mes, ano, data_registro)
-            VALUES (1, :descricao, :tipo, :recorrencia, :valor, :mes, :ano, CURDATE())
+            VALUES (@uid, :descricao, :tipo, :recorrencia, :valor, :mes, :ano, CURDATE())
         ");
         return $stmt->execute([
             ':descricao'   => trim($data['descricao']),
@@ -87,7 +87,7 @@ class FinancasModel {
                 valor       = :valor,
                 mes         = :mes,
                 ano         = :ano
-            WHERE id = :id AND usuario_id = 1
+            WHERE id = :id AND usuario_id = @uid
         ");
         return $stmt->execute([
             ':descricao'   => trim($data['descricao']),
@@ -105,14 +105,14 @@ class FinancasModel {
         $stmt = $conn->prepare("
             UPDATE renda_mensal
             SET ativo = IF(ativo = 'S', 'N', 'S')
-            WHERE id = :id AND usuario_id = 1
+            WHERE id = :id AND usuario_id = @uid
         ");
         return $stmt->execute([':id' => $id]);
     }
 
     public function removerRenda(int $id): bool {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("DELETE FROM renda_mensal WHERE id = :id AND usuario_id = 1");
+        $stmt = $conn->prepare("DELETE FROM renda_mensal WHERE id = :id AND usuario_id = @uid");
         return $stmt->execute([':id' => $id]);
     }
 
@@ -123,7 +123,7 @@ class FinancasModel {
             SELECT COALESCE(SUM(v), 0) FROM (
                 SELECT valor AS v
                 FROM gastos
-                WHERE usuario_id = 1
+                WHERE usuario_id = @uid
                   AND metodo_pagamento IN ('Dinheiro','Débito','Pix')
                   AND MONTH(data_gasto) = :m1 AND YEAR(data_gasto) = :a1
 
@@ -131,7 +131,7 @@ class FinancasModel {
 
                 SELECT valor AS v
                 FROM gastos
-                WHERE usuario_id = 1
+                WHERE usuario_id = @uid
                   AND metodo_pagamento = 'Crédito' AND parcelado = 'N'
                   AND MONTH(dataVencimento) = :m2 AND YEAR(dataVencimento) = :a2
 
@@ -140,7 +140,7 @@ class FinancasModel {
                 SELECT p.valor_parcela AS v
                 FROM gastos g
                 INNER JOIN parcelas p ON p.gasto_id = g.id
-                WHERE g.usuario_id = 1
+                WHERE g.usuario_id = @uid
                   AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'S'
                   AND MONTH(p.data_vencimento) = :m3 AND YEAR(p.data_vencimento) = :a3
 
@@ -149,7 +149,7 @@ class FinancasModel {
                 SELECT grl.valor AS v
                 FROM gastos_recorrentes_lancamentos grl
                 INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
-                WHERE gr.ativo = 'S'
+                WHERE gr.ativo = 'S' AND gr.usuario_id = @uid
                   AND MONTH(grl.mes_referencia) = :m4 AND YEAR(grl.mes_referencia) = :a4
             ) t
         ");

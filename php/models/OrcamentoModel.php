@@ -19,7 +19,7 @@ class OrcamentoModel {
             $stmt = $conn->prepare("
                 UPDATE orcamentos
                 SET valor_limite = :limite, meses = :meses, anos = :anos
-                WHERE id = :id AND usuario_id = 1
+                WHERE id = :id AND usuario_id = @uid
             ");
             return $stmt->execute([
                 ':limite' => $valor,
@@ -31,7 +31,7 @@ class OrcamentoModel {
 
         $stmt = $conn->prepare("
             INSERT INTO orcamentos (categoria_id, usuario_id, valor_limite, meses, anos)
-            VALUES (:cat, 1, :limite, :meses, :anos)
+            VALUES (:cat, @uid, :limite, :meses, :anos)
         ");
         return $stmt->execute([
             ':cat'    => $categoria_id,
@@ -43,7 +43,7 @@ class OrcamentoModel {
 
     public static function remover(int $id): bool {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("DELETE FROM orcamentos WHERE id = :id AND usuario_id = 1");
+        $stmt = $conn->prepare("DELETE FROM orcamentos WHERE id = :id AND usuario_id = @uid");
         return $stmt->execute([':id' => $id]);
     }
 
@@ -67,7 +67,7 @@ class OrcamentoModel {
             LEFT JOIN (
                 SELECT categoria_id, valor AS valor_mes
                 FROM gastos
-                WHERE usuario_id = 1
+                WHERE usuario_id = @uid
                   AND metodo_pagamento IN ('Dinheiro','Débito','Pix')
                   AND MONTH(data_gasto) = :m1 AND YEAR(data_gasto) = :a1
 
@@ -75,7 +75,7 @@ class OrcamentoModel {
 
                 SELECT categoria_id, valor AS valor_mes
                 FROM gastos
-                WHERE usuario_id = 1
+                WHERE usuario_id = @uid
                   AND metodo_pagamento = 'Crédito' AND parcelado = 'N'
                   AND MONTH(dataVencimento) = :m2 AND YEAR(dataVencimento) = :a2
 
@@ -84,7 +84,7 @@ class OrcamentoModel {
                 SELECT g.categoria_id, p.valor_parcela AS valor_mes
                 FROM gastos g
                 INNER JOIN parcelas p ON p.gasto_id = g.id
-                WHERE g.usuario_id = 1
+                WHERE g.usuario_id = @uid
                   AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'S'
                   AND MONTH(p.data_vencimento) = :m3 AND YEAR(p.data_vencimento) = :a3
 
@@ -93,11 +93,11 @@ class OrcamentoModel {
                 SELECT gr.categoria_id, grl.valor AS valor_mes
                 FROM gastos_recorrentes_lancamentos grl
                 INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
-                WHERE gr.ativo = 'S' AND gr.usuario_id = 1
+                WHERE gr.ativo = 'S' AND gr.usuario_id = @uid
                   AND (gr.mes_inicio IS NULL OR gr.mes_inicio <= grl.mes_referencia)
                   AND MONTH(grl.mes_referencia) = :m4 AND YEAR(grl.mes_referencia) = :a4
             ) g_mes ON g_mes.categoria_id = c.id
-            WHERE o.usuario_id = 1
+            WHERE o.usuario_id = @uid
               AND (o.meses IS NULL OR FIND_IN_SET(:mes_check, o.meses) > 0)
               AND (o.anos  IS NULL OR FIND_IN_SET(:ano_check, o.anos)  > 0)
             GROUP BY c.id, c.nome, c.cor, c.icone, o.id, o.valor_limite, o.meses, o.anos

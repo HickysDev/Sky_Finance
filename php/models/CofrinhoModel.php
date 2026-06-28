@@ -13,7 +13,7 @@ class CofrinhoModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             SELECT * FROM cofrinhos
-            WHERE usuario_id = 1
+            WHERE usuario_id = @uid
             ORDER BY created_at DESC
         ");
         $stmt->execute();
@@ -38,7 +38,7 @@ class CofrinhoModel {
                     nome = :nome, descricao = :desc, imagem_url = :img,
                     meta_valor = :meta, data_limite = :dl,
                     tem_cdi = :cdi, cdi_percentual = :pct, cdi_taxa_anual = :taxa, cor = :cor
-                WHERE id = :id AND usuario_id = 1
+                WHERE id = :id AND usuario_id = @uid
             ");
             return $stmt->execute([
                 ':nome' => $nome, ':desc' => $desc, ':img' => $img,
@@ -50,7 +50,7 @@ class CofrinhoModel {
 
         $stmt = $conn->prepare("
             INSERT INTO cofrinhos (usuario_id, nome, descricao, imagem_url, meta_valor, data_limite, tem_cdi, cdi_percentual, cdi_taxa_anual, cor)
-            VALUES (1, :nome, :desc, :img, :meta, :dl, :cdi, :pct, :taxa, :cor)
+            VALUES (@uid, :nome, :desc, :img, :meta, :dl, :cdi, :pct, :taxa, :cor)
         ");
         return $stmt->execute([
             ':nome' => $nome, ':desc' => $desc, ':img' => $img,
@@ -61,7 +61,7 @@ class CofrinhoModel {
 
     public static function remover(int $id): bool {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("DELETE FROM cofrinhos WHERE id = :id AND usuario_id = 1");
+        $stmt = $conn->prepare("DELETE FROM cofrinhos WHERE id = :id AND usuario_id = @uid");
         return $stmt->execute([':id' => $id]);
     }
 
@@ -76,7 +76,7 @@ class CofrinhoModel {
             $stmt->execute([':cid' => $cofrinhoId, ':val' => $valor, ':dt' => $data, ':obs' => $obs ?: null]);
 
             $stmt2 = $conn->prepare("
-                UPDATE cofrinhos SET valor_atual = valor_atual + :val WHERE id = :id AND usuario_id = 1
+                UPDATE cofrinhos SET valor_atual = valor_atual + :val WHERE id = :id AND usuario_id = @uid
             ");
             $stmt2->execute([':val' => $valor, ':id' => $cofrinhoId]);
 
@@ -99,11 +99,11 @@ class CofrinhoModel {
                     SELECT SUM(ca.valor)
                     FROM cofrinho_aportes ca
                     INNER JOIN cofrinhos cc ON cc.id = ca.cofrinho_id
-                    WHERE cc.usuario_id = 1
+                    WHERE cc.usuario_id = @uid
                       AND MONTH(ca.data_aporte) = :mes
                       AND YEAR(ca.data_aporte)  = :ano
                 ), 0) AS aportes_mes
-            FROM cofrinhos WHERE usuario_id = 1
+            FROM cofrinhos WHERE usuario_id = @uid
         ");
         $stmt->execute([':mes' => $mes, ':ano' => $ano]);
         $totais = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -115,7 +115,7 @@ class CofrinhoModel {
 
         $stmt2 = $conn->prepare("
             SELECT id, nome, cor, valor_atual, meta_valor, data_limite
-            FROM cofrinhos WHERE usuario_id = 1 ORDER BY created_at DESC LIMIT 10
+            FROM cofrinhos WHERE usuario_id = @uid ORDER BY created_at DESC LIMIT 10
         ");
         $stmt2->execute();
         $totais['lista'] = $stmt2->fetchAll(PDO::FETCH_ASSOC);
@@ -129,7 +129,7 @@ class CofrinhoModel {
             SELECT COALESCE(SUM(ca.valor), 0)
             FROM cofrinho_aportes ca
             JOIN cofrinhos c ON c.id = ca.cofrinho_id
-            WHERE c.usuario_id = 1
+            WHERE c.usuario_id = @uid
               AND MONTH(ca.data_aporte) = :mes
               AND YEAR(ca.data_aporte)  = :ano
         ");
@@ -139,7 +139,7 @@ class CofrinhoModel {
 
     public static function retirar(int $cofrinhoId, float $valor, string $data, string $obs = ''): array {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("SELECT valor_atual FROM cofrinhos WHERE id = :id AND usuario_id = 1");
+        $stmt = $conn->prepare("SELECT valor_atual FROM cofrinhos WHERE id = :id AND usuario_id = @uid");
         $stmt->execute([':id' => $cofrinhoId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -155,7 +155,7 @@ class CofrinhoModel {
             $stmt->execute([':cid' => $cofrinhoId, ':val' => -$valor, ':dt' => $data, ':obs' => $obs ?: null]);
 
             $stmt2 = $conn->prepare("
-                UPDATE cofrinhos SET valor_atual = valor_atual - :val WHERE id = :id AND usuario_id = 1
+                UPDATE cofrinhos SET valor_atual = valor_atual - :val WHERE id = :id AND usuario_id = @uid
             ");
             $stmt2->execute([':val' => $valor, ':id' => $cofrinhoId]);
 
@@ -170,7 +170,10 @@ class CofrinhoModel {
     public static function buscarAportes(int $id): array {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
-            SELECT * FROM cofrinho_aportes WHERE cofrinho_id = :id ORDER BY data_aporte DESC LIMIT 20
+            SELECT * FROM cofrinho_aportes
+            WHERE cofrinho_id = :id
+              AND cofrinho_id IN (SELECT id FROM cofrinhos WHERE usuario_id = @uid)
+            ORDER BY data_aporte DESC LIMIT 20
         ");
         $stmt->execute([':id' => $id]);
         return $stmt->fetchAll();

@@ -6,31 +6,31 @@ class ResponsaveisModel {
 
     public static function buscar(): array {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("SELECT * FROM responsaveis WHERE usuario_id = 1 ORDER BY nome");
+        $stmt = $conn->prepare("SELECT * FROM responsaveis WHERE usuario_id = @uid ORDER BY nome");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public static function adicionar(string $nome, string $cor): bool {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("INSERT INTO responsaveis (usuario_id, nome, cor) VALUES (1, :nome, :cor)");
+        $stmt = $conn->prepare("INSERT INTO responsaveis (usuario_id, nome, cor) VALUES (@uid, :nome, :cor)");
         return $stmt->execute([':nome' => trim($nome), ':cor' => $cor]);
     }
 
     public static function editar(int $id, string $nome, string $cor): bool {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("UPDATE responsaveis SET nome = :nome, cor = :cor WHERE id = :id AND usuario_id = 1");
+        $stmt = $conn->prepare("UPDATE responsaveis SET nome = :nome, cor = :cor WHERE id = :id AND usuario_id = @uid");
         return $stmt->execute([':nome' => trim($nome), ':cor' => $cor, ':id' => $id]);
     }
 
     public static function excluir(int $id): bool {
         $conn = Database::getConnection();
         // Remove vínculo das despesas antes de excluir
-        $conn->prepare("UPDATE gastos SET responsavel_id = NULL WHERE responsavel_id = :id")
+        $conn->prepare("UPDATE gastos SET responsavel_id = NULL WHERE responsavel_id = :id AND usuario_id = @uid")
              ->execute([':id' => $id]);
-        $conn->prepare("UPDATE gastos_recorrentes SET responsavel_id = NULL WHERE responsavel_id = :id")
+        $conn->prepare("UPDATE gastos_recorrentes SET responsavel_id = NULL WHERE responsavel_id = :id AND usuario_id = @uid")
              ->execute([':id' => $id]);
-        $stmt = $conn->prepare("DELETE FROM responsaveis WHERE id = :id AND usuario_id = 1");
+        $stmt = $conn->prepare("DELETE FROM responsaveis WHERE id = :id AND usuario_id = @uid");
         return $stmt->execute([':id' => $id]);
     }
 
@@ -46,7 +46,7 @@ class ResponsaveisModel {
                     /* Não-crédito: filtra por data_gasto */
                     SELECT COALESCE(SUM(g.valor), 0)
                     FROM gastos g
-                    WHERE g.responsavel_id = r.id AND g.usuario_id = 1
+                    WHERE g.responsavel_id = r.id AND g.usuario_id = @uid
                       AND g.metodo_pagamento != 'Crédito'
                       AND MONTH(g.data_gasto) = :mes AND YEAR(g.data_gasto) = :ano
                 ) +
@@ -54,7 +54,7 @@ class ResponsaveisModel {
                     /* Crédito não parcelado: filtra por dataVencimento */
                     SELECT COALESCE(SUM(g.valor), 0)
                     FROM gastos g
-                    WHERE g.responsavel_id = r.id AND g.usuario_id = 1
+                    WHERE g.responsavel_id = r.id AND g.usuario_id = @uid
                       AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'N'
                       AND MONTH(g.dataVencimento) = :mes2 AND YEAR(g.dataVencimento) = :ano2
                 ) +
@@ -63,7 +63,7 @@ class ResponsaveisModel {
                     SELECT COALESCE(SUM(p.valor_parcela), 0)
                     FROM gastos g
                     INNER JOIN parcelas p ON p.gasto_id = g.id
-                    WHERE g.responsavel_id = r.id AND g.usuario_id = 1
+                    WHERE g.responsavel_id = r.id AND g.usuario_id = @uid
                       AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'S'
                       AND MONTH(p.data_vencimento) = :mes3 AND YEAR(p.data_vencimento) = :ano3
                 ) +
@@ -72,11 +72,11 @@ class ResponsaveisModel {
                     SELECT COALESCE(SUM(grl.valor), 0)
                     FROM gastos_recorrentes gr
                     JOIN gastos_recorrentes_lancamentos grl ON grl.gasto_recorrente_id = gr.id
-                    WHERE gr.responsavel_id = r.id AND gr.usuario_id = 1
+                    WHERE gr.responsavel_id = r.id AND gr.usuario_id = @uid
                       AND MONTH(grl.mes_referencia) = :mes4 AND YEAR(grl.mes_referencia) = :ano4
                 ) AS total
             FROM responsaveis r
-            WHERE r.usuario_id = 1
+            WHERE r.usuario_id = @uid
             ORDER BY total DESC, r.nome
         ");
 
@@ -105,7 +105,7 @@ class ResponsaveisModel {
             FROM gastos g
             LEFT JOIN cartoes_credito cc ON cc.id = g.cartao_id
             LEFT JOIN categorias cat ON cat.id = g.categoria_id
-            WHERE g.responsavel_id = :rid AND g.usuario_id = 1
+            WHERE g.responsavel_id = :rid AND g.usuario_id = @uid
               AND g.metodo_pagamento != 'Crédito'
               AND MONTH(g.data_gasto) = :mes AND YEAR(g.data_gasto) = :ano
         ");
@@ -119,7 +119,7 @@ class ResponsaveisModel {
             FROM gastos g
             LEFT JOIN cartoes_credito cc ON cc.id = g.cartao_id
             LEFT JOIN categorias cat ON cat.id = g.categoria_id
-            WHERE g.responsavel_id = :rid AND g.usuario_id = 1
+            WHERE g.responsavel_id = :rid AND g.usuario_id = @uid
               AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'N'
               AND MONTH(g.dataVencimento) = :mes AND YEAR(g.dataVencimento) = :ano
         ");
@@ -135,7 +135,7 @@ class ResponsaveisModel {
             INNER JOIN parcelas p ON p.gasto_id = g.id
             LEFT JOIN cartoes_credito cc ON cc.id = g.cartao_id
             LEFT JOIN categorias cat ON cat.id = g.categoria_id
-            WHERE g.responsavel_id = :rid AND g.usuario_id = 1
+            WHERE g.responsavel_id = :rid AND g.usuario_id = @uid
               AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'S'
               AND MONTH(p.data_vencimento) = :mes AND YEAR(p.data_vencimento) = :ano
         ");
@@ -151,7 +151,7 @@ class ResponsaveisModel {
             LEFT JOIN cartoes_credito cc  ON cc.id  = gr.cartao_id
             LEFT JOIN categorias cat ON cat.id = gr.categoria_id
             WHERE gr.responsavel_id = :rid
-              AND gr.usuario_id = 1
+              AND gr.usuario_id = @uid
               AND MONTH(grl.mes_referencia) = :mes
               AND YEAR(grl.mes_referencia)  = :ano
         ");

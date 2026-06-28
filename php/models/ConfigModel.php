@@ -9,8 +9,6 @@ include_once __DIR__ . '/../../conn/conn.php';
  */
 class ConfigModel {
 
-    private const USUARIO_ID = 1;
-
     // Cache por request para não consultar o banco a cada chamada
     private static $mesInicioCache = false; // false = ainda não carregado
 
@@ -24,7 +22,7 @@ class ConfigModel {
         try {
             $conn = Database::getConnection();
             $stmt = $conn->prepare("SELECT mes_inicio_controle FROM usuarios WHERE id = ?");
-            $stmt->execute([self::USUARIO_ID]);
+            $stmt->execute([Database::usuarioLogadoId()]);
             $val = $stmt->fetchColumn();
             self::$mesInicioCache = $val ? substr($val, 0, 7) . '-01' : null;
         } catch (Exception $e) {
@@ -43,7 +41,7 @@ class ConfigModel {
             $data = $m[1] . '-' . $m[2] . '-01';
         }
         $ok = $conn->prepare("UPDATE usuarios SET mes_inicio_controle = ? WHERE id = ?")
-                   ->execute([$data, self::USUARIO_ID]);
+                   ->execute([$data, Database::usuarioLogadoId()]);
         self::$mesInicioCache = $data ? substr($data, 0, 7) . '-01' : null;
         return $ok;
     }

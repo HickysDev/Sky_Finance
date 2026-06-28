@@ -2,12 +2,21 @@
 require_once __DIR__ . '/../../conn/conn.php';
 require_once __DIR__ . '/../middleware/auth.php';
 require_once __DIR__ . '/../models/ConfigModel.php';
+require_once __DIR__ . '/../models/CategoriaModel.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
 $acao = $_POST['acao'] ?? $_GET['acao'] ?? '';
 $conn = Database::getConnection();
 $meuId = (int) $_SESSION['usuario_id'];
+
+// Ações de administração de usuários: somente o administrador (id 1).
+$acoesAdmin = ['listar', 'adicionar', 'remover', 'reset_dados'];
+if (in_array($acao, $acoesAdmin, true) && $meuId !== 1) {
+    http_response_code(403);
+    echo json_encode(['erro' => 'Acesso negado.']);
+    exit;
+}
 
 switch ($acao) {
 
@@ -114,6 +123,7 @@ switch ($acao) {
         $hash = password_hash($senha, PASSWORD_BCRYPT, ['cost' => 12]);
         $stmt = $conn->prepare("INSERT INTO usuarios (nome, email, senha_hash) VALUES (?, ?, ?)");
         if ($stmt->execute([$nome, $email, $hash])) {
+            CategoriaModel::seedPadrao((int) $conn->lastInsertId());
             echo json_encode(['ok' => true]);
         } else {
             http_response_code(500);

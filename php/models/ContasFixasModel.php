@@ -7,7 +7,7 @@ class ContasFixasModel {
 
     public static function listar(): array {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("SELECT * FROM contas_fixas WHERE usuario_id = 1 ORDER BY dia_vencimento ASC, nome ASC");
+        $stmt = $conn->prepare("SELECT * FROM contas_fixas WHERE usuario_id = @uid ORDER BY dia_vencimento ASC, nome ASC");
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as &$r) {
@@ -20,7 +20,7 @@ class ContasFixasModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             INSERT INTO contas_fixas (usuario_id, nome, valor, dia_vencimento, cor)
-            VALUES (1, :nome, :valor, :dia, :cor)
+            VALUES (@uid, :nome, :valor, :dia, :cor)
         ");
         return $stmt->execute([':nome' => trim($nome), ':valor' => $valor, ':dia' => $dia, ':cor' => $cor]);
     }
@@ -29,20 +29,20 @@ class ContasFixasModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             UPDATE contas_fixas SET nome = :nome, valor = :valor, dia_vencimento = :dia, cor = :cor
-            WHERE id = :id AND usuario_id = 1
+            WHERE id = :id AND usuario_id = @uid
         ");
         return $stmt->execute([':nome' => trim($nome), ':valor' => $valor, ':dia' => $dia, ':cor' => $cor, ':id' => $id]);
     }
 
     public static function toggleAtivo(int $id): bool {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("UPDATE contas_fixas SET ativo = IF(ativo = 'S', 'N', 'S') WHERE id = :id AND usuario_id = 1");
+        $stmt = $conn->prepare("UPDATE contas_fixas SET ativo = IF(ativo = 'S', 'N', 'S') WHERE id = :id AND usuario_id = @uid");
         return $stmt->execute([':id' => $id]);
     }
 
     public static function excluir(int $id): bool {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("DELETE FROM contas_fixas WHERE id = :id AND usuario_id = 1");
+        $stmt = $conn->prepare("DELETE FROM contas_fixas WHERE id = :id AND usuario_id = @uid");
         return $stmt->execute([':id' => $id]);
     }
 
@@ -54,8 +54,8 @@ class ContasFixasModel {
                    cfp.id AS pagamento_id, cfp.data_pagamento, cfp.valor_pago
             FROM contas_fixas cf
             LEFT JOIN contas_fixas_pagamentos cfp
-                ON cfp.conta_fixa_id = cf.id AND cfp.mes = :mes AND cfp.ano = :ano AND cfp.usuario_id = 1
-            WHERE cf.usuario_id = 1 AND cf.ativo = 'S'
+                ON cfp.conta_fixa_id = cf.id AND cfp.mes = :mes AND cfp.ano = :ano AND cfp.usuario_id = @uid
+            WHERE cf.usuario_id = @uid AND cf.ativo = 'S'
             ORDER BY cf.dia_vencimento ASC, cf.nome ASC
         ");
         $stmt->execute([':mes' => $mes, ':ano' => $ano]);
@@ -72,7 +72,7 @@ class ContasFixasModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             INSERT INTO contas_fixas_pagamentos (conta_fixa_id, usuario_id, mes, ano, data_pagamento, valor_pago)
-            VALUES (:cid, 1, :mes, :ano, :data, :valor)
+            VALUES (:cid, @uid, :mes, :ano, :data, :valor)
             ON DUPLICATE KEY UPDATE data_pagamento = :data2, valor_pago = :valor2
         ");
         return $stmt->execute([
@@ -86,7 +86,7 @@ class ContasFixasModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             DELETE FROM contas_fixas_pagamentos
-            WHERE conta_fixa_id = :cid AND mes = :mes AND ano = :ano AND usuario_id = 1
+            WHERE conta_fixa_id = :cid AND mes = :mes AND ano = :ano AND usuario_id = @uid
         ");
         return $stmt->execute([':cid' => $contaFixaId, ':mes' => $mes, ':ano' => $ano]);
     }
@@ -101,8 +101,8 @@ class ContasFixasModel {
             SELECT cf.id, cf.nome, cf.valor, cf.dia_vencimento, cf.cor
             FROM contas_fixas cf
             LEFT JOIN contas_fixas_pagamentos cfp
-                ON cfp.conta_fixa_id = cf.id AND cfp.mes = :mes AND cfp.ano = :ano AND cfp.usuario_id = 1
-            WHERE cf.usuario_id = 1 AND cf.ativo = 'S' AND cfp.id IS NULL
+                ON cfp.conta_fixa_id = cf.id AND cfp.mes = :mes AND cfp.ano = :ano AND cfp.usuario_id = @uid
+            WHERE cf.usuario_id = @uid AND cf.ativo = 'S' AND cfp.id IS NULL
             ORDER BY cf.dia_vencimento ASC
         ");
         $stmt->execute([':mes' => $mes, ':ano' => $ano]);
