@@ -14,7 +14,7 @@ class ContasPessoaModel {
             SELECT cp.*, cat.nome AS categoria, cat.cor AS cat_cor, cat.icone AS cat_icone
             FROM contas_pessoa cp
             LEFT JOIN categorias cat ON cat.id = cp.categoria_id
-            WHERE cp.responsavel_id = :rid AND cp.usuario_id = 1
+            WHERE cp.responsavel_id = :rid AND cp.usuario_id = @uid
             $filtroMes
             ORDER BY cp.pago ASC, cp.data DESC
         ");
@@ -32,7 +32,7 @@ class ContasPessoaModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             INSERT INTO contas_pessoa (usuario_id, responsavel_id, descricao, valor, data, categoria_id, metodo_pagamento)
-            VALUES (1, :rid, :desc, :valor, :data, :cat, :metodo)
+            VALUES (@uid, :rid, :desc, :valor, :data, :cat, :metodo)
         ");
         return $stmt->execute([
             ':rid'    => $responsavelId,
@@ -46,13 +46,13 @@ class ContasPessoaModel {
 
     public static function marcarPago(int $id, bool $pago): bool {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("UPDATE contas_pessoa SET pago = :pago WHERE id = :id AND usuario_id = 1");
+        $stmt = $conn->prepare("UPDATE contas_pessoa SET pago = :pago WHERE id = :id AND usuario_id = @uid");
         return $stmt->execute([':pago' => $pago ? 'S' : 'N', ':id' => $id]);
     }
 
     public static function remover(int $id): bool {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("DELETE FROM contas_pessoa WHERE id = :id AND usuario_id = 1");
+        $stmt = $conn->prepare("DELETE FROM contas_pessoa WHERE id = :id AND usuario_id = @uid");
         return $stmt->execute([':id' => $id]);
     }
 
@@ -72,9 +72,9 @@ class ContasPessoaModel {
                 COUNT(CASE WHEN cp.pago = 'N' THEN 1 END)                           AS qtd_aberto
             FROM responsaveis r
             LEFT JOIN contas_pessoa cp
-                ON cp.responsavel_id = r.id AND cp.usuario_id = 1
+                ON cp.responsavel_id = r.id AND cp.usuario_id = @uid
                 AND MONTH(cp.data) = :mes AND YEAR(cp.data) = :ano
-            WHERE r.usuario_id = 1
+            WHERE r.usuario_id = @uid
             GROUP BY r.id, r.nome, r.cor
             ORDER BY eu_devo DESC, r.nome
         ");
@@ -87,7 +87,7 @@ class ContasPessoaModel {
             SELECT COALESCE(SUM(v), 0) AS total FROM (
                 SELECT g.valor AS v
                 FROM gastos g
-                WHERE g.responsavel_id = :rid1 AND g.usuario_id = 1
+                WHERE g.responsavel_id = :rid1 AND g.usuario_id = @uid
                   AND g.metodo_pagamento != 'Crédito'
                   AND MONTH(g.data_gasto) = :mes1 AND YEAR(g.data_gasto) = :ano1
 
@@ -95,7 +95,7 @@ class ContasPessoaModel {
 
                 SELECT g.valor AS v
                 FROM gastos g
-                WHERE g.responsavel_id = :rid2 AND g.usuario_id = 1
+                WHERE g.responsavel_id = :rid2 AND g.usuario_id = @uid
                   AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'N'
                   AND MONTH(g.dataVencimento) = :mes2 AND YEAR(g.dataVencimento) = :ano2
 
@@ -104,7 +104,7 @@ class ContasPessoaModel {
                 SELECT p.valor_parcela AS v
                 FROM gastos g
                 INNER JOIN parcelas p ON p.gasto_id = g.id
-                WHERE g.responsavel_id = :rid3 AND g.usuario_id = 1
+                WHERE g.responsavel_id = :rid3 AND g.usuario_id = @uid
                   AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'S'
                   AND MONTH(p.data_vencimento) = :mes3 AND YEAR(p.data_vencimento) = :ano3
             ) t
@@ -113,7 +113,7 @@ class ContasPessoaModel {
             SELECT COALESCE(SUM(grl.valor), 0) AS total
             FROM gastos_recorrentes gr
             JOIN gastos_recorrentes_lancamentos grl ON grl.gasto_recorrente_id = gr.id
-            WHERE gr.responsavel_id = :rid AND gr.usuario_id = 1
+            WHERE gr.responsavel_id = :rid AND gr.usuario_id = @uid
               AND MONTH(grl.mes_referencia) = :mes AND YEAR(grl.mes_referencia) = :ano
         ");
 
@@ -149,7 +149,7 @@ class ContasPessoaModel {
             FROM gastos g
             LEFT JOIN cartoes_credito cc  ON cc.id  = g.cartao_id
             LEFT JOIN categorias cat ON cat.id = g.categoria_id
-            WHERE g.responsavel_id = :rid AND g.usuario_id = 1
+            WHERE g.responsavel_id = :rid AND g.usuario_id = @uid
               AND g.metodo_pagamento != 'Crédito'
               AND MONTH(g.data_gasto) = :mes AND YEAR(g.data_gasto) = :ano
         ");
@@ -164,7 +164,7 @@ class ContasPessoaModel {
             FROM gastos g
             LEFT JOIN cartoes_credito cc  ON cc.id  = g.cartao_id
             LEFT JOIN categorias cat ON cat.id = g.categoria_id
-            WHERE g.responsavel_id = :rid AND g.usuario_id = 1
+            WHERE g.responsavel_id = :rid AND g.usuario_id = @uid
               AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'N'
               AND MONTH(g.dataVencimento) = :mes AND YEAR(g.dataVencimento) = :ano
         ");
@@ -180,7 +180,7 @@ class ContasPessoaModel {
             INNER JOIN parcelas p ON p.gasto_id = g.id
             LEFT JOIN cartoes_credito cc  ON cc.id  = g.cartao_id
             LEFT JOIN categorias cat ON cat.id = g.categoria_id
-            WHERE g.responsavel_id = :rid AND g.usuario_id = 1
+            WHERE g.responsavel_id = :rid AND g.usuario_id = @uid
               AND g.metodo_pagamento = 'Crédito' AND g.parcelado = 'S'
               AND MONTH(p.data_vencimento) = :mes AND YEAR(p.data_vencimento) = :ano
         ");
@@ -195,7 +195,7 @@ class ContasPessoaModel {
             JOIN gastos_recorrentes_lancamentos grl ON grl.gasto_recorrente_id = gr.id
             LEFT JOIN cartoes_credito cc  ON cc.id  = gr.cartao_id
             LEFT JOIN categorias cat ON cat.id = gr.categoria_id
-            WHERE gr.responsavel_id = :rid AND gr.usuario_id = 1
+            WHERE gr.responsavel_id = :rid AND gr.usuario_id = @uid
               AND MONTH(grl.mes_referencia) = :mes AND YEAR(grl.mes_referencia) = :ano
         ");
         $stmt2->execute([':rid' => $responsavelId, ':mes' => $mes, ':ano' => $ano]);

@@ -46,12 +46,14 @@ CREATE TABLE IF NOT EXISTS `login_tentativas` (
 -- CATEGORIAS
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `categorias` (
-  `id`    INT          NOT NULL AUTO_INCREMENT,
-  `nome`  VARCHAR(50)  NOT NULL,
-  `ativo` VARCHAR(2)   NULL DEFAULT 'S',
-  `cor`   VARCHAR(7)   NOT NULL DEFAULT '#6B7280',
-  `icone` VARCHAR(100) NULL DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `id`         INT          NOT NULL AUTO_INCREMENT,
+  `usuario_id` INT          NOT NULL DEFAULT 1,
+  `nome`       VARCHAR(50)  NOT NULL,
+  `ativo`      VARCHAR(2)   NULL DEFAULT 'S',
+  `cor`        VARCHAR(7)   NOT NULL DEFAULT '#6B7280',
+  `icone`      VARCHAR(100) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_cat_usuario` (`usuario_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ------------------------------------------------------------

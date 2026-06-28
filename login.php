@@ -5,6 +5,7 @@ session_start();
 
 require_once __DIR__ . '/conn/conn.php';
 require_once __DIR__ . '/conn/config.php';
+require_once __DIR__ . '/php/models/CategoriaModel.php';
 
 if (!empty($_SESSION['usuario_id'])) {
     header('Location: ' . BASE_URL . '/index.php');
@@ -48,8 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $hash = password_hash($senha, PASSWORD_BCRYPT, ['cost' => 12]);
                 $stmt = $conn->prepare("INSERT INTO usuarios (nome, email, senha_hash) VALUES (?, ?, ?)");
                 if ($stmt->execute([$nome, $email, $hash])) {
+                    $novoId = (int) $conn->lastInsertId();
+                    CategoriaModel::seedPadrao($novoId);
                     session_regenerate_id(true);
-                    $_SESSION['usuario_id']   = (int) $conn->lastInsertId();
+                    $_SESSION['usuario_id']   = $novoId;
                     $_SESSION['usuario_nome'] = $nome;
                     unset($_SESSION['csrf_token']);
                     header('Location: ' . BASE_URL . '/index.php');

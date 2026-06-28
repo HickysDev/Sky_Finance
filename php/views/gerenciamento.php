@@ -1,12 +1,7 @@
 <?php
 require_once __DIR__ . '/../templates/header.php';
-require_once __DIR__ . '/../../conn/conn.php';
 
-$conn = Database::getConnection();
-$buscaCartao = $conn->prepare("SELECT * FROM cartoes_credito");
-$buscaCartao->execute();
-$cartoes = $buscaCartao->fetchAll(PDO::FETCH_ASSOC);
-
+// Cartões, recorrentes, etc. são carregados via AJAX (controllers já filtrados por usuário).
 $tipoDespesa = 'recorrente';
 ?>
 

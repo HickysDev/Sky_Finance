@@ -34,7 +34,7 @@ class CartaoModel {
         ");
 
         return $sql->execute([
-            ':id'        => 1,
+            ':id'        => Database::usuarioLogadoId(),
             ':nome'      => $cartao['nomeCartao'],
             ':limite'    => $this->parseLimite($cartao['limite'] ?? ''),
             ':fechamento'=> (int) $cartao['dataFechamento'],
@@ -51,7 +51,7 @@ class CartaoModel {
             UPDATE cartoes_credito
             SET nome_cartao = :nome, limite = :limite, fechamento_dia = :fechamento,
                 vencimento_dia = :vencimento, cor = :cor, fechamento_auto = :auto
-            WHERE id = :cartaoId
+            WHERE id = :cartaoId AND usuario_id = @uid
         ");
 
         return $sql->execute([
@@ -68,7 +68,7 @@ class CartaoModel {
     public function excluiCartao() {
         $conn = Database::getConnection();
 
-        $sql = $conn->prepare("DELETE FROM cartoes_credito WHERE id = ?");
+        $sql = $conn->prepare("DELETE FROM cartoes_credito WHERE id = ? AND usuario_id = @uid");
 
         $query = $sql->execute([$this->getId()]);
 
@@ -78,7 +78,7 @@ class CartaoModel {
     public function buscaCartaos() {
         $conn = Database::getConnection();
 
-        $buscaCartaos = $conn->prepare("SELECT * FROM cartoes_credito");
+        $buscaCartaos = $conn->prepare("SELECT * FROM cartoes_credito WHERE usuario_id = @uid ORDER BY id");
         $buscaCartaos->execute();
         $resultados = $buscaCartaos->fetchAll(PDO::FETCH_ASSOC);
 
@@ -94,7 +94,7 @@ class CartaoModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             SELECT data_pagamento FROM faturas_pagas
-            WHERE cartao_id = :cid AND mes = :mes AND ano = :ano AND usuario_id = 1
+            WHERE cartao_id = :cid AND mes = :mes AND ano = :ano AND usuario_id = @uid
         ");
         $stmt->execute([':cid' => $cartaoId, ':mes' => $mes, ':ano' => $ano]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -105,7 +105,7 @@ class CartaoModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             INSERT INTO faturas_pagas (usuario_id, cartao_id, mes, ano, data_pagamento)
-            VALUES (1, :cid, :mes, :ano, :data)
+            VALUES (@uid, :cid, :mes, :ano, :data)
             ON DUPLICATE KEY UPDATE data_pagamento = :data2
         ");
         return $stmt->execute([':cid' => $cartaoId, ':mes' => $mes, ':ano' => $ano, ':data' => $data, ':data2' => $data]);
@@ -115,7 +115,7 @@ class CartaoModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             DELETE FROM faturas_pagas
-            WHERE cartao_id = :cid AND mes = :mes AND ano = :ano AND usuario_id = 1
+            WHERE cartao_id = :cid AND mes = :mes AND ano = :ano AND usuario_id = @uid
         ");
         return $stmt->execute([':cid' => $cartaoId, ':mes' => $mes, ':ano' => $ano]);
     }

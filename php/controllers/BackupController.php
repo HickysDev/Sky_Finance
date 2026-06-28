@@ -6,33 +6,33 @@ $acao = $_POST['acao'] ?? $_GET['acao'] ?? '';
 // ── EXPORTAR ────────────────────────────────────────────────────────────────
 if ($acao === 'exportar') {
 
-    // [tabela, WHERE clause para filtrar usuario_id = 1]
+    // [tabela, WHERE clause para filtrar usuario_id = @uid]
     // null = sem filtro (tabela compartilhada)
     // Subqueries para tabelas-filho sem coluna usuario_id
     $tabelas = [
-        ['usuarios',                        'id = 1'],
-        ['categorias',                      null],
-        ['cartoes_credito',                 'usuario_id = 1'],
-        ['responsaveis',                    'usuario_id = 1'],
-        ['gastos',                          'usuario_id = 1'],
-        ['parcelas',                        'gasto_id IN (SELECT id FROM gastos WHERE usuario_id = 1)'],
-        ['gastos_recorrentes',              'usuario_id = 1'],
-        ['gastos_recorrentes_lancamentos',  'usuario_id = 1'],
-        ['renda_mensal',                    'usuario_id = 1'],
-        ['contas_pessoa',                   'usuario_id = 1'],
-        ['contas_fixas',                    'usuario_id = 1'],
-        ['contas_fixas_pagamentos',         'usuario_id = 1'],
-        ['faturas_pagas',                   'usuario_id = 1'],
-        ['cofrinhos',                       'usuario_id = 1'],
-        ['cofrinho_aportes',                'cofrinho_id IN (SELECT id FROM cofrinhos WHERE usuario_id = 1)'],
-        ['orcamentos',                      'usuario_id = 1'],
+        ['usuarios',                        'id = @uid'],
+        ['categorias',                      'usuario_id = @uid'],
+        ['cartoes_credito',                 'usuario_id = @uid'],
+        ['responsaveis',                    'usuario_id = @uid'],
+        ['gastos',                          'usuario_id = @uid'],
+        ['parcelas',                        'gasto_id IN (SELECT id FROM gastos WHERE usuario_id = @uid)'],
+        ['gastos_recorrentes',              'usuario_id = @uid'],
+        ['gastos_recorrentes_lancamentos',  'usuario_id = @uid'],
+        ['renda_mensal',                    'usuario_id = @uid'],
+        ['contas_pessoa',                   'usuario_id = @uid'],
+        ['contas_fixas',                    'usuario_id = @uid'],
+        ['contas_fixas_pagamentos',         'usuario_id = @uid'],
+        ['faturas_pagas',                   'usuario_id = @uid'],
+        ['cofrinhos',                       'usuario_id = @uid'],
+        ['cofrinho_aportes',                'cofrinho_id IN (SELECT id FROM cofrinhos WHERE usuario_id = @uid)'],
+        ['orcamentos',                      'usuario_id = @uid'],
     ];
 
     $conn  = Database::getConnection();
     $stamp = date('d/m/Y H:i');
     $fname = 'skyfinance_' . date('Y-m-d_H-i') . '.sql';
 
-    $sql  = "-- Sky Finance Backup | Gerado em: {$stamp} | usuario_id = 1\n";
+    $sql  = "-- Sky Finance Backup | Gerado em: {$stamp} | usuario_id = @uid\n";
     $sql .= "-- Importe via a página de Backup do sistema.\n\n";
     $sql .= "SET FOREIGN_KEY_CHECKS = 0;\n";
     $sql .= "SET NAMES utf8mb4;\n\n";
