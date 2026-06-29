@@ -672,7 +672,9 @@ class GastosModel {
                   )
             ");
             $s->execute([':target' => $targetRenda, ':mes' => (int) $mes, ':ano' => $ano]);
-            $mult = ['Mensal' => 1, 'Quinzenal' => 2, 'Semanal' => 4.33, 'Anual' => 1/12, 'Único' => 0];
+            // 'Único' = renda pontual de um mês específico → conta integral (×1) no mês,
+            // igual à tela de Finanças (que soma o valor cheio). Antes era 0 e sumia do dashboard.
+            $mult = ['Mensal' => 1, 'Quinzenal' => 2, 'Semanal' => 4.33, 'Anual' => 1/12, 'Único' => 1];
             foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $totalRenda += (float) $r['valor'] * ($mult[$r['recorrencia']] ?? 1);
             }
@@ -817,7 +819,9 @@ class GastosModel {
 
         // Renda por mês (respeita vigência de cada entrada)
         try {
-            $mult = ['Mensal' => 1, 'Quinzenal' => 2, 'Semanal' => 4.33, 'Anual' => 1/12, 'Único' => 0];
+            // 'Único' = renda pontual de um mês específico → conta integral (×1) no mês,
+            // igual à tela de Finanças (que soma o valor cheio). Antes era 0 e sumia do dashboard.
+            $mult = ['Mensal' => 1, 'Quinzenal' => 2, 'Semanal' => 4.33, 'Anual' => 1/12, 'Único' => 1];
             $s = $conn->prepare("
                 SELECT valor, recorrencia, mes, ano,
                        MONTH(data_registro) AS mes_reg,
