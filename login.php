@@ -125,6 +125,9 @@ if (empty($_SESSION['csrf_token'])) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login — Sky Finance</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="src/img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="src/img/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="src/img/favicon-180.png">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
