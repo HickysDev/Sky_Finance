@@ -482,14 +482,21 @@ $mesAtual = date('n');
 
         // Ajusta mês/ano se já passou do vencimento do cartão
         function ajustaMesPorVencimento(vencimentoDia) {
-            if (!vencimentoDia) return;
-            const diaHoje = new Date().getDate();
-            if (diaHoje >= parseInt(vencimentoDia)) {
-                let mes = parseInt($('#mes').val()) + 1;
-                let ano = parseInt($('#anoDisplay').text());
-                if (mes > 12) { mes = 1; ano++; }
-                $('#mes').val(mes);
-                $('#anoDisplay').text(ano);
+            if (vencimentoDia) {
+                const diaHoje = new Date().getDate();
+                if (diaHoje >= parseInt(vencimentoDia)) {
+                    let mes = parseInt($('#mes').val()) + 1;
+                    let ano = parseInt($('#anoDisplay').text());
+                    if (mes > 12) { mes = 1; ano++; }
+                    $('#mes').val(mes);
+                    $('#anoDisplay').text(ano);
+                }
+            }
+            // Marco inicial: nunca abrir antes do início do controle (antes não há dados).
+            if (window.mesInicialPadrao) {
+                var _mp = window.mesInicialPadrao(parseInt($('#mes').val(), 10), parseInt($('#anoDisplay').text(), 10));
+                $('#mes').val(_mp.mes);
+                $('#anoDisplay').text(_mp.ano);
             }
         }
 

@@ -433,16 +433,7 @@ $tipoDespesa = 'recorrente';
 
                 <div class="mb-2">
                     <label class="form-label">Cor do cartão</label>
-                    <div class="cor-swatch-group">
-                        <button type="button" class="cor-swatch" data-cor="#8B5CF6" style="background:#8B5CF6" title="Roxo"></button>
-                        <button type="button" class="cor-swatch selecionado" data-cor="#3B82F6" style="background:#3B82F6" title="Azul"></button>
-                        <button type="button" class="cor-swatch" data-cor="#10B981" style="background:#10B981" title="Verde"></button>
-                        <button type="button" class="cor-swatch" data-cor="#EF4444" style="background:#EF4444" title="Vermelho"></button>
-                        <button type="button" class="cor-swatch" data-cor="#F59E0B" style="background:#F59E0B" title="Âmbar"></button>
-                        <button type="button" class="cor-swatch" data-cor="#F97316" style="background:#F97316" title="Laranja"></button>
-                        <button type="button" class="cor-swatch" data-cor="#EC4899" style="background:#EC4899" title="Rosa"></button>
-                        <button type="button" class="cor-swatch" data-cor="#374151" style="background:#374151" title="Chumbo"></button>
-                    </div>
+                    <div class="cor-swatch-group" id="cartaoCorSwatches"></div>
                     <input type="hidden" id="corCartao" value="#3B82F6">
                 </div>
             </div>
@@ -654,20 +645,20 @@ $(document).on('change', '#fechamentoAuto', function () {
     }
 });
 
+window.montaSeletorCor('#cartaoCorSwatches', '#corCartao');
+
 $(document).on('click', '#adicionarCartao', function () {
     $('#tipoAlteracao').val('criar');
     $('#idCartao').val('');
     $('#nomeCartao').val('');
-    $('#limite').val('');
+    bancLimite.setValue(0);
     $('#dataFechamento').val('');
     $('#dataVencimento').val('');
     $('#fechamentoHint').hide();
     $('#mesRefWrapper').hide();
     $('#fechamentoAuto').prop('checked', true);
     buildMesRefSelect();
-    $('#corCartao').val('#3B82F6');
-    $('.cor-swatch:not(.cat-cor-swatch)').removeClass('selecionado');
-    $('.cor-swatch:not(.cat-cor-swatch)[data-cor="#3B82F6"]').addClass('selecionado');
+    $('#cartaoCorSwatches').data('setCor')('#3B82F6');
     $('#modalCartaoTitulo').text('Novo Cartão');
     $('#modalCartao').modal('show');
 });
@@ -680,24 +671,16 @@ $(document).on('click', '.editarCartao', function () {
     $('#tipoAlteracao').val('alteracao');
     $('#idCartao').val(id);
     $('#nomeCartao').val(c.nome_cartao);
-    $('#limite').val(c.limite.replace('.', ','));
+    bancLimite.setValue(c.limite);
     $('#dataFechamento').val(c.fechamento_dia);
     $('#dataVencimento').val(c.vencimento_dia);
     $('#fechamentoAuto').prop('checked', c.fechamento_auto === 'S');
     $('#fechamentoHint').hide();
     $('#mesRefWrapper').hide();
     const cor = c.cor || '#3B82F6';
-    $('#corCartao').val(cor);
-    $('.cor-swatch:not(.cat-cor-swatch)').removeClass('selecionado');
-    $(`.cor-swatch:not(.cat-cor-swatch)[data-cor="${cor}"]`).addClass('selecionado');
+    $('#cartaoCorSwatches').data('setCor')(cor);
     $('#modalCartaoTitulo').text(c.nome_cartao);
     $('#modalCartao').modal('show');
-});
-
-$(document).on('click', '.cor-swatch:not(.cat-cor-swatch)', function () {
-    $('.cor-swatch:not(.cat-cor-swatch)').removeClass('selecionado');
-    $(this).addClass('selecionado');
-    $('#corCartao').val($(this).data('cor'));
 });
 
 function salvaCartaoHandler() {
@@ -1095,25 +1078,12 @@ function inativaRecorrente(id) {
 
 // ── RESPONSÁVEIS ────────────────────────────────────────────────
 (function () {
-    var RESP_CORES = ['#3B82F6','#8B5CF6','#EC4899','#EF4444','#F97316','#F59E0B','#22C55E','#10B981','#6B7280'];
-
-    $('#respCorSwatches').html(RESP_CORES.map(function (c) {
-        return '<button type="button" class="cor-swatch resp-cor-swatch" data-cor="' + c +
-               '" style="background:' + c + ';"></button>';
-    }).join(''));
-
-    $(document).on('click', '.resp-cor-swatch', function () {
-        $('.resp-cor-swatch').removeClass('selecionado');
-        $(this).addClass('selecionado');
-        $('#respCor').val($(this).data('cor'));
-    });
+    window.montaSeletorCor('#respCorSwatches', '#respCor');
 
     $('#adicionarResponsavel').click(function () {
         $('#respId').val(0);
         $('#respNome').val('');
-        $('#respCor').val('#3B82F6');
-        $('.resp-cor-swatch').removeClass('selecionado');
-        $('.resp-cor-swatch[data-cor="#3B82F6"]').addClass('selecionado');
+        $('#respCorSwatches').data('setCor')('#3B82F6');
         $('#modalRespTitulo').text('Novo Responsável');
         $('#modalResponsavel').modal('show');
     });
@@ -1124,9 +1094,7 @@ function inativaRecorrente(id) {
         var cor  = $(this).data('cor') || '#3B82F6';
         $('#respId').val(id);
         $('#respNome').val(nome);
-        $('#respCor').val(cor);
-        $('.resp-cor-swatch').removeClass('selecionado');
-        $('.resp-cor-swatch[data-cor="' + cor + '"]').addClass('selecionado');
+        $('#respCorSwatches').data('setCor')(cor);
         $('#modalRespTitulo').text(nome);
         $('#modalResponsavel').modal('show');
     });
@@ -1218,27 +1186,15 @@ function buscaResponsaveis() {
 
 // ── CONTAS FIXAS ────────────────────────────────────────────────
 (function () {
-    var CF_CORES = ['#3B82F6','#8B5CF6','#EC4899','#EF4444','#F97316','#F59E0B','#22C55E','#10B981','#6B7280'];
-
-    $('#cfCorSwatches').html(CF_CORES.map(function (c) {
-        return '<button type="button" class="cor-swatch cf-cor-swatch" data-cor="' + c +
-               '" style="background:' + c + ';"></button>';
-    }).join(''));
-
-    $(document).on('click', '.cf-cor-swatch', function () {
-        $('.cf-cor-swatch').removeClass('selecionado');
-        $(this).addClass('selecionado');
-        $('#cfCor').val($(this).data('cor'));
-    });
+    window.montaSeletorCor('#cfCorSwatches', '#cfCor');
+    var bancCfValor = bancInput(document.getElementById('cfValor'));
 
     $('#adicionarContaFixa').click(function () {
         $('#cfId').val(0);
         $('#cfNome').val('');
-        $('#cfValor').val('');
+        bancCfValor.setValue(0);
         $('#cfDia').val('');
-        $('#cfCor').val('#3B82F6');
-        $('.cf-cor-swatch').removeClass('selecionado');
-        $('.cf-cor-swatch[data-cor="#3B82F6"]').addClass('selecionado');
+        $('#cfCorSwatches').data('setCor')('#3B82F6');
         $('#modalCFTitulo').text('Nova Conta Fixa');
         $('#modalContaFixa').modal('show');
     });
@@ -1250,11 +1206,9 @@ function buscaResponsaveis() {
         var cor = cf.cor || '#3B82F6';
         $('#cfId').val(id);
         $('#cfNome').val(cf.nome);
-        $('#cfValor').val(parseFloat(cf.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
+        bancCfValor.setValue(cf.valor);
         $('#cfDia').val(cf.dia_vencimento);
-        $('#cfCor').val(cor);
-        $('.cf-cor-swatch').removeClass('selecionado');
-        $('.cf-cor-swatch[data-cor="' + cor + '"]').addClass('selecionado');
+        $('#cfCorSwatches').data('setCor')(cor);
         $('#modalCFTitulo').text(cf.nome);
         $('#modalContaFixa').modal('show');
     });
@@ -1362,8 +1316,6 @@ function buscaContasFixas() {
             });
             html += '</div>';
             $('#listaContasFixas').html(html);
-
-            document.querySelectorAll('.cf-real').forEach(function (el) { bancInput(el, el.value); });
         },
         error: function (xhr) {
             $('#listaContasFixas').html('<div class="alert alert-danger">Erro: ' + xhr.responseText + '</div>');
@@ -1391,7 +1343,7 @@ function buscaContasFixas() {
 
 carregarResponsaveis();
 
-document.querySelectorAll('.real').forEach(function (el) { bancInput(el, el.value); });
+var bancLimite = bancInput(document.getElementById('limite'));
 
 var bancValorGest = bancInput(document.getElementById('valor'));
 

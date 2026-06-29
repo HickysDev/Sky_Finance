@@ -51,6 +51,13 @@ $(document).ready(function () {
 
     function getAno() { return parseInt($('#anoDisplay').text()); }
 
+    // Marco inicial: abre no mês do marco se o atual for anterior (antes não há dados).
+    if (window.mesInicialPadrao) {
+        var _mp = window.mesInicialPadrao(parseInt($('#mes').val(), 10), getAno());
+        $('#mes').val(_mp.mes);
+        $('#anoDisplay').text(_mp.ano);
+    }
+
     // ── NAVEGAÇÃO ────────────────────────────────────────────────────
     $('#mesEsquerda').click(function () {
         var v = parseInt($('#mes').val());

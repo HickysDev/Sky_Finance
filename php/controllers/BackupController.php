@@ -102,10 +102,15 @@ if ($acao === 'importar') {
     $ok    = 0;
     $erros = [];
 
+    // Garante FK desligadas durante toda a importação (independe do conteúdo do arquivo)
+    try { $conn->exec("SET FOREIGN_KEY_CHECKS = 0"); } catch (Exception $e) {}
+
     foreach ($stmts as $raw) {
         // Remove linhas de comentário (-- ...) antes de decidir se executa
         $stmt = trim(preg_replace('/^--[^\n]*(\n|$)/m', '', $raw));
         if ($stmt === '') continue;
+        // Backups antigos usavam TRUNCATE, que falha em tabelas com FK → converte para DELETE
+        $stmt = preg_replace('/^TRUNCATE\s+TABLE\s+/i', 'DELETE FROM ', $stmt);
         try {
             $conn->exec($stmt);
             $ok++;
@@ -114,6 +119,8 @@ if ($acao === 'importar') {
             $erros[] = $trecho . ' → ' . $e->getMessage();
         }
     }
+
+    try { $conn->exec("SET FOREIGN_KEY_CHECKS = 1"); } catch (Exception $e) {}
 
     if (empty($erros)) {
         echo json_encode(['ok' => true, 'msg' => "{$ok} instruções executadas com sucesso."]);
@@ -135,8 +142,10 @@ function dumpTabela(PDO $conn, string $tabela, ?string $where = null): string
         return "-- Tabela `{$tabela}` não encontrada, ignorada.\n\n";
     }
 
+    // DELETE FROM (e não TRUNCATE) — TRUNCATE falha em tabelas referenciadas por FK,
+    // mesmo com FOREIGN_KEY_CHECKS=0. DELETE com as checagens desligadas funciona.
     $sql  = "-- [{$tabela}]\n";
-    $sql .= "TRUNCATE TABLE `{$tabela}`;\n";
+    $sql .= "DELETE FROM `{$tabela}`;\n";
 
     if (empty($rows)) {
         return $sql . "\n";
