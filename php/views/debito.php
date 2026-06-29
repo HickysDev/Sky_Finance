@@ -100,6 +100,13 @@ $mesAtual = date('n');
 
     $(document).ready(function () {
 
+        // Marco inicial: abre no mês do marco se o atual for anterior (antes não há dados).
+        if (window.mesInicialPadrao) {
+            var _mp = window.mesInicialPadrao(parseInt($('#mes').val(), 10), parseInt($('#anoDisplay').text(), 10));
+            $('#mes').val(_mp.mes);
+            $('#anoDisplay').text(_mp.ano);
+        }
+
         buscaCartoes();
         buscaCategorias();
 

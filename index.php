@@ -249,6 +249,14 @@ $mesAtual = date('n');
 <script>
 $(document).ready(function () {
 
+    // Marco inicial: se o mês atual for anterior ao início do controle,
+    // abre direto no mês do marco (antes dele não há dados).
+    if (window.mesInicialPadrao) {
+        var _mp = window.mesInicialPadrao(parseInt($('#mes').val(), 10), parseInt($('#anoDisplay').text(), 10));
+        $('#mes').val(_mp.mes);
+        $('#anoDisplay').text(_mp.ano);
+    }
+
     const chartColors = [
         '#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6',
         '#EC4899','#F97316','#06B6D4','#84CC16','#9CA3AF'

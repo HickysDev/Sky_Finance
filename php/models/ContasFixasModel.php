@@ -7,7 +7,7 @@ class ContasFixasModel {
 
     public static function listar(): array {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("SELECT * FROM contas_fixas WHERE usuario_id = @uid ORDER BY dia_vencimento ASC, nome ASC");
+        $stmt = $conn->prepare("SELECT * FROM contas_fixas WHERE usuario_id = @uid ORDER BY nome ASC");
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as &$r) {
@@ -56,7 +56,7 @@ class ContasFixasModel {
             LEFT JOIN contas_fixas_pagamentos cfp
                 ON cfp.conta_fixa_id = cf.id AND cfp.mes = :mes AND cfp.ano = :ano AND cfp.usuario_id = @uid
             WHERE cf.usuario_id = @uid AND cf.ativo = 'S'
-            ORDER BY cf.dia_vencimento ASC, cf.nome ASC
+            ORDER BY cf.nome ASC
         ");
         $stmt->execute([':mes' => $mes, ':ano' => $ano]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);

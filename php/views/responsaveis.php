@@ -309,6 +309,13 @@
 var mesSel  = new Date().getMonth() + 1;
 var anoSel  = new Date().getFullYear();
 var hoje    = new Date().toISOString().split('T')[0];
+
+// Marco inicial: abre no mês do marco se o atual for anterior (antes não há dados).
+if (window.mesInicialPadrao) {
+    var _mpResp = window.mesInicialPadrao(mesSel, anoSel);
+    mesSel = _mpResp.mes;
+    anoSel = _mpResp.ano;
+}
 var tipoItem = 'avista';
 var MESES   = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];

@@ -118,6 +118,21 @@ $conn = Database::getConnection();
       return alvo < App.marcoInicio;
   };
 
+  // ── Mês padrão de abertura: nunca anterior ao marco inicial ──
+  // Recebe o mês/ano que a tela usaria por padrão (atual ou ajustado pela fatura)
+  // e devolve o marco caso seja anterior — assim a tela abre onde há dados.
+  window.mesInicialPadrao = function (mes, ano) {
+      if (!window.App || !App.marcoInicio) return { mes: mes, ano: ano };
+      var alvo = ('0000' + ano).slice(-4) + '-' + ('00' + mes).slice(-2) + '-01';
+      if (alvo < App.marcoInicio) {
+          return {
+              mes: parseInt(App.marcoInicio.substring(5, 7), 10),
+              ano: parseInt(App.marcoInicio.substring(0, 4), 10)
+          };
+      }
+      return { mes: mes, ano: ano };
+  };
+
   window.atualizaAvisoMarco = function (mes, ano) {
       var $b = $('#avisoMarcoBanner');
       if (window.antesDoMarco(mes, ano)) {
@@ -131,6 +146,52 @@ $conn = Database::getConnection();
       } else {
           $b.remove();
       }
+  };
+
+  // ── Seletor de cor padrão (paleta única + cor personalizada) ──────
+  // Mesma paleta em todas as telas; o último swatch abre o seletor nativo.
+  window.CORES_PADRAO = [
+      '#3B82F6', '#8B5CF6', '#EC4899', '#EF4444', '#F97316', '#F59E0B',
+      '#22C55E', '#10B981', '#06B6D4', '#14B8A6', '#84CC16', '#6B7280'
+  ];
+
+  // Monta o seletor dentro de `containerSel`, gravando a cor em `hiddenSel`.
+  // Retorna (e guarda em .data('setCor')) a função setCor(cor) para abrir/editar.
+  window.montaSeletorCor = function (containerSel, hiddenSel, onChange) {
+      var $c = $(containerSel);
+      if (!$c.length) return function () {};
+
+      var html = window.CORES_PADRAO.map(function (cor) {
+          return '<button type="button" class="cor-swatch" data-cor="' + cor +
+                 '" style="background:' + cor + ';" title="' + cor + '"></button>';
+      }).join('');
+      html += '<label class="cor-swatch cor-swatch-custom" title="Cor personalizada">' +
+              '<i class="bi bi-eyedropper"></i>' +
+              '<input type="color">' +
+              '</label>';
+      $c.html(html);
+
+      function setCor(cor) {
+          cor = cor || '#3B82F6';
+          $(hiddenSel).val(cor);
+          $c.find('.cor-swatch').removeClass('selecionado');
+          var $custom = $c.find('.cor-swatch-custom');
+          var $preset = $c.find('.cor-swatch[data-cor="' + cor + '"]');
+          if ($preset.length) {
+              $preset.addClass('selecionado');
+              $custom.css('background', '');           // volta ao gradiente
+          } else {
+              $custom.addClass('selecionado').css('background', cor);
+              $custom.find('input[type="color"]').val(cor);
+          }
+          if (typeof onChange === 'function') onChange(cor);
+      }
+
+      $c.on('click', '.cor-swatch[data-cor]', function () { setCor($(this).data('cor')); });
+      $c.on('input', '.cor-swatch-custom input[type="color"]', function () { setCor(this.value); });
+
+      $c.data('setCor', setCor);
+      return setCor;
   };
 
   // ── Input monetário estilo app de banco ──────────────────────────

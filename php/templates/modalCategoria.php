@@ -99,16 +99,9 @@ emoji-picker {
 
 <script>
 (function () {
-    var CAT_CORES = [
-        '#3B82F6', '#8B5CF6', '#EC4899', '#EF4444', '#F97316',
-        '#F59E0B', '#22C55E', '#10B981', '#06B6D4', '#14B8A6',
-        '#84CC16', '#6B7280'
-    ];
-
-    $('#catCorSwatches').html(CAT_CORES.map(function (c) {
-        return '<button type="button" class="cor-swatch cat-cor-swatch" data-cor="' + c +
-               '" style="background:' + c + ';" title="' + c + '"></button>';
-    }).join(''));
+    window.montaSeletorCor('#catCorSwatches', '#catCor', function () {
+        if (window.atualizarPreviewCategoria) window.atualizarPreviewCategoria();
+    });
 
     window.atualizarPreviewCategoria = function () {
         var cor   = $('#catCor').val() || '#6B7280';
@@ -124,10 +117,8 @@ emoji-picker {
         $('#catId').val(id || 0);
         $('#catNome').val(nome || '');
         $('#catIcone').val(icone || '');
-        $('#catCor').val(cor || '#6B7280');
         $('#catModalTitulo').text(parseInt(id) > 0 ? 'Editar Categoria' : 'Nova Categoria');
-        $('.cat-cor-swatch').removeClass('selecionado');
-        $('.cat-cor-swatch[data-cor="' + (cor || '#6B7280') + '"]').addClass('selecionado');
+        $('#catCorSwatches').data('setCor')(cor || '#6B7280');
         atualizarPreviewCategoria();
         $('#modalCategoria').modal('show');
     };
@@ -183,13 +174,6 @@ emoji-picker {
             e.stopImmediatePropagation();
         }
     }, true);
-
-    $(document).on('click', '.cat-cor-swatch', function () {
-        $('.cat-cor-swatch').removeClass('selecionado');
-        $(this).addClass('selecionado');
-        $('#catCor').val($(this).data('cor'));
-        atualizarPreviewCategoria();
-    });
 
     $(document).on('click', '#salvarCategoria', function () {
         var id    = parseInt($('#catId').val());

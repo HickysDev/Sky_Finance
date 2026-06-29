@@ -337,12 +337,14 @@ $conn = Database::getConnection();
                         <label class="form-label">Nome</label>
                         <input type="text" class="form-control" id="cofNome" placeholder="Ex: Viagem Europa">
                     </div>
-                    <div class="col-4 col-md-2">
-                        <label class="form-label">Cor</label>
-                        <input type="color" class="form-control form-control-color w-100" id="cofCor" value="#3B82F6">
-                    </div>
-                    <div class="col-8 col-md-2 d-flex flex-column justify-content-end">
+                    <div class="col-12 col-md-4 d-flex flex-column justify-content-end">
+                        <label class="form-label">Capa</label>
                         <div id="cofCoverPreview" style="height:38px;border-radius:8px;background:linear-gradient(135deg,#3B82F6,#1D4ED8);transition:background .2s;"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Cor</label>
+                        <div class="cor-swatch-group" id="cofCorSwatches"></div>
+                        <input type="hidden" id="cofCor" value="#3B82F6">
                     </div>
                     <div class="col-12">
                         <label class="form-label">Descrição <span class="text-muted" style="font-size:0.8rem;">(opcional)</span></label>
@@ -489,6 +491,13 @@ $conn = Database::getConnection();
 
 <script>
 $(document).ready(function () {
+
+    // Marco inicial: abre no mês do marco se o atual for anterior (antes não há dados).
+    if (window.mesInicialPadrao) {
+        var _mp = window.mesInicialPadrao(parseInt($('#mesFin').val(), 10), parseInt($('#finAnoDisplay').text(), 10));
+        $('#mesFin').val(_mp.mes);
+        $('#finAnoDisplay').text(_mp.ano);
+    }
 
     // ─── ÍCONES E CORES POR TIPO ─────────────────────────────────────────
     const tipoConfig = {
@@ -979,6 +988,7 @@ $(document).ready(function () {
         atualizaBtnTodosAnos();
 
         // Carrega categorias no select
+        
         $.ajax({
             type: 'POST',
             url: App.ctrl.categoria,
@@ -1437,14 +1447,17 @@ $(document).ready(function () {
         $('#cofImagem').val('');
         $('#cofImagemPreview').hide();
         $('#cofDataLimite').val('');
-        $('#cofCor').val('#3B82F6');
-        $('#cofCoverPreview').css('background', 'linear-gradient(135deg,#3B82F6,#1D4ED8)');
+        $('#cofCorSwatches').data('setCor')('#3B82F6');
         $('#cofTemCDI').prop('checked', false);
         $('#cofCDIPctWrap, #cofTaxaWrap').hide();
         $('#cofCDIPct').val('100');
         $('#cofCDITaxa').val('13.15');
         if (cleaveCofMeta) cleaveCofMeta.setValue(0); else $('#cofMeta').val('');
     }
+
+    window.montaSeletorCor('#cofCorSwatches', '#cofCor', function (cor) {
+        $('#cofCoverPreview').css('background', 'linear-gradient(135deg,' + cor + ',' + shadeColor(cor, -35) + ')');
+    });
 
     $('#btnNovoCof').click(function () {
         resetModalCof();
@@ -1462,8 +1475,7 @@ $(document).ready(function () {
         $('#cofImagem').val($b.data('imagem'));
         $('#cofDataLimite').val($b.data('datalimite'));
         var cor = $b.data('cor') || '#3B82F6';
-        $('#cofCor').val(cor);
-        $('#cofCoverPreview').css('background', 'linear-gradient(135deg,' + cor + ',' + shadeColor(cor, -35) + ')');
+        $('#cofCorSwatches').data('setCor')(cor);
 
         if ($b.data('imagem')) {
             $('#cofImagemImg').attr('src', $b.data('imagem'));
@@ -1485,11 +1497,6 @@ $(document).ready(function () {
         var url = $(this).val().trim();
         if (url) { $('#cofImagemImg').attr('src', url); $('#cofImagemPreview').show(); }
         else { $('#cofImagemPreview').hide(); }
-    });
-
-    $('#cofCor').on('input', function () {
-        var cor = $(this).val();
-        $('#cofCoverPreview').css('background', 'linear-gradient(135deg,' + cor + ',' + shadeColor(cor, -35) + ')');
     });
 
     $('#cofTemCDI').change(function () {
