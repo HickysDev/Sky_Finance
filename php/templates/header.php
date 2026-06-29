@@ -260,7 +260,7 @@ $conn = Database::getConnection();
           render();
       });
 
-      return {
+      var api = {
           getValue: function () {
               if (!digits) return 0;
               var n = digits;
@@ -272,6 +272,10 @@ $conn = Database::getConnection();
               render();
           }
       };
+      // Expõe a API no próprio elemento para reset genérico ao fechar modais
+      el._banc = api;
+      el.classList.add('js-banc');
+      return api;
   };
   </script>
 
@@ -292,6 +296,16 @@ $conn = Database::getConnection();
   // (sem isso Bootstrap remove o classe e o scroll volta antes da hora).
   $(document).on('hidden.bs.modal', '.modal', function () {
       if ($('.modal.show').length) $('body').addClass('modal-open');
+  });
+
+  // Ao fechar qualquer modal, zera todos os campos de valor (bancInput) dentro dela.
+  // Assim, ao reabrir para um novo lançamento, o campo começa em "R$ 0,00" e não
+  // mantém o valor digitado antes. Fluxos de edição preenchem o valor ao abrir
+  // (depois deste reset), então não são afetados.
+  $(document).on('hidden.bs.modal', '.modal', function () {
+      this.querySelectorAll('.js-banc').forEach(function (el) {
+          if (el._banc) el._banc.setValue(0);
+      });
   });
   </script>
 
