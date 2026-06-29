@@ -163,8 +163,10 @@ $(document).ready(function () {
 
     // ─── KPI CARDS ───────────────────────────────────────────────────────────
     function renderKPI(t, melhor, pior) {
-        const pos     = t.saldo >= 0;
-        const poupPct = t.renda > 0 ? Math.max(0, (t.saldo / t.renda) * 100) : 0;
+        const pos      = t.saldo >= 0;
+        // Taxa de poupança = o que foi realmente guardado em cofrinhos ÷ renda do ano.
+        const guardado = parseFloat(t.guardado || 0);
+        const poupPct  = t.renda > 0 ? Math.max(0, (guardado / t.renda) * 100) : 0;
         const cards   = [
             { icon: 'bi-arrow-down-circle-fill', cor: '#22C55E', label: 'Renda Total',      sub: 'estimativa anual',           valor: formatBR(t.renda) },
             { icon: 'bi-receipt',                cor: '#EF4444', label: 'Total Gasto',       sub: 'à vista + crédito + fixos',  valor: formatBR(t.gasto) },
@@ -175,7 +177,7 @@ $(document).ready(function () {
                 sub:   'renda − gastos no ano',
                 valor: (pos ? '' : '− ') + formatBR(Math.abs(t.saldo)),
             },
-            { icon: 'bi-piggy-bank-fill', cor: '#8B5CF6', label: 'Taxa de Poupança', sub: 'percentual da renda guardado', valor: poupPct.toFixed(1) + '%' },
+            { icon: 'bi-piggy-bank-fill', cor: '#8B5CF6', label: 'Taxa de Poupança', sub: 'guardado em cofrinhos ÷ renda', valor: poupPct.toFixed(1) + '%' },
             melhor ? {
                 icon: 'bi-trophy-fill', cor: '#F59E0B',
                 label: 'Melhor Mês',

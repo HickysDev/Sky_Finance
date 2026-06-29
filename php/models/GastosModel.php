@@ -913,6 +913,22 @@ class GastosModel {
         $s->execute([$ano, $ano, $ano, $ano, $ano]);
         $porCategoria = $s->fetchAll(PDO::FETCH_ASSOC);
 
+        // Total efetivamente guardado em cofrinhos no ano (aportes líquidos: depósitos − retiradas).
+        // Base da "Taxa de Poupança" — só conta o que foi realmente guardado, não a sobra do mês.
+        $guardado = 0.0;
+        try {
+            $mAporte = ($marcoAnual && preg_match('/^\d{4}-\d{2}-01$/', $marcoAnual))
+                ? " AND ca.data_aporte >= '$marcoAnual'" : '';
+            $s = $conn->prepare("
+                SELECT COALESCE(SUM(ca.valor), 0)
+                FROM cofrinho_aportes ca
+                INNER JOIN cofrinhos c ON c.id = ca.cofrinho_id
+                WHERE c.usuario_id = @uid AND YEAR(ca.data_aporte) = ?{$mAporte}
+            ");
+            $s->execute([$ano]);
+            $guardado = (float) $s->fetchColumn();
+        } catch (Exception $e) { $guardado = 0.0; }
+
         $totais = [
             'debito'     => array_sum(array_column($meses, 'debito')),
             'credito'    => array_sum(array_column($meses, 'credito')),
@@ -922,6 +938,7 @@ class GastosModel {
             'renda'      => array_sum(array_column($meses, 'renda')),
             'gasto'      => array_sum(array_column($meses, 'gasto')),
             'saldo'      => array_sum(array_column($meses, 'saldo')),
+            'guardado'   => $guardado,
         ];
 
         $mesesArr = array_values($meses);
