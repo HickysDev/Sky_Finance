@@ -786,7 +786,7 @@ $mesAtual = date('n');
                 type: 'doughnut',
                 data: {
                     labels: nomes,
-                    datasets: [{ data: valores, backgroundColor: cores, borderWidth: 2, borderColor: 'transparent' }]
+                    datasets: [{ data: valores, backgroundColor: cores, borderColor: '#1E1E2F', borderWidth: 3, hoverOffset: 8 }]
                 },
                 options: {
                     cutout: '68%',
