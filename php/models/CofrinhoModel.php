@@ -67,6 +67,16 @@ class CofrinhoModel {
 
     public static function aporte(int $cofrinhoId, float $valor, string $data, string $obs = ''): bool {
         $conn = Database::getConnection();
+
+        // Confirma que o cofrinho é do usuário antes de inserir. cofrinho_aportes
+        // não tem coluna usuario_id, então sem esta checagem um usuário conseguia
+        // inserir aportes no cofrinho de outro (IDOR). Mesmo padrão de retirar().
+        $dono = $conn->prepare("SELECT 1 FROM cofrinhos WHERE id = :id AND usuario_id = @uid");
+        $dono->execute([':id' => $cofrinhoId]);
+        if (!$dono->fetchColumn()) {
+            return false;
+        }
+
         $conn->beginTransaction();
         try {
             $stmt = $conn->prepare("

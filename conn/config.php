@@ -19,6 +19,7 @@ define('CTRL_COFRINHO',      BASE_URL . '/php/controllers/CofrinhoController.php
 define('CTRL_RESPONSAVEIS',  BASE_URL . '/php/controllers/ResponsaveisController.php');
 define('CTRL_CONTAS_FIXAS',  BASE_URL . '/php/controllers/ContasFixasController.php');
 define('CTRL_USUARIOS',      BASE_URL . '/php/controllers/UsuariosController.php');
+define('CTRL_DESEJOS',       BASE_URL . '/php/controllers/ListaDesejosController.php');
 
 // ── Caminho base para includes PHP (use em qualquer nível de pasta) ──────────
 // Exemplo: require_once BASE_PATH . '/php/templates/header.php';
