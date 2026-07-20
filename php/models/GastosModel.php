@@ -984,14 +984,15 @@ class GastosModel {
     public static function editarGastoSimples($id, $descricao, $categoriaId) {
         $conn = Database::getConnection();
         // COALESCE: se nenhuma categoria for enviada, mantém a atual (não zera)
-        $stmt = $conn->prepare("UPDATE gastos SET descricao = ?, categoria_id = COALESCE(?, categoria_id) WHERE id = ?");
+        // AND usuario_id = @uid: impede editar o gasto de outro usuário (IDOR)
+        $stmt = $conn->prepare("UPDATE gastos SET descricao = ?, categoria_id = COALESCE(?, categoria_id) WHERE id = ? AND usuario_id = @uid");
         $stmt->execute([$descricao, $categoriaId ?: null, (int) $id]);
         return ['success' => true];
     }
 
     public static function editarRecorrenteSimples($id, $nome, $categoriaId) {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("UPDATE gastos_recorrentes SET nome = ?, categoria_id = COALESCE(?, categoria_id) WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE gastos_recorrentes SET nome = ?, categoria_id = COALESCE(?, categoria_id) WHERE id = ? AND usuario_id = @uid");
         $stmt->execute([$nome, $categoriaId ?: null, (int) $id]);
         return ['success' => true];
     }
@@ -1001,7 +1002,7 @@ class GastosModel {
         $stmt = $conn->prepare("
             UPDATE gastos
             SET descricao = ?, valor = ?, categoria_id = COALESCE(?, categoria_id), metodo_pagamento = ?, cartao_id = ?, data_gasto = ?
-            WHERE id = ?
+            WHERE id = ? AND usuario_id = @uid
         ");
         $stmt->execute([
             $descricao,
@@ -1018,10 +1019,12 @@ class GastosModel {
     public static function editaRecorrentes($id, $nome, $valor, $categoria, $cartao) {
         $conn = Database::getConnection();
 
+        // Filtra por @uid já na leitura: se o recorrente não for do usuário,
+        // $atual vem vazio e a função retorna sem tocar em nada (IDOR).
         $stmt = $conn->prepare("
             SELECT gr.cartao_id, gr.valor
             FROM gastos_recorrentes gr
-            WHERE gr.id = ?
+            WHERE gr.id = ? AND gr.usuario_id = @uid
         ");
         $stmt->execute([(int) $id]);
         $atual = $stmt->fetch();
@@ -1031,7 +1034,7 @@ class GastosModel {
         }
 
         if ((int) $atual['cartao_id'] !== (int) $cartao || (float) $atual['valor'] !== (float) $valor) {
-            $sql = $conn->prepare("UPDATE gastos_recorrentes SET ativo = 'N' WHERE id = ?");
+            $sql = $conn->prepare("UPDATE gastos_recorrentes SET ativo = 'N' WHERE id = ? AND usuario_id = @uid");
             $sucessoInativar = $sql->execute([(int) $id]);
 
             if (!$sucessoInativar) {
@@ -1074,7 +1077,7 @@ class GastosModel {
             return false;
         }
 
-        $sql = $conn->prepare("UPDATE gastos_recorrentes SET categoria_id = ?, nome = ?, ativo = 'S' WHERE id = ?");
+        $sql = $conn->prepare("UPDATE gastos_recorrentes SET categoria_id = ?, nome = ?, ativo = 'S' WHERE id = ? AND usuario_id = @uid");
         return $sql->execute([(int) $categoria, $nome, (int) $id]);
     }
 

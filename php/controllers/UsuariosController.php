@@ -189,6 +189,7 @@ switch ($acao) {
             'contas_pessoa',
             'cofrinho_aportes',
             'orcamentos',
+            'lista_desejos',
             'gastos',
             'gastos_recorrentes',
             'cofrinhos',
@@ -200,6 +201,15 @@ switch ($acao) {
             'login_tentativas',
         ];
 
+        // Ação global e irreversível: snapshot antes de apagar, para ser
+        // recuperável. Se o backup falhar, aborta — não apaga sem rede.
+        $snapshot = BackupAutomatico::gerar('pre-reset');
+        if (!$snapshot) {
+            http_response_code(500);
+            echo json_encode(['erro' => 'Não foi possível gerar o backup de segurança. Reset cancelado.']);
+            break;
+        }
+
         try {
             $conn->exec("SET FOREIGN_KEY_CHECKS = 0");
             foreach ($tabelas as $tabela) {
@@ -207,7 +217,7 @@ switch ($acao) {
                 try { $conn->exec("ALTER TABLE `$tabela` AUTO_INCREMENT = 1"); } catch (Exception $e) {}
             }
             $conn->exec("SET FOREIGN_KEY_CHECKS = 1");
-            echo json_encode(['ok' => true]);
+            echo json_encode(['ok' => true, 'backup' => basename($snapshot)]);
         } catch (Exception $e) {
             http_response_code(500);
             echo json_encode(['erro' => 'Erro ao limpar dados: ' . $e->getMessage()]);

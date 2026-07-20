@@ -43,6 +43,7 @@ if ($acao === 'exportar') {
         'cofrinhos',
         'cofrinho_aportes',
         'orcamentos',
+        'lista_desejos',
     ];
 
     $conn  = Database::getConnection();
