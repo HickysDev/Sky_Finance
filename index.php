@@ -431,7 +431,7 @@ $(document).ready(function () {
         const main = [
             { icon: 'bi-arrow-down-circle-fill',                          cor: '#22C55E', label: 'Renda estimada', sub: 'fontes de renda ativas',   valor: formatBR(d.totalRenda) },
             { icon: 'bi-arrow-up-circle-fill',                            cor: '#EF4444', label: 'Total gasto',    sub: 'todas as despesas do mês', valor: formatBR(d.totalGasto) },
-            { icon: pos ? 'bi-graph-up-arrow' : 'bi-graph-down-arrow',   cor: saldoCor,  label: 'Saldo estimado', sub: 'renda − total gasto',
+            { icon: pos ? 'bi-graph-up-arrow' : 'bi-graph-down-arrow',   cor: saldoCor,  label: 'Saldo estimado', sub: 'renda − gastos − guardado',
               valor: (pos ? '' : '− ') + formatBR(Math.abs(d.saldo)) },
         ];
 
