@@ -225,6 +225,37 @@ body {
   to   { transform: translate(-8vw, -8vh) scale(1.1); }
 }
 
+/* ─── TEMA: GATOS ESPACIAIS ─────────────────────────
+   Reaproveita a camada .aurora (já é fixed, tela cheia e pointer-events:none)
+   como suporte do padrão, em vez de criar outro elemento.
+   O véu escuro é a primeira camada do background-image: mantém o contraste
+   dos números nos painéis, deixando o padrão visível nos espaços vazios. */
+.tema-gatos .aurora {
+  background-image:
+    linear-gradient(rgba(10, 14, 39, 0.74), rgba(10, 14, 39, 0.74)),
+    url("../src/img/temas/gatos-espaciais.jpg");
+  background-repeat: no-repeat, repeat;
+  background-size: cover, 420px 420px;
+  background-position: center, center;
+}
+
+/* Sem os blobs animados: o padrão já é o fundo */
+.tema-gatos .aurora-blob { display: none; }
+
+/* Painéis quase sólidos só neste tema: o padrão aparece nos espaços entre os
+   cards, não atrás dos valores. Redefinir a variável cobre de uma vez todos os
+   lugares que a usam (painéis, KPIs, tabelas, dropdowns). */
+.tema-gatos {
+  --cor-painel: rgba(38, 40, 60, 0.94);
+}
+
+.tema-gatos .modal-content {
+  background: rgba(30, 32, 50, 0.96) !important;
+}
+
+/* O padrão é azul-marinho escuro — o tema claro tornaria o texto ilegível.
+   Por isso "gatos" e "light-mode" são mutuamente exclusivos no header. */
+
 /* Garante que conteúdo fica acima da aurora */
 .navbar-sky { position: relative; z-index: 10; }
 
