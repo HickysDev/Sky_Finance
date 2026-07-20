@@ -51,12 +51,18 @@ $conn = Database::getConnection();
   <!-- Custom CSS -->
   <link rel="stylesheet" href="<?= BASE_URL ?>/styles/style.css" />
 
-  <!-- Tema claro: aplica antes do render para evitar flash -->
+  <!-- Tema: aplica antes do render para evitar flash -->
   <script>
-    if (localStorage.getItem('skyTheme') === 'light') {
-      document.documentElement.classList.add('light-mode');
-      document.documentElement.setAttribute('data-bs-theme', 'light');
-    }
+    (function () {
+      var t = localStorage.getItem('skyTheme');
+      var h = document.documentElement;
+      if (t === 'light') {
+        h.classList.add('light-mode');
+        h.setAttribute('data-bs-theme', 'light');
+      } else if (t === 'gatos') {
+        h.classList.add('tema-gatos');
+      }
+    })();
   </script>
 
   <!-- jQuery -->
@@ -543,6 +549,12 @@ $navGrupos = [
               <span id="labelTheme">Modo claro</span>
             </button>
           </li>
+          <li>
+            <button type="button" class="dropdown-item" id="btnTemaGatos">
+              <i class="bi bi-stars me-2" id="iconeGatos"></i>
+              <span id="labelGatos">Gatos espaciais</span>
+            </button>
+          </li>
           <li><hr class="dropdown-divider"></li>
           <li>
             <a class="dropdown-item text-danger" href="<?= BASE_URL ?>/logout.php">
@@ -557,34 +569,52 @@ $navGrupos = [
 
 <script>
 (function () {
-  var html  = document.documentElement;
-  var btn   = document.getElementById('btnToggleTheme');
-  var icone = document.getElementById('iconeTheme');
+  var html       = document.documentElement;
+  var btn        = document.getElementById('btnToggleTheme');
+  var icone      = document.getElementById('iconeTheme');
+  var label      = document.getElementById('labelTheme');
+  var btnGatos   = document.getElementById('btnTemaGatos');
+  var iconeGatos = document.getElementById('iconeGatos');
+  var labelGatos = document.getElementById('labelGatos');
 
-  var label = document.getElementById('labelTheme');
+  // Temas mutuamente exclusivos: 'dark' | 'light' | 'gatos'.
+  // 'gatos' usa um padrão azul-marinho escuro, então não combina com o modo claro.
+  function aplicaTema(tema) {
+    html.classList.toggle('light-mode', tema === 'light');
+    html.classList.toggle('tema-gatos', tema === 'gatos');
+    html.setAttribute('data-bs-theme', tema === 'light' ? 'light' : 'dark');
 
-  function aplicaTema(claro) {
-    if (claro) {
-      html.classList.add('light-mode');
-      html.setAttribute('data-bs-theme', 'light');
-      icone.className = 'bi bi-moon-fill me-2';
-      if (label) label.textContent = 'Modo escuro';
-    } else {
-      html.classList.remove('light-mode');
-      html.setAttribute('data-bs-theme', 'dark');
-      icone.className = 'bi bi-sun-fill me-2';
-      if (label) label.textContent = 'Modo claro';
-    }
+    icone.className = tema === 'light' ? 'bi bi-moon-fill me-2' : 'bi bi-sun-fill me-2';
+    if (label) label.textContent = tema === 'light' ? 'Modo escuro' : 'Modo claro';
+
+    if (labelGatos) labelGatos.textContent = tema === 'gatos' ? 'Remover gatos' : 'Gatos espaciais';
+    if (iconeGatos) iconeGatos.className = tema === 'gatos' ? 'bi bi-x-circle me-2' : 'bi bi-stars me-2';
   }
 
-  aplicaTema(localStorage.getItem('skyTheme') === 'light');
+  function temaAtual() {
+    var t = localStorage.getItem('skyTheme');
+    return (t === 'light' || t === 'gatos') ? t : 'dark';
+  }
+
+  function salva(tema) {
+    aplicaTema(tema);
+    localStorage.setItem('skyTheme', tema);
+  }
+
+  aplicaTema(temaAtual());
 
   btn.addEventListener('click', function (e) {
     e.stopPropagation(); // não fecha o dropdown ao clicar
-    var claro = !html.classList.contains('light-mode');
-    aplicaTema(claro);
-    localStorage.setItem('skyTheme', claro ? 'light' : 'dark');
+    // Sair do tema gatos pelo botão de claro/escuro leva ao claro.
+    salva(temaAtual() === 'light' ? 'dark' : 'light');
   });
+
+  if (btnGatos) {
+    btnGatos.addEventListener('click', function (e) {
+      e.stopPropagation();
+      salva(temaAtual() === 'gatos' ? 'dark' : 'gatos');
+    });
+  }
 })();
 </script>
 
