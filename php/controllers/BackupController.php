@@ -1,44 +1,62 @@
 <?php
+require_once __DIR__ . '/../../conn/config.php';
 require_once __DIR__ . '/../../conn/conn.php';
+// O backup exporta o banco inteiro (todos os usuários, incluindo senha_hash).
+// Sem esta proteção, qualquer visitante baixaria a base completa.
+require_once __DIR__ . '/../middleware/auth.php';
+
+// Backup e restauração são operações sobre a base inteira, não sobre os dados de
+// um usuário — por isso ficam restritas ao administrador (id 1), a mesma regra que
+// UsuariosController aplica a listar/adicionar/remover/reset_dados.
+// Sem isto, qualquer usuário comum baixaria os dados e os hashes de senha dos demais.
+if ((int) ($_SESSION['usuario_id'] ?? 0) !== 1) {
+    http_response_code(403);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['erro' => 'Apenas o administrador pode exportar ou restaurar backups.']);
+    exit;
+}
 
 $acao = $_POST['acao'] ?? $_GET['acao'] ?? '';
 
 // ── EXPORTAR ────────────────────────────────────────────────────────────────
 if ($acao === 'exportar') {
 
-    // [tabela, WHERE clause para filtrar usuario_id = @uid]
-    // null = sem filtro (tabela compartilhada)
-    // Subqueries para tabelas-filho sem coluna usuario_id
+    // Backup COMPLETO: todas as tabelas, todos os usuários, sem filtro.
+    // A restauração faz DELETE + INSERT por tabela, então exportar tudo é o que
+    // mantém o arquivo consistente — um export parcial apagaria os demais usuários.
+    // Ordem: pais antes dos filhos, para a restauração respeitar as FKs.
     $tabelas = [
-        ['usuarios',                        'id = @uid'],
-        ['categorias',                      'usuario_id = @uid'],
-        ['cartoes_credito',                 'usuario_id = @uid'],
-        ['responsaveis',                    'usuario_id = @uid'],
-        ['gastos',                          'usuario_id = @uid'],
-        ['parcelas',                        'gasto_id IN (SELECT id FROM gastos WHERE usuario_id = @uid)'],
-        ['gastos_recorrentes',              'usuario_id = @uid'],
-        ['gastos_recorrentes_lancamentos',  'usuario_id = @uid'],
-        ['renda_mensal',                    'usuario_id = @uid'],
-        ['contas_pessoa',                   'usuario_id = @uid'],
-        ['contas_fixas',                    'usuario_id = @uid'],
-        ['contas_fixas_pagamentos',         'usuario_id = @uid'],
-        ['faturas_pagas',                   'usuario_id = @uid'],
-        ['cofrinhos',                       'usuario_id = @uid'],
-        ['cofrinho_aportes',                'cofrinho_id IN (SELECT id FROM cofrinhos WHERE usuario_id = @uid)'],
-        ['orcamentos',                      'usuario_id = @uid'],
+        'usuarios',
+        'login_tentativas',
+        'categorias',
+        'cartoes_credito',
+        'responsaveis',
+        'gastos',
+        'parcelas',
+        'gastos_recorrentes',
+        'gastos_recorrentes_lancamentos',
+        'renda_mensal',
+        'contas_pessoa',
+        'contas_fixas',
+        'contas_fixas_pagamentos',
+        'faturas_pagas',
+        'cofrinhos',
+        'cofrinho_aportes',
+        'orcamentos',
     ];
 
     $conn  = Database::getConnection();
     $stamp = date('d/m/Y H:i');
     $fname = 'skyfinance_' . date('Y-m-d_H-i') . '.sql';
 
-    $sql  = "-- Sky Finance Backup | Gerado em: {$stamp} | usuario_id = @uid\n";
-    $sql .= "-- Importe via a página de Backup do sistema.\n\n";
+    $sql  = "-- Sky Finance Backup COMPLETO | Gerado em: {$stamp}\n";
+    $sql .= "-- Contém todas as tabelas e todos os usuários.\n";
+    $sql .= "-- Importe via a página de Backup do sistema (substitui a base inteira).\n\n";
     $sql .= "SET FOREIGN_KEY_CHECKS = 0;\n";
     $sql .= "SET NAMES utf8mb4;\n\n";
 
-    foreach ($tabelas as [$t, $where]) {
-        $sql .= dumpTabela($conn, $t, $where);
+    foreach ($tabelas as $t) {
+        $sql .= dumpTabela($conn, $t);
     }
 
     $sql .= "SET FOREIGN_KEY_CHECKS = 1;\n";
@@ -89,6 +107,11 @@ if ($acao === 'importar') {
         exit;
     }
 
+    // Snapshot do estado atual ANTES de restaurar. A restauração apaga tudo e
+    // reinsere; se o arquivo importado estiver errado ou incompleto, este é o
+    // único caminho de volta.
+    $antes = BackupAutomatico::gerar('pre-restauracao');
+
     // Normaliza quebras de linha e remove BOM
     $conteudo = preg_replace('/^\xEF\xBB\xBF/', '', $conteudo);
     $conteudo = str_replace("\r\n", "\n", $conteudo);
@@ -123,7 +146,10 @@ if ($acao === 'importar') {
     try { $conn->exec("SET FOREIGN_KEY_CHECKS = 1"); } catch (Exception $e) {}
 
     if (empty($erros)) {
-        echo json_encode(['ok' => true, 'msg' => "{$ok} instruções executadas com sucesso."]);
+        $aviso = $antes
+            ? " O estado anterior foi salvo em " . basename($antes) . "."
+            : " (atenção: não foi possível salvar o estado anterior)";
+        echo json_encode(['ok' => true, 'msg' => "{$ok} instruções executadas com sucesso.{$aviso}"]);
     } else {
         $primeiros = implode('<br>', array_map('htmlspecialchars', array_slice($erros, 0, 3)));
         $extra     = count($erros) > 3 ? ' (e mais ' . (count($erros) - 3) . ')' : '';
