@@ -68,6 +68,9 @@ $conn = Database::getConnection();
   <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+  <!-- Projeção de faturas (compartilhado entre Simulador e Lista de Desejos) -->
+  <script src="<?= BASE_URL ?>/src/js/faturas.js"></script>
+
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -104,7 +107,8 @@ $conn = Database::getConnection();
           cofrinho:      '<?= CTRL_COFRINHO ?>',
           responsaveis:  '<?= CTRL_RESPONSAVEIS ?>',
           contasFixas:   '<?= CTRL_CONTAS_FIXAS ?>',
-          usuarios:      '<?= CTRL_USUARIOS ?>'
+          usuarios:      '<?= CTRL_USUARIOS ?>',
+          desejos:       '<?= CTRL_DESEJOS ?>'
       }
   };
   </script>
@@ -452,6 +456,7 @@ $navGrupos = [
         ['href' => BASE_URL . '/php/views/resumo_anual.php',                       'label' => 'Resumo',       'icon' => 'bi-bar-chart-line-fill', 'match' => 'resumo_anual.php',   'match_q' => ''],
         ['href' => BASE_URL . '/php/views/responsaveis.php',                       'label' => 'Pessoas',      'icon' => 'bi-people-fill',         'match' => 'responsaveis.php',   'match_q' => ''],
         ['href' => BASE_URL . '/php/views/simulador.php',                          'label' => 'Simulador',    'icon' => 'bi-calculator-fill',     'match' => 'simulador.php',      'match_q' => ''],
+        ['href' => BASE_URL . '/php/views/lista_desejos.php',                      'label' => 'Desejos',      'icon' => 'bi-bag-heart-fill',      'match' => 'lista_desejos.php',  'match_q' => ''],
         ['href' => BASE_URL . '/php/views/gerenciamento.php',                      'label' => 'Config.',      'icon' => 'bi-gear-fill',           'match' => 'gerenciamento.php',  'match_q' => ''],
     ],
 ];
