@@ -2,6 +2,7 @@
 
 include_once __DIR__ . '/../../conn/conn.php';
 include_once __DIR__ . '/ConfigModel.php';
+include_once __DIR__ . '/CofrinhoModel.php';
 
 class GastosModel {
 
@@ -479,7 +480,7 @@ class GastosModel {
             return [
                 'totalDebito' => 0, 'totalCredito' => 0, 'totalRecorrente' => 0,
                 'totalRecorrenteTodos' => 0, 'totalContas' => 0, 'totalContasFixas' => 0,
-                'totalGasto' => 0, 'totalRenda' => 0, 'saldo' => 0,
+                'totalGasto' => 0, 'totalRenda' => 0, 'totalCofrinhos' => 0, 'saldo' => 0,
                 'porCategoria' => [], 'recentes' => [], 'antesDoMarco' => true,
             ];
         }
@@ -713,6 +714,16 @@ class GastosModel {
 
         $totalGasto = $totalDebito + $totalCredito + $totalRecorrente + $totalContas + $totalContasFixas;
 
+        // Dinheiro guardado em cofrinhos no mês (líquido: aportes menos retiradas,
+        // já que retirada é gravada como aporte negativo). Não é despesa — por isso
+        // fica fora de totalGasto —, mas sai do que sobra, então entra no saldo.
+        $totalCofrinhos = 0.0;
+        try {
+            $totalCofrinhos = CofrinhoModel::totalAportesMes((int) $mes, (int) $ano);
+        } catch (Exception $e) {
+            $totalCofrinhos = 0.0;
+        }
+
         return [
             'totalDebito'           => $totalDebito,
             'totalCredito'          => $totalCredito,
@@ -722,7 +733,8 @@ class GastosModel {
             'totalContasFixas'      => $totalContasFixas,
             'totalGasto'            => $totalGasto,
             'totalRenda'       => $totalRenda,
-            'saldo'            => $totalRenda - $totalGasto,
+            'totalCofrinhos'   => $totalCofrinhos,
+            'saldo'            => $totalRenda - $totalGasto - $totalCofrinhos,
             'porCategoria'     => $porCategoria,
             'recentes'         => $recentes,
         ];
@@ -738,7 +750,7 @@ class GastosModel {
 
         $meses = [];
         for ($m = 1; $m <= 12; $m++) {
-            $meses[$m] = ['mes' => $m, 'debito' => 0.0, 'credito' => 0.0, 'recorrente' => 0.0, 'contas' => 0.0, 'fixas' => 0.0, 'renda' => 0.0];
+            $meses[$m] = ['mes' => $m, 'debito' => 0.0, 'credito' => 0.0, 'recorrente' => 0.0, 'contas' => 0.0, 'fixas' => 0.0, 'renda' => 0.0, 'cofrinhos' => 0.0];
         }
 
         // Contas fixas ativas (valor igual em todos os meses)
@@ -852,6 +864,19 @@ class GastosModel {
             }
         } catch (Exception $e) {}
 
+        // Guardado em cofrinhos por mês (líquido — retirada é aporte negativo)
+        try {
+            $s = $conn->prepare("
+                SELECT MONTH(ca.data_aporte) AS mes, COALESCE(SUM(ca.valor),0) AS total
+                FROM cofrinho_aportes ca
+                JOIN cofrinhos c ON c.id = ca.cofrinho_id
+                WHERE c.usuario_id = @uid AND YEAR(ca.data_aporte) = ?
+                GROUP BY MONTH(ca.data_aporte)
+            ");
+            $s->execute([$ano]);
+            foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $r) { $meses[(int)$r['mes']]['cofrinhos'] += (float)$r['total']; }
+        } catch (Exception $e) {}
+
         // Zera meses anteriores ao marco inicial (ignora dados antes do início do controle)
         $marcoAnual = ConfigModel::getMesInicio();
         if ($marcoAnual) {
@@ -859,15 +884,17 @@ class GastosModel {
                 if (sprintf('%04d-%02d-01', $ano, $mn) < $marcoAnual) {
                     $mv['debito'] = $mv['credito'] = $mv['recorrente'] = 0.0;
                     $mv['contas'] = $mv['fixas']   = $mv['renda']      = 0.0;
+                    $mv['cofrinhos'] = 0.0;
                 }
             }
             unset($mv);
         }
 
-        // Gasto e saldo por mês
+        // Gasto e saldo por mês. Cofrinho não entra em 'gasto' (não é despesa),
+        // mas sai do saldo, igual ao dashboard.
         foreach ($meses as &$m) {
             $m['gasto'] = $m['debito'] + $m['credito'] + $m['recorrente'] + $m['contas'] + $m['fixas'];
-            $m['saldo'] = $m['renda'] - $m['gasto'];
+            $m['saldo'] = $m['renda'] - $m['gasto'] - $m['cofrinhos'];
         }
         unset($m);
 
