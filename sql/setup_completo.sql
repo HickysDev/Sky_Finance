@@ -307,6 +307,24 @@ CREATE TABLE IF NOT EXISTS `orcamentos` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ------------------------------------------------------------
+-- LISTA DE DESEJOS
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `lista_desejos` (
+  `id`         INT           NOT NULL AUTO_INCREMENT,
+  `usuario_id` INT           NOT NULL DEFAULT 1,
+  `nome`       VARCHAR(200)  NOT NULL,
+  `link`       VARCHAR(1000) NULL DEFAULT NULL,
+  `imagem`     VARCHAR(1000) NULL DEFAULT NULL,
+  `valor`      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `prioridade` ENUM('alta','media','baixa') NOT NULL DEFAULT 'media',
+  `comprado`   CHAR(1)       NOT NULL DEFAULT 'N',
+  `created_at` TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `usuario_id` (`usuario_id`),
+  CONSTRAINT `lista_desejos_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ------------------------------------------------------------
 
 SET FOREIGN_KEY_CHECKS = 1;
 
