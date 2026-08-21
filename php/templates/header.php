@@ -348,7 +348,7 @@ $conn = Database::getConnection();
           var cor = r.cor || '#6B7280';
           var sel = selected && String(r.id) === selected ? ' selecionado' : '';
           html += '<div class="resp-chip' + sel + '" data-id="' + r.id + '" style="--resp-cor:' + cor + ';">' +
-                  '<span class="resp-dot"></span>' + r.nome + '</div>';
+                  '<span class="resp-dot"></span>' + escHtml(r.nome) + '</div>';
       });
       $('#responsavelSelector').html(html);
   }

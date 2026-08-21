@@ -571,9 +571,9 @@ $(document).ready(function () {
                                 <i class="bi ${cfg.icon}"></i>
                             </div>
                             <div>
-                                <div class="renda-desc">${r.descricao}</div>
+                                <div class="renda-desc">${escHtml(r.descricao)}</div>
                                 <div class="d-flex gap-2 mt-1 flex-wrap">
-                                    <span class="badge renda-badge-tipo" style="background:${cfg.cor}22;color:${cfg.cor};">${r.tipo}</span>
+                                    <span class="badge renda-badge-tipo" style="background:${cfg.cor}22;color:${cfg.cor};">${escHtml(r.tipo)}</span>
                                     ${aplicBadge}
                                     ${inativo ? '<span class="badge bg-secondary">Inativo</span>' : ''}
                                 </div>
@@ -596,8 +596,8 @@ $(document).ready(function () {
                                 </button>
                                 <button class="btn btn-sm btn-outline-warning btnEditaRenda"
                                         data-id="${r.id}"
-                                        data-descricao="${r.descricao}"
-                                        data-tipo="${r.tipo}"
+                                        data-descricao="${escHtml(r.descricao)}"
+                                        data-tipo="${escHtml(r.tipo)}"
                                         data-recorrente="${r.recorrente}"
                                         data-mes="${r.mes || ''}"
                                         data-ano="${r.ano || ''}"
@@ -757,7 +757,7 @@ $(document).ready(function () {
             title: '<i class="bi bi-graph-up-arrow me-2" style="color:#22C55E;"></i>Registrar mudança de renda',
             html: `
                 <div class="text-start mb-3">
-                    <small class="text-muted">Fonte: <strong>${desc}</strong></small>
+                    <small class="text-muted">Fonte: <strong>${escHtml(desc)}</strong></small>
                 </div>
                 <div class="mb-3 text-start">
                     <label class="form-label">Novo valor mensal</label>
@@ -999,7 +999,7 @@ $(document).ready(function () {
                 $.each(cats, function (_, c) {
                     var sel = String(c.id) === String(catId) ? ' selected' : '';
                     opts += '<option value="' + c.id + '"' + sel + '>' +
-                            (c.icone ? c.icone + ' ' : '') + c.nome + '</option>';
+                            (c.icone ? escHtml(c.icone) + ' ' : '') + escHtml(c.nome) + '</option>';
                 });
                 $('#orcCategoria').html(opts);
                 $('#orcCategoria').prop('disabled', !!id);
@@ -1678,9 +1678,7 @@ $(document).ready(function () {
         return parseFloat(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function escHtml(str) {
-        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
+    // escHtml vem do header.php (global) — a cópia local não escapava aspas simples.
 
     function shadeColor(hex, pct) {
         var num = parseInt(hex.replace('#',''), 16);

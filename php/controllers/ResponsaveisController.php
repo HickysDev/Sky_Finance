@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../conn/config.php';
+require_once __DIR__ . '/../middleware/auth.php';
 include_once __DIR__ . '/../models/ResponsaveisModel.php';
 include_once __DIR__ . '/../models/ContasPessoaModel.php';
 

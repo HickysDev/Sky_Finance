@@ -528,11 +528,11 @@ $(document).ready(function () {
             const pct  = total > 0 ? (val / total * 100) : 0;
             const cor  = catCores[i];
             const cat  = window.categoriaNomes[d.nome] || {};
-            const icon = cat.icone ? '<span class="me-1">' + cat.icone + '</span>' : '';
+            const icon = cat.icone ? '<span class="me-1">' + escHtml(cat.icone) + '</span>' : '';
 
             listHtml += '<tr class="cat-list-row" data-cat="' + escHtml(d.nome) + '" style="cursor:pointer;">' +
                 '<td class="cat-list-td-dot"><div class="cat-list-dot" style="background:' + cor + ';"></div></td>' +
-                '<td class="cat-list-td-nome" style="color:' + cor + ';">' + icon + d.nome + '</td>' +
+                '<td class="cat-list-td-nome" style="color:' + cor + ';">' + icon + escHtml(d.nome) + '</td>' +
                 '<td class="cat-list-td-pct">' + pct.toFixed(0) + '%</td>' +
                 '<td class="cat-list-td-val">R$ ' + formatBR(val) + '</td>' +
             '</tr>';
@@ -705,10 +705,10 @@ $(document).ready(function () {
             <div class="recente-item ${i > 0 ? 'recente-sep' : ''}">
                 <div class="d-flex justify-content-between align-items-center gap-2">
                     <div class="overflow-hidden">
-                        <div class="recente-desc text-truncate">${g.descricao}</div>
+                        <div class="recente-desc text-truncate">${escHtml(g.descricao)}</div>
                         <div class="d-flex gap-2 align-items-center mt-1">
                             ${catInlineHtml(g.categoria)}
-                            <span class="badge" style="background:${m.bg};color:${m.cor};font-size:0.72rem;padding:2px 7px;">${g.metodo_pagamento}</span>
+                            <span class="badge" style="background:${m.bg};color:${m.cor};font-size:0.72rem;padding:2px 7px;">${escHtml(g.metodo_pagamento)}</span>
                         </div>
                     </div>
                     <div class="text-end flex-shrink-0">
@@ -1032,9 +1032,8 @@ $(document).ready(function () {
     function formatBR(n) {
         return parseFloat(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-    function escHtml(str) {
-        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
+    // escHtml vem do header.php (global). Não redefinir aqui: a cópia local
+    // não escapava aspas simples e sombreava a versão completa.
 
     // Carrega categorias primeiro para o gráfico ter as cores corretas
     $.ajax({

@@ -141,7 +141,7 @@ $(document).ready(function () {
                     '<div class="cfi-left">' +
                         '<span class="cfi-dot" style="background:' + cor + ';"></span>' +
                         '<div>' +
-                            '<div class="cfi-nome">' + c.nome + '</div>' +
+                            '<div class="cfi-nome">' + escHtml(c.nome) + '</div>' +
                             '<div class="cfi-detalhe"><i class="bi bi-calendar3 me-1"></i>Vence dia ' + c.dia_vencimento + '</div>' +
                         '</div>' +
                     '</div>' +

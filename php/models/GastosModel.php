@@ -209,7 +209,13 @@ class GastosModel {
 
     public static function excluirGastos($ids, $tipo) {
         $conn = Database::getConnection();
-        $queryRemover = false;
+
+        // Antes o retorno refletia só o ÚLTIMO id do loop: uma falha no meio da
+        // seleção era reportada como sucesso. Agora só é sucesso se nenhuma
+        // query falhar E algo tiver sido de fato removido (rowCount = 0 quando
+        // o gasto é de outro usuário e o filtro @uid barra a exclusão).
+        $removidos = 0;
+        $falhou    = false;
 
         foreach ($ids as $id) {
             if ($tipo === 'credito' && ($id['parcelado'] ?? '') === 'S') {
@@ -218,13 +224,26 @@ class GastosModel {
             }
 
             $removerGasto = $conn->prepare("DELETE FROM gastos WHERE id = ? AND usuario_id = @uid");
-            $queryRemover = $removerGasto->execute([(int) $id['id']]);
+            if (!$removerGasto->execute([(int) $id['id']])) {
+                $falhou = true;
+                continue;
+            }
+            $removidos += $removerGasto->rowCount();
         }
 
-        return $queryRemover ? 1 : 2;
+        return (!$falhou && $removidos > 0) ? 1 : 2;
     }
 
-    private static function gerarLancamentosParaMes($mes, $ano) {
+    /**
+     * Garante que existam lançamentos dos recorrentes ativos do usuário logado
+     * para o mês informado. Idempotente: o índice único (gasto_recorrente_id,
+     * mes_referencia) + INSERT IGNORE cobrem corrida entre requisições.
+     *
+     * Esta é a ÚNICA regra de geração do sistema. O dia de fechamento do cartão
+     * decide apenas o `mes_inicio` do recorrente (em adicionarGasto/reativar);
+     * daí em diante todo mês >= mes_inicio recebe um lançamento.
+     */
+    public static function gerarLancamentosParaMes($mes, $ano) {
         $conn   = Database::getConnection();
         $mesRef = sprintf('%04d-%02d-01', $ano, (int) $mes);
 
