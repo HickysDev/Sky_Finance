@@ -307,10 +307,10 @@ $(document).ready(function () {
             const val = parseFloat(d.total);
             const pct = (val / total * 100).toFixed(0);
             const cor = cores[i];
-            const icon = d.icone ? '<span class="me-1">' + d.icone + '</span>' : '';
+            const icon = d.icone ? '<span class="me-1">' + escHtml(d.icone) + '</span>' : '';
             rows += '<tr>' +
                 '<td class="cat-list-td-dot"><div class="cat-list-dot" style="background:' + cor + ';"></div></td>' +
-                '<td class="cat-list-td-nome" style="color:' + cor + ';">' + icon + d.nome + '</td>' +
+                '<td class="cat-list-td-nome" style="color:' + cor + ';">' + icon + escHtml(d.nome) + '</td>' +
                 '<td class="cat-list-td-pct">' + pct + '%</td>' +
                 '<td class="cat-list-td-val">R$ ' + formatBR(val) + '</td>' +
             '</tr>';

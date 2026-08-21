@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS contas_pessoa (
     descricao      VARCHAR(200) NOT NULL,
     valor          DECIMAL(10,2) NOT NULL,
     data           DATE         NOT NULL,
-    pago           TINYINT(1)   NOT NULL DEFAULT 0,
+    pago           CHAR(1)      NOT NULL DEFAULT 'N',
     created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (responsavel_id) REFERENCES responsaveis(id) ON DELETE CASCADE
 );

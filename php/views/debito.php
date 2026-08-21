@@ -424,7 +424,7 @@ $mesAtual = date('n');
                     let cor = cartao.cor || '#3B82F6';
                     html += `<div class="cartao-mini-modal" data-id="${cartao.id}" style="--cartao-cor:${cor};">
                         <i class="bi bi-credit-card-fill" style="color:${cor};"></i>
-                        ${cartao.nome_cartao}
+                        ${escHtml(cartao.nome_cartao)}
                     </div>`;
                 });
             }

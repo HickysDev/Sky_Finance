@@ -116,6 +116,12 @@ class FinancasModel {
         return $stmt->execute([':id' => $id]);
     }
 
+    /**
+     * Total gasto no mês. Mesma composição de GastosModel::buscarResumoMes()
+     * (débito + crédito + recorrentes + contas de pessoas + contas fixas) —
+     * antes faltavam contas_pessoa e contas_fixas aqui, e as duas telas
+     * mostravam "gasto do mês" diferente para o mesmo mês.
+     */
     public function totalGastosMes(int $mes, int $ano): float {
         if (ConfigModel::antesDoMarco($mes, $ano)) return 0.0;
         $conn = Database::getConnection();
@@ -150,7 +156,22 @@ class FinancasModel {
                 FROM gastos_recorrentes_lancamentos grl
                 INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
                 WHERE gr.ativo = 'S' AND gr.usuario_id = @uid
+                  AND (gr.mes_inicio IS NULL OR gr.mes_inicio <= grl.mes_referencia)
                   AND MONTH(grl.mes_referencia) = :m4 AND YEAR(grl.mes_referencia) = :a4
+
+                UNION ALL
+
+                SELECT cp.valor AS v
+                FROM contas_pessoa cp
+                WHERE cp.usuario_id = @uid
+                  AND MONTH(cp.data) = :m5 AND YEAR(cp.data) = :a5
+
+                UNION ALL
+
+                -- Contas fixas ativas valem para todo mês (não têm data própria)
+                SELECT cf.valor AS v
+                FROM contas_fixas cf
+                WHERE cf.usuario_id = @uid AND cf.ativo = 'S'
             ) t
         ");
         $stmt->execute([
@@ -158,6 +179,7 @@ class FinancasModel {
             ':m2' => $mes, ':a2' => $ano,
             ':m3' => $mes, ':a3' => $ano,
             ':m4' => $mes, ':a4' => $ano,
+            ':m5' => $mes, ':a5' => $ano,
         ]);
         return (float) $stmt->fetchColumn();
     }

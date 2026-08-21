@@ -1125,7 +1125,7 @@ function inativaRecorrente(id) {
         var id   = $(this).data('id');
         var nome = $(this).data('nome');
         Swal.fire({
-            title: 'Remover "' + nome + '"?',
+            title: 'Remover "' + escHtml(nome) + '"?',
             text: 'As despesas vinculadas ficarão sem responsável.',
             icon: 'warning', showCancelButton: true,
             confirmButtonColor: '#EF4444', cancelButtonColor: '#6B7280',
@@ -1252,7 +1252,7 @@ function buscaResponsaveis() {
         var id   = $(this).data('id');
         var nome = $(this).data('nome');
         Swal.fire({
-            title: 'Remover "' + nome + '"?',
+            title: 'Remover "' + escHtml(nome) + '"?',
             text: 'O histórico de pagamentos também será removido.',
             icon: 'warning', showCancelButton: true,
             confirmButtonColor: '#EF4444', cancelButtonColor: '#6B7280',
@@ -1540,7 +1540,7 @@ $(document).on('click', '.btnRemoverUsuario', function () {
     var id   = $(this).data('id');
     var nome = $(this).data('nome');
     Swal.fire({
-        title: 'Remover ' + nome + '?',
+        title: 'Remover ' + escHtml(nome) + '?',
         text: 'O usuário perderá o acesso ao sistema.',
         icon: 'warning', showCancelButton: true,
         confirmButtonColor: '#EF4444', cancelButtonColor: '#6B7280',

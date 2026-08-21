@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     nome         VARCHAR(100)  NOT NULL,
     email        VARCHAR(150)  NOT NULL UNIQUE,
     senha_hash   VARCHAR(255)  NOT NULL,
-    ativo        TINYINT(1)    NOT NULL DEFAULT 1,
+    ativo        CHAR(1)       NOT NULL DEFAULT 'S',
     ultimo_login DATETIME      NULL,
     created_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
