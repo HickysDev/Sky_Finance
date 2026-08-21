@@ -243,16 +243,16 @@ $mesAtual = date('n');
             $(this).addClass('selecionado');
             $('#cartaoAtual').val($(this).data('id') ?? '');
 
-            // Recalcula mês baseado no vencimento do cartão selecionado
-            const venc = $(this).data('vencimento');
+            // Recalcula o mês pelo fechamento do cartão selecionado
+            const fech = $(this).data('fechamento');
             // Reseta para mês atual antes de recalcular
             $('#mes').val(<?= date('n') ?>);
             $('#anoDisplay').text(<?= date('Y') ?>);
-            if (venc) {
-                ajustaMesPorVencimento(venc);
+            if (fech) {
+                ajustaMesPorFechamento(fech);
             } else {
-                // "Todos" — usa menor vencimento entre os cartões
-                ajustaMesPorVencimento(vencimentoMinimo(window.cartoesArray || {}));
+                // "Todos" — usa o menor fechamento entre os cartões
+                ajustaMesPorFechamento(fechamentoMinimo(window.cartoesArray || {}));
             }
             buscaFatura($('#mes').val());
         });
@@ -456,6 +456,9 @@ $mesAtual = date('n');
                 success: function () {
                     toastr.success('Despesa criada com sucesso!');
                     $('#modalAdiciona').modal('hide');
+                    // Recorrente não tem data de compra; os demais podem cair em
+                    // outra fatura que não a exibida — vai até ela.
+                    if (!isRecorrente) irParaFaturaDaCompra(payload.data, payload.cartao);
                     buscaFatura($('#mes').val());
                 },
                 error: function () { toastr.error('Erro ao criar despesa!'); }
@@ -473,18 +476,22 @@ $mesAtual = date('n');
                     let cor = cartao.cor || '#3B82F6';
                     html += `<div class="cartao-mini-modal" data-id="${cartao.id}" style="--cartao-cor:${cor};">
                         <i class="bi bi-credit-card-fill" style="color:${cor};"></i>
-                        ${cartao.nome_cartao}
+                        ${escHtml(cartao.nome_cartao)}
                     </div>`;
                 });
             }
             $('#cartaoSelectorModal').html(html || '<span style="color:#6B7280;font-size:.85rem;">Nenhum cartão cadastrado</span>');
         }
 
-        // Ajusta mês/ano se já passou do vencimento do cartão
-        function ajustaMesPorVencimento(vencimentoDia) {
-            if (vencimentoDia) {
+        // Abre a tela na fatura que está ABERTA hoje — a mesma em que cairia uma
+        // compra feita agora. Usa o FECHAMENTO, não o vencimento: a partir do dia
+        // do fechamento a compra já vai para a fatura seguinte, então usar o
+        // vencimento criava uma janela (do fechamento até o vencimento) em que a
+        // despesa era lançada num mês e a tela mostrava outro — ela "sumia".
+        function ajustaMesPorFechamento(fechamentoDia) {
+            if (fechamentoDia) {
                 const diaHoje = new Date().getDate();
-                if (diaHoje >= parseInt(vencimentoDia)) {
+                if (diaHoje >= parseInt(fechamentoDia)) {
                     let mes = parseInt($('#mes').val()) + 1;
                     let ano = parseInt($('#anoDisplay').text());
                     if (mes > 12) { mes = 1; ano++; }
@@ -500,13 +507,42 @@ $mesAtual = date('n');
             }
         }
 
-        function vencimentoMinimo(cartoesObj) {
+        // Menor dia de fechamento entre os cartões: com "Todos" selecionado, é ele
+        // que determina a partir de quando a fatura corrente já não recebe compras.
+        function fechamentoMinimo(cartoesObj) {
             let min = null;
             $.each(cartoesObj, function (_, c) {
-                const v = parseInt(c.vencimento_dia);
+                const v = parseInt(c.fechamento_dia);
                 if (!isNaN(v) && (min === null || v < min)) min = v;
             });
             return min;
+        }
+
+        // Em qual fatura (mês/ano) uma compra nesta data, neste cartão, vai cair.
+        // Mesma regra do servidor (GastosModel::adicionarGasto): dia >= fechamento
+        // joga para o mês seguinte.
+        function faturaDaCompra(dataStr, cartaoId) {
+            const c = window.cartoesArray && window.cartoesArray[cartaoId];
+            if (!c || !dataStr) return null;
+            const p   = String(dataStr).split('-');
+            let   ano = parseInt(p[0], 10);
+            let   mes = parseInt(p[1], 10);
+            const dia = parseInt(p[2], 10);
+            if (dia >= parseInt(c.fechamento_dia, 10)) { mes++; if (mes > 12) { mes = 1; ano++; } }
+            return { mes: mes, ano: ano };
+        }
+
+        // Depois de salvar, leva a tela até a fatura em que o lançamento caiu.
+        // Sem isso a despesa "some": ela é gravada numa fatura futura enquanto a
+        // tela continua exibindo a atual.
+        function irParaFaturaDaCompra(dataStr, cartaoId) {
+            const alvo = faturaDaCompra(dataStr, cartaoId);
+            if (!alvo) return;
+            if (alvo.mes !== parseInt($('#mes').val(), 10) || alvo.ano !== getAno()) {
+                $('#mes').val(alvo.mes);
+                $('#anoDisplay').text(alvo.ano);
+                toastr.info('Lançado na fatura de ' + _MESES_CURTOS[alvo.mes - 1] + '/' + alvo.ano + '.');
+            }
         }
 
         function buscaCartoes() {
@@ -525,7 +561,7 @@ $mesAtual = date('n');
 
                     $.each(data, function (idx, cartao) {
                         let cor = cartao.cor || '#3B82F6';
-                        html += `<div class="cartao-mini" data-id="${cartao.id}" data-vencimento="${cartao.vencimento_dia}" style="--cartao-cor:${cor};">
+                        html += `<div class="cartao-mini" data-id="${cartao.id}" data-vencimento="${cartao.vencimento_dia}" data-fechamento="${cartao.fechamento_dia}" style="--cartao-cor:${cor};">
                             <i class="bi bi-credit-card-fill" style="color:${cor};font-size:1.6rem;"></i>
                             <span>${escHtml(cartao.nome_cartao)}</span>
                         </div>`;
@@ -533,8 +569,8 @@ $mesAtual = date('n');
 
                     $('#cartoesRow').html(html);
 
-                    // Ajusta para próximo mês se já passou do menor vencimento
-                    ajustaMesPorVencimento(vencimentoMinimo(data));
+                    // Abre já na fatura que está recebendo compras hoje
+                    ajustaMesPorFechamento(fechamentoMinimo(data));
                     _cartoesOk = true;
                     _verificaECarrega();
                 },
@@ -811,7 +847,7 @@ $mesAtual = date('n');
                 legHtml += '<div class="d-flex align-items-center justify-content-between py-1" style="border-bottom:1px solid var(--cor-borda);font-size:0.82rem;">' +
                     '<div class="d-flex align-items-center gap-2">' +
                     '<span style="width:10px;height:10px;border-radius:50%;background:' + cores[i] + ';flex-shrink:0;display:inline-block;"></span>' +
-                    '<span>' + nome + '</span></div>' +
+                    '<span>' + escHtml(nome) + '</span></div>' +
                     '<div class="d-flex align-items-center gap-3">' +
                     '<span style="color:var(--cor-texto-off);">' + pct + '%</span>' +
                     '<span class="fw-600">R$ ' + vlr + '</span>' +

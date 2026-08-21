@@ -362,7 +362,7 @@ function carregaCartoesSim() {
                 var cor = c.cor || '#3B82F6';
                 html += '<div class="sim-cartao-chip" data-id="' + c.id + '" data-fechamento="' + (c.fechamento_dia || 1) + '" style="--chip-cor:' + cor + ';">' +
                         '<span class="sim-chip-dot" style="background:' + cor + ';"></span>' +
-                        c.nome_cartao + '</div>';
+                        escHtml(c.nome_cartao) + '</div>';
             });
             $('#simCartoesWrap').html(html);
             // seleciona o primeiro por padrão
@@ -551,8 +551,9 @@ function calcularParcelas(valor, tipo, numParcelas, dataStr, fechamento) {
     var mes  = d.getMonth() + 1;
     var ano  = d.getFullYear();
 
-    // Se compra depois do fechamento, cai na fatura do próximo mês
-    if (dia > fechamento) {
+    // Compra no dia do fechamento ou depois cai na fatura do próximo mês.
+    // `>=` para bater com GastosModel::adicionarGasto (que é quem grava).
+    if (dia >= fechamento) {
         mes++;
         if (mes > 12) { mes = 1; ano++; }
     }
