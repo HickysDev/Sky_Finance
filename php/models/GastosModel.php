@@ -1012,8 +1012,13 @@ class GastosModel {
         ];
 
         $mesesArr = array_values($meses);
-        $melhor = array_reduce($mesesArr, fn($c, $m) => (!$c || $m['saldo'] > $c['saldo']) ? $m : $c);
-        $pior   = array_reduce($mesesArr, fn($c, $m) => (!$c || $m['saldo'] < $c['saldo']) ? $m : $c);
+        // Melhor/pior só entre meses dentro do controle: os anteriores ao marco estão
+        // zerados e, com saldo 0, viravam o "pior mês" quando todo o resto era positivo.
+        $comparaveis = array_values(array_filter($mesesArr, function ($m) use ($ano, $marcoAnual) {
+            return !$marcoAnual || sprintf('%04d-%02d-01', $ano, $m['mes']) >= $marcoAnual;
+        })) ?: $mesesArr;
+        $melhor = array_reduce($comparaveis, fn($c, $m) => (!$c || $m['saldo'] > $c['saldo']) ? $m : $c);
+        $pior   = array_reduce($comparaveis, fn($c, $m) => (!$c || $m['saldo'] < $c['saldo']) ? $m : $c);
 
         return [
             'meses'        => $mesesArr,
