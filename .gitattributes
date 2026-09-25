@@ -1,0 +1,2 @@
+# Linguagem no GitHub: alguns .php são só HTML e eram classificados como Hack
+*.php linguist-language=PHP
