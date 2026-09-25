@@ -1,5 +1,8 @@
 <?php
+require_once __DIR__ . '/../../conn/config.php';
+require_once __DIR__ . '/../middleware/auth.php';
 include_once __DIR__ . '/../models/GastosModel.php';
+include_once __DIR__ . '/../models/ContasPessoaModel.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -76,7 +79,7 @@ switch ($acao) {
         if (!$id) { http_response_code(400); echo json_encode(['erro' => 'ID inválido']); exit; }
         $valorEdit = str_replace(['R$', ' ', '.'], '', $valor);
         $valorEdit = (float) str_replace(',', '.', $valorEdit);
-        $retorno = GastosModel::editarGasto($id, $descricao, $valorEdit, $categoria, $metodo, $cartao, $data);
+        $retorno = GastosModel::editarGasto($id, $descricao, $valorEdit, $categoria, $metodo, $cartao, $data, $responsavel);
         break;
 
     case 'editarSimples':
@@ -95,12 +98,27 @@ switch ($acao) {
             $valor = str_replace(',', '.', $valor);
             $valor = (float) $valor;
         }
-        $retorno = GastosModel::editaRecorrentes($id, $nome, $valor, $categoria, $cartao);
+        // Sem o campo no POST, mantém o responsável atual (false); '' = "Eu".
+        $retorno = GastosModel::editaRecorrentes($id, $nome, $valor, $categoria, $cartao,
+            isset($_POST['responsavel']) ? $responsavel : false,
+            $_POST['a_partir'] ?? null); // 'YYYY-MM': mês em que o valor/cartão novo começa
         break;
 
     case 'dashboard':
         $mesNum = (int) ($mes ?? date('n'));
         $retorno = GastosModel::buscarResumoMes($mesNum, $ano);
+        // "Me devem": despesas no nome de outras pessoas (já estão dentro do total gasto)
+        $meDeve = 0.0; $meDeveAberto = 0.0;
+        foreach (ContasPessoaModel::resumo($mesNum, $ano) as $p) {
+            $meDeve       += $p['me_deve'];
+            $meDeveAberto += $p['me_deve_aberto'];
+        }
+        $retorno['totalMeDeve']       = round($meDeve, 2);
+        $retorno['totalMeDeveAberto'] = round($meDeveAberto, 2);
+        break;
+
+    case 'parcelasTerminando':
+        $retorno = GastosModel::parcelasTerminando((int) ($mes ?? date('n')), $ano);
         break;
 
     case 'resumoAnual':

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../../conn/config.php';
+require_once __DIR__ . '/../middleware/auth.php';
 require_once __DIR__ . '/../models/CofrinhoModel.php';
 
 header('Content-Type: application/json; charset=utf-8');

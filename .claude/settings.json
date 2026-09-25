@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.claude.json\",\"$env:USERPROFILE\\\\.claude\\\\settings.json\",\"$env:USERPROFILE\\\\.claude\\\\settings.local.json\" -ErrorAction SilentlyContinue | Select-Object FullName, Length)",
+      "Read(//c/Users/henrique.freitas/.claude/**)",
+      "PowerShell(Copy-Item \"$env:USERPROFILE\\\\.claude\\\\settings.json\" \"$env:USERPROFILE\\\\.claude\\\\settings.json.bak\" -Force; Write-Output \"backup ok\")",
+      "PowerShell(try { $j = Get-Content \"$env:USERPROFILE\\\\.claude\\\\settings.json\" -Raw | ConvertFrom-Json -ErrorAction Stop; Write-Output \"JSON valido. model=$\\($j.model\\) effortLevel=$\\($j.effortLevel\\)\" } catch { Write-Output \"ERRO: $_\" })",
+      "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root -e \"SELECT TABLE_NAME, TABLE_ROWS FROM information_schema.TABLES WHERE TABLE_SCHEMA='projeto' ORDER BY TABLE_NAME;\")",
+      "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root -e \"SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT, EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='projeto' ORDER BY TABLE_NAME, ORDINAL_POSITION;\")",
+      "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root -e \"SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME, CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA='projeto' AND REFERENCED_TABLE_NAME IS NOT NULL ORDER BY TABLE_NAME;\")",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost/Sky_Finance/php/controllers/GastosController.php?acao=dashboard&mes=7&ano=2026\" -Method GET -MaximumRedirection 0 -ErrorAction Stop; Write-Output \"STATUS: $\\($r.StatusCode\\)\"; Write-Output \"BODY: $\\($r.Content.Substring\\(0,[Math]::Min\\(300,$r.Content.Length\\)\\)\\)\" } catch { Write-Output \"EXC: $\\($_.Exception.Message\\)\"; if \\($_.Exception.Response\\) { Write-Output \"CODE: $\\([int]$_.Exception.Response.StatusCode\\)\" } })",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost/Sky_Finance/php/controllers/GastosController.php?acao=dashboard&mes=7&ano=2026\" -Method GET -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; Write-Output \"STATUS: $\\($r.StatusCode\\)\"; Write-Output \\(\"BODY: \" + $r.Content.Substring\\(0,[Math]::Min\\(400,$r.Content.Length\\)\\)\\) } catch { Write-Output \"EXC: $\\($_.Exception.Message\\)\" })",
+      "PowerShell($f=\"C:\\\\Users\\\\henrique.freitas\\\\Downloads\\\\skyfinance_2026-07-09_22-04.sql\"; $i=Get-Item $f; \"Tamanho: $\\($i.Length\\) bytes\"; \"Modificado: $\\($i.LastWriteTime\\)\"; \"Linhas: $\\(\\(Get-Content $f | Measure-Object -Line\\).Lines\\)\")",
+      "Read(//c/Users/henrique.freitas/Downloads/**)",
+      "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root projeto -e \"SELECT id, nome, email, ativo, ultimo_login, mes_inicio_controle FROM usuarios;\")",
+      "PowerShell($stamp = Get-Date -Format \"yyyy-MM-dd_HH-mm\"; $out = \"C:\\\\Users\\\\henrique.freitas\\\\Downloads\\\\skyfinance_PRE-RESTORE_$stamp.sql\"; & \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysqldump.exe\" -u root --databases projeto --routines --events --single-transaction --result-file=\"$out\"; if \\($?\\) { $i = Get-Item $out; \"Dump de seguranca salvo: $\\($i.FullName\\)\"; \"Tamanho: $\\($i.Length\\) bytes\" })",
+      "PowerShell($f=\"C:\\\\Users\\\\henrique.freitas\\\\Downloads\\\\skyfinance_2026-07-09_22-04.sql\"; & \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root --default-character-set=utf8mb4 projeto -e \"source $f\" ; if \\($?\\) { \"IMPORT OK\" } else { \"IMPORT FALHOU\" })",
+      "PowerShell(& \"C:\\\\xampp\\\\php\\\\php.exe\" -r \"echo 'session.save_path=' . ini_get\\('session.save_path'\\) . PHP_EOL; echo 'error_log=' . ini_get\\('error_log'\\) . PHP_EOL; echo 'log_errors=' . ini_get\\('log_errors'\\) . PHP_EOL; echo 'display_errors=' . ini_get\\('display_errors'\\) . PHP_EOL; echo 'version=' . PHP_VERSION . PHP_EOL;\")",
+      "PowerShell($sid=\"e2etestsession00000000abcd\"; $path=\"C:\\\\xampp\\\\tmp\\\\sess_$sid\"; $content='usuario_id|i:1;usuario_nome|s:8:\"Henrique\";'; [System.IO.File]::WriteAllText\\($path, $content, \\(New-Object System.Text.UTF8Encoding $false\\)\\); \"Sessao criada: $path\"; \"SID: $sid\")",
+      "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root projeto -N -e \"SELECT GROUP_CONCAT\\(id\\) FROM cartoes_credito; SELECT nome FROM categorias LIMIT 1; SELECT GROUP_CONCAT\\(id\\) FROM responsaveis; SELECT GROUP_CONCAT\\(id\\) FROM contas_fixas; SELECT GROUP_CONCAT\\(id\\) FROM cofrinhos;\")",
+      "PowerShell($l=\"C:\\\\xampp\\\\apache\\\\logs\\\\error.log\"; $hoje = Get-Content $l | Where-Object { $_ -match 'Mon Jul 20' -and $_ -match 'php' }; if\\($hoje\\){ \"Entradas PHP de hoje:\"; $hoje } else { \"Nenhum erro PHP registrado hoje \\(apenas notices de startup do Apache\\).\" })",
+      "PowerShell($f=\"C:\\\\Users\\\\henrique.freitas\\\\Downloads\\\\skyfinance_2026-07-09_22-04.sql\"; $c=Get-Content $f -Raw; \"Ocorrencias de DELETE sem WHERE: \" + \\([regex]::Matches\\($c,'DELETE FROM `\\\\w+`;'\\)\\).Count; \"Ocorrencias de DELETE com WHERE: \" + \\([regex]::Matches\\($c,'DELETE FROM `\\\\w+` WHERE'\\)\\).Count; \"--- tabelas com DELETE global ---\"; [regex]::Matches\\($c,'DELETE FROM `\\(\\\\w+\\)`;'\\) | ForEach-Object { $_.Groups[1].Value })",
+      "Bash(\"C:/xampp/mysql/bin/mysql.exe\" -u root projeto -e \"SHOW CREATE TABLE cofrinhos\\\\G SHOW CREATE TABLE cofrinho_aportes\\\\G\")",
+      "Bash(\"C:/xampp/mysql/bin/mysql.exe\" -u root projeto -e \"SHOW CREATE TABLE gastos\\\\G SHOW CREATE TABLE gastos_recorrentes\\\\G SHOW CREATE TABLE gastos_recorrentes_lancamentos\\\\G SHOW CREATE TABLE parcelas\\\\G\")",
+      "Bash(Select-String -Pattern \"CONSTRAINT|UNIQUE KEY|KEY \")",
+      "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root -e \"SELECT a.TABLE_NAME, a.AUTO_INCREMENT orig, b.AUTO_INCREMENT rollback_ FROM information_schema.TABLES a JOIN information_schema.TABLES b ON b.TABLE_NAME=a.TABLE_NAME AND b.TABLE_SCHEMA='projeto_rollbackchk' WHERE a.TABLE_SCHEMA='projeto' AND a.AUTO_INCREMENT<>b.AUTO_INCREMENT;\")",
+      "PowerShell(& \"C:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe\" -u root -e \"DROP DATABASE IF EXISTS projeto_rollbackchk;\")",
+      "PowerShell(\"--- AUTO_INCREMENT ---\")",
+      "PowerShell(\"\\(vazio = todos iguais\\)\")",
+      "PowerShell(\"banco de verificacao removido\")",
+      "PowerShell(& \"C:\\\\Users\\\\henrique.freitas\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--xampp-htdocs-Sky-Finance\\\\63f96561-4264-40dd-b45f-e6956bff6b3f\\\\scratchpad\\\\write_tests.ps1\")",
+      "PowerShell(& \"C:\\\\xampp\\\\php\\\\php.exe\" \"C:\\\\Users\\\\henrique.freitas\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--xampp-htdocs-Sky-Finance\\\\63f96561-4264-40dd-b45f-e6956bff6b3f\\\\scratchpad\\\\dbg_dump.php\")",
+      "PowerShell(& \"C:\\\\xampp\\\\php\\\\php.exe\" \"C:\\\\Users\\\\henrique.freitas\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--xampp-htdocs-Sky-Finance\\\\63f96561-4264-40dd-b45f-e6956bff6b3f\\\\scratchpad\\\\teste_prerestauracao.php\")",
+      "Bash(git restore *)",
+      "Bash(git checkout *)",
+      "Bash(git commit *)",
+      "PowerShell(& \"C:\\\\xampp\\\\php\\\\php.exe\" -r \"echo 'curl=' . \\(function_exists\\('curl_init'\\)?'sim':'NAO'\\) . PHP_EOL; echo 'allow_url_fopen=' . ini_get\\('allow_url_fopen'\\) . PHP_EOL; echo 'dom=' . \\(class_exists\\('DOMDocument'\\)?'sim':'NAO'\\) . PHP_EOL; echo 'gd=' . \\(function_exists\\('imagecreatefromjpeg'\\)?'sim':'NAO'\\) . PHP_EOL;\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\henrique.freitas\\AppData\\Local\\Temp\\claude\\c--xampp-htdocs-Sky-Finance\\63f96561-4264-40dd-b45f-e6956bff6b3f\\scratchpad"
+    ]
+  }
+}

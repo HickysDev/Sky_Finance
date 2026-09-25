@@ -9,7 +9,9 @@ window.FaturasSim = {
 
   /**
    * Em qual (mês, ano) cada parcela cai, a partir do dia de fechamento do cartão.
-   * Regra: compra depois do fechamento entra na fatura do mês seguinte.
+   * Regra: compra NO dia do fechamento ou depois entra na fatura do mês seguinte.
+   * O `>=` espelha GastosModel::adicionarGasto — com `>` a projeção mostrava um
+   * mês a menos que o lançamento realmente gravado ao confirmar a compra.
    * @returns [{ mes, ano, parcela, idx }]
    */
   calcularParcelas: function (valor, tipo, numParcelas, dataStr, fechamento) {
@@ -18,7 +20,7 @@ window.FaturasSim = {
     var mes = d.getMonth() + 1;
     var ano = d.getFullYear();
 
-    if (dia > fechamento) {
+    if (dia >= fechamento) {
       mes++;
       if (mes > 12) { mes = 1; ano++; }
     }

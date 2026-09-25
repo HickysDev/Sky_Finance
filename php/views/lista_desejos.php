@@ -73,10 +73,7 @@ require_once __DIR__ . '/../templates/header.php';
         <div class="row g-2">
           <div class="col-7">
             <label class="form-label">Valor</label>
-            <div class="input-group">
-              <span class="input-group-text">R$</span>
-              <input type="text" class="form-control" id="desejoValor" placeholder="0,00">
-            </div>
+            <input type="text" class="form-control" id="desejoValor" inputmode="numeric">
           </div>
           <div class="col-5">
             <label class="form-label">Prioridade</label>
@@ -193,6 +190,9 @@ $(document).ready(function () {
   var CORES_PRIO = { alta: '#EF4444', media: '#F59E0B', baixa: '#22C55E' };
   var NOME_PRIO  = { alta: 'Alta', media: 'Média', baixa: 'Baixa' };
 
+  // Mesma máscara monetária das outras telas: dígitos entram pelos centavos.
+  var valorDesejo = bancInput('#desejoValor');
+
   function moeda(v) {
     return (parseFloat(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
@@ -291,7 +291,7 @@ $(document).ready(function () {
       $('#desejoId').val(item.id);
       $('#desejoNome').val(item.nome);
       $('#desejoLink').val(item.link || '');
-      $('#desejoValor').val(moeda(item.valor));
+      valorDesejo.setValue(parseFloat(item.valor) || 0);
       $('#desejoPrioridade').val(item.prioridade);
       $('#desejoUrlManual').val('');
       var img = urlImagem(item.imagem);
@@ -301,7 +301,8 @@ $(document).ready(function () {
     } else {
       $('#modalDesejoTitulo').text('Novo desejo');
       $('#desejoId').val('');
-      $('#desejoNome, #desejoLink, #desejoValor, #desejoUrlManual').val('');
+      $('#desejoNome, #desejoLink, #desejoUrlManual').val('');
+      valorDesejo.setValue(0);
       $('#desejoPrioridade').val('media');
       setPrevia('');
     }
@@ -419,7 +420,7 @@ $(document).ready(function () {
   var simValorAtual = 0;
 
   // Só o mês importa na simulação (YYYY-MM). O dia exato é escolhido na hora de
-  // adicionar a despesa de verdade; aqui assumimos o dia 1 para o cálculo.
+  // adicionar a despesa de verdade; aqui assumimos hoje (mês atual) ou dia 1 (meses futuros).
   function mesAtualISO() {
     var d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
@@ -464,9 +465,14 @@ $(document).ready(function () {
     $('#simDesejoResultado').hide();
     $('#simDesejoLoading').show();
 
+    // No mês atual o dia 1 já passou: usar hoje, senão uma compra feita depois do
+    // fechamento aparecia na fatura deste mês em vez da seguinte.
+    var mesSim = $('#simDesejoData').val() || mesAtualISO();
+    var diaSim = mesSim === mesAtualISO() ? String(new Date().getDate()).padStart(2, '0') : '01';
+
     FaturasSim.projetar({
       valor: simValorAtual, tipo: tipo, numParcelas: n,
-      dataStr: ($('#simDesejoData').val() || mesAtualISO()) + '-01',
+      dataStr: mesSim + '-' + diaSim,
       fechamento: parseInt($('#simDesejoFechamento').val(), 10) || 1,
       cartaoId: cartaoId
     }, function (linhas) {

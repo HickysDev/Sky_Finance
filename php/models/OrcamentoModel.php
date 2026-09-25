@@ -93,9 +93,17 @@ class OrcamentoModel {
                 SELECT gr.categoria_id, grl.valor AS valor_mes
                 FROM gastos_recorrentes_lancamentos grl
                 INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
-                WHERE gr.ativo = 'S' AND gr.usuario_id = @uid
-                  AND (gr.mes_inicio IS NULL OR gr.mes_inicio <= grl.mes_referencia)
+                WHERE gr.usuario_id = @uid
                   AND MONTH(grl.mes_referencia) = :m4 AND YEAR(grl.mes_referencia) = :a4
+
+                UNION ALL
+
+                -- 'Eu devo' de Pessoas: o dashboard já conta na categoria; sem isto
+                -- o orçamento mostrava menos gasto que o gráfico para a mesma categoria.
+                SELECT cp.categoria_id, cp.valor AS valor_mes
+                FROM contas_pessoa cp
+                WHERE cp.usuario_id = @uid AND cp.categoria_id IS NOT NULL
+                  AND MONTH(cp.data) = :m5 AND YEAR(cp.data) = :a5
             ) g_mes ON g_mes.categoria_id = c.id
             WHERE o.usuario_id = @uid
               AND (o.meses IS NULL OR FIND_IN_SET(:mes_check, o.meses) > 0)
@@ -109,6 +117,7 @@ class OrcamentoModel {
             ':m2' => $mes, ':a2' => $ano,
             ':m3' => $mes, ':a3' => $ano,
             ':m4' => $mes, ':a4' => $ano,
+            ':m5' => $mes, ':a5' => $ano,
             ':mes_check' => $mes,
             ':ano_check' => $ano,
         ]);

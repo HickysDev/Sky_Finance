@@ -7,11 +7,16 @@
         <h1 class="titulo mt-2 fs-titulo-pag">
             Responsáveis &nbsp;<i class="bi bi-people-fill titulo-azul"></i>
         </h1>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <select id="ordemPessoas" class="form-select form-select-sm" style="width:auto;" title="Ordenar pessoas">
+                <option value="nome">Nome (A–Z)</option>
+                <option value="medeve">Quem me deve mais</option>
+                <option value="eudevo">A quem devo mais</option>
+            </select>
             <button class="btn btn-outline-secondary btn-sm" id="btnMesAnterior"><i class="bi bi-chevron-left"></i></button>
             <span class="titulo fs-5" id="mesAnoDisplay" style="min-width:130px;text-align:center;"></span>
             <button class="btn btn-outline-secondary btn-sm" id="btnMesSeguinte"><i class="bi bi-chevron-right"></i></button>
-            <a href="gerenciamento.php" class="btn btn-outline-secondary btn-sm ms-2">
+            <a href="gerenciamento.php?tab=Responsaveis" class="btn btn-gerenciar btn-sm ms-2">
                 <i class="bi bi-gear me-1"></i>Gerenciar
             </a>
         </div>
@@ -258,10 +263,25 @@
     border-bottom: 1px solid rgba(255,255,255,0.04);
     font-size: 0.86rem;
 }
-.medeve-desc  { flex: 1; color: var(--cor-texto); }
-.medeve-cat   { font-size: 0.75rem; }
-.medeve-data  { font-size: 0.73rem; color: var(--cor-texto-off); white-space: nowrap; }
-.medeve-val   { font-weight: 600; color: var(--cor-sucesso); white-space: nowrap; }
+.medeve-slot  { width: 20px; flex-shrink: 0; display: flex; justify-content: center; }
+.medeve-slot-icon { color: var(--cor-texto-off); font-size: 0.85rem; opacity: .7; }
+.medeve-desc  { flex: 1; min-width: 0; color: var(--cor-texto); }
+.medeve-cat   { font-size: 0.75rem; width: 130px; flex-shrink: 0; display: flex; justify-content: center; }
+.medeve-st    { width: 125px; margin-right: .5rem; flex-shrink: 0; display: flex; justify-content: center; }
+.medeve-data  { font-size: 0.73rem; color: var(--cor-texto-off); white-space: nowrap; width: 58px; flex-shrink: 0; text-align: right; }
+.medeve-val   { font-weight: 600; color: var(--cor-sucesso); white-space: nowrap; width: 95px; flex-shrink: 0; text-align: right; }
+@media (max-width: 576px) {
+    .medeve-cat, .medeve-st { display: none; }
+}
+.medeve-row.pago .medeve-desc { text-decoration: line-through; color: var(--cor-texto-off); }
+.medeve-row.pago .medeve-val  { color: var(--cor-texto-off); }
+.medeve-status {
+    font-size: 0.68rem; padding: 1px 8px; border-radius: 10px; white-space: nowrap;
+    color: var(--cor-texto-off); border: 1px solid var(--cor-borda);
+}
+.medeve-link-fatura { text-decoration: none; color: var(--cor-texto-off); display: inline-flex; align-items: center; gap: .35rem; font-size: 0.75rem; }
+.medeve-link-fatura:hover .medeve-status, .medeve-link-fatura:hover { color: var(--cor-azul); border-color: var(--cor-azul); }
+.medeve-status.ok { color: var(--cor-sucesso); border-color: var(--cor-sucesso); }
 .medeve-origem {
     font-size: 0.67rem; padding: 1px 6px; border-radius: 10px;
     background: rgba(59,130,246,0.15); color: var(--cor-azul);
@@ -324,6 +344,28 @@ function atualizaDisplay() {
     $('#mesAnoDisplay').text(MESES[mesSel - 1] + ' ' + anoSel);
 }
 
+// ── Ordenação ──────────────────────────────────────────────────
+// Antes vinha por "devo a ela" (servidor), que muda a cada mês e embaralhava a
+// lista. Padrão: nome; a escolha fica salva neste navegador.
+var ORDEM_KEY = 'skyOrdemPessoas';
+function ordemAtual() {
+    try { return localStorage.getItem(ORDEM_KEY) || 'nome'; } catch (e) { return 'nome'; }
+}
+function ordenaPessoas(lista) {
+    var ordem  = ordemAtual();
+    var porNome = function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR', { sensitivity: 'base' }); };
+    lista.sort(function (a, b) {
+        if (ordem === 'medeve') return (parseFloat(b.me_deve_aberto) || 0) - (parseFloat(a.me_deve_aberto) || 0) || porNome(a, b);
+        if (ordem === 'eudevo') return (parseFloat(b.eu_devo) || 0) - (parseFloat(a.eu_devo) || 0) || porNome(a, b);
+        return porNome(a, b);
+    });
+    return lista;
+}
+$('#ordemPessoas').val(ordemAtual()).on('change', function () {
+    try { localStorage.setItem(ORDEM_KEY, this.value); } catch (e) {}
+    carregaContas();
+});
+
 // ── Carregar resumo ────────────────────────────────────────────
 function carregaContas() {
     if (window.atualizaAvisoMarco) atualizaAvisoMarco(mesSel, anoSel);
@@ -351,11 +393,14 @@ function carregaContas() {
                 return;
             }
 
+            ordenaPessoas(data);
+
             var html = '';
             $.each(data, function (_, p) {
                 var cor      = p.cor || '#6B7280';
                 var euDevo   = parseFloat(p.eu_devo)  || 0;
-                var meDeve   = parseFloat(p.me_deve)  || 0;
+                // Em aberto (igual ao "devo a ela", que só soma o não pago)
+                var meDeve   = parseFloat(p.me_deve_aberto) || 0;
                 var qtd      = parseInt(p.qtd_aberto) || 0;
                 var fmtDevo  = 'R$ ' + euDevo.toLocaleString('pt-BR', {minimumFractionDigits:2});
                 var fmtDeve  = 'R$ ' + meDeve.toLocaleString('pt-BR', {minimumFractionDigits:2});
@@ -365,12 +410,14 @@ function carregaContas() {
                     : '';
 
                 html +=
-                '<div class="pessoa-card" id="card-' + p.id + '" data-id="' + p.id + '" style="--pessoa-cor:' + cor + ';">' +
+                '<div class="pessoa-card" id="card-' + p.id + '" data-id="' + p.id + '" data-arquivada="' + (p.arquivado_em ? 1 : 0) + '" style="--pessoa-cor:' + cor + ';">' +
                     '<div class="pessoa-card-header">' +
                         '<div class="pessoa-avatar">' + escHtml(p.nome.charAt(0).toUpperCase()) + '</div>' +
                         '<div class="flex-grow-1 min-w-0">' +
                             '<div class="pessoa-nome">' + escHtml(p.nome) + '</div>' +
-                            '<div class="pessoa-meta">Clique para ver detalhes</div>' +
+                            '<div class="pessoa-meta">' + (p.arquivado_em
+                                ? '<i class="bi bi-archive me-1"></i>Arquivada — só histórico'
+                                : 'Clique para ver detalhes') + '</div>' +
                         '</div>' +
                         '<div class="pessoa-balances">' +
                             '<div class="balance-pill">' +
@@ -382,6 +429,7 @@ function carregaContas() {
                                 '<div class="bp-val bp-eudevo' + (euDevo === 0 ? ' bp-zero' : '') + '">' + fmtDevo + '</div>' +
                                 '<div class="bp-label">devo a ela</div>' +
                             '</div>' +
+                            pillAbater(meDeve, euDevo) +
                         '</div>' +
                         '<i class="bi bi-chevron-down pessoa-chevron"></i>' +
                     '</div>' +
@@ -462,13 +510,20 @@ function renderEuDevo(respId, data) {
             totalPago   += p ? item.valor : 0;
             var dataFmt  = item.data ? moment(item.data).format('DD/MM/YY') : '';
             var catHtml  = item.categoria ? catBadgeHtml(item.categoria) : '';
+            var ehCF     = item.origem === 'conta_fixa';
+            // Conta fixa: pagar aqui = pagar a conta (mesmo registro da tela Contas Fixas).
+            // Sem lixeira — para tirar da pessoa, edite a conta ou pague como "eu mesmo".
+            var cfBadge  = ehCF ? ' <span class="medeve-origem ms-1" style="background:rgba(249,115,22,0.15);color:#F97316;border-color:rgba(249,115,22,0.3);">Conta fixa</span>' : '';
             rows +=
-            '<div class="item-row' + (p ? ' pago' : '') + '" data-id="' + item.id + '">' +
-                '<div class="item-check" title="' + (p ? 'Reabrir' : 'Marcar pago') + '"><i class="bi bi-check-lg"></i></div>' +
-                '<div class="item-desc">' + escHtml(item.descricao) + (catHtml ? '<br><span class="mt-1 d-inline-block">' + catHtml + '</span>' : '') + '</div>' +
+            '<div class="item-row' + (p ? ' pago' : '') + (ehCF ? ' cf-item' : '') + '" data-id="' + item.id + '"' +
+                (ehCF ? ' data-valor="' + item.valor + '"' : '') + '>' +
+                '<div class="item-check" title="' + (p ? 'Reabrir' : (ehCF ? 'Dei o dinheiro — marcar conta paga' : 'Marcar pago')) + '"><i class="bi bi-check-lg"></i></div>' +
+                '<div class="item-desc">' + escHtml(item.descricao) + cfBadge + (catHtml ? '<br><span class="mt-1 d-inline-block">' + catHtml + '</span>' : '') + '</div>' +
                 '<div class="item-data">' + dataFmt + '</div>' +
                 '<div class="item-val">R$ ' + item.valor.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>' +
-                '<button class="item-del" data-id="' + item.id + '"><i class="bi bi-trash3"></i></button>' +
+                (ehCF
+                    ? '<span class="item-del" style="visibility:hidden;"><i class="bi bi-trash3"></i></span>'
+                    : '<button class="item-del" data-id="' + item.id + '"><i class="bi bi-trash3"></i></button>') +
             '</div>';
         });
     }
@@ -481,9 +536,10 @@ function renderEuDevo(respId, data) {
                 '<div class="ft-item"><label>Em aberto</label><span style="color:var(--cor-perigo);">' + fmtAberto + '</span></div>' +
                 '<div class="ft-item"><label>Já pago</label><span style="color:var(--cor-sucesso);">' + fmtPago + '</span></div>' +
             '</div>' +
+            (parseInt($('#card-' + respId).data('arquivada'), 10) === 1 ? '' :
             '<button class="btn btn-sm btn-success btnNovoItem" data-id="' + respId + '">' +
                 '<i class="bi bi-plus-lg me-1"></i>Adicionar item' +
-            '</button>' +
+            '</button>') +
         '</div>';
 
     $panel.html(rows + footer);
@@ -503,41 +559,170 @@ function carregaItensMeDeve(respId) {
 
 function renderMeDeve(respId, data) {
     var $panel = $('#panel-medeve-' + respId);
-    var total  = 0, rows = '';
+    var aberto = 0, recebido = 0, rows = '';
 
     if (!data || !data.length) {
         rows = '<div class="empty-panel"><i class="bi bi-inbox me-2"></i>Nenhuma despesa no nome dela neste mês.</div>';
     } else {
         $.each(data, function (_, d) {
-            total += d.valor;
+            if (d.recebido) recebido += d.valor; else aberto += d.valor;
             var dataFmt   = d.data ? moment(d.data).format('DD/MM/YY') : '';
             var catHtml   = catBadgeHtml(d.categoria);
             var recBadge  = d.origem === 'recorrente' ? '<span class="medeve-origem ms-1">Recorrente</span>' : '';
+            var quando    = d.recebido_em ? moment(d.recebido_em).format('DD/MM/YY') : '';
+
+            // Crédito: status vem da fatura paga (sem botão). Demais: check manual.
+            var status;
+            if (d.forma === 'fatura') {
+                status = d.recebido
+                    ? '<span class="medeve-status ok" title="Fatura paga em ' + quando + '"><i class="bi bi-credit-card-2-back-fill me-1"></i>Fatura paga</span>'
+                    : '<span class="medeve-status" title="Fica quitado quando a fatura do cartão for marcada como paga"><i class="bi bi-credit-card-2-back me-1"></i>Na fatura</span>';
+                // Clique no status abre a fatura do cartão no mês de vencimento
+                var dv = moment(d.data);
+                status = '<a class="medeve-link-fatura" title="Ver na fatura' + (d.nome_cartao ? ' — ' + escHtml(d.nome_cartao) : '') + '"' +
+                         ' href="' + App.base + '/php/views/cartaocredito.php?mes=' + (dv.month() + 1) + '&ano=' + dv.year() +
+                         (d.cartao_id ? '&cartao=' + d.cartao_id : '') +
+                         '&item=' + (d.origem === 'recorrente' ? 'recorrente-' + d.recorrente_id : 'gasto-' + d.id) + '">' + status +
+                         '<i class="bi bi-box-arrow-up-right"></i></a>';
+            } else {
+                status = '<div class="item-check medeve-check" data-alvo="' + d.alvo + '" data-id="' + d.id + '"' +
+                         ' title="' + (d.recebido ? 'Recebido em ' + quando + ' — clique para reabrir' : 'Marcar como recebido') + '">' +
+                         '<i class="bi bi-check-lg"></i></div>';
+            }
+
             rows +=
-            '<div class="medeve-row">' +
+            '<div class="medeve-row item-row' + (d.recebido ? ' pago' : '') + '">' +
+                // Colunas fixas: slot do check (vazio no crédito) e slot de status
+                // (vazio no Pix/dinheiro) — assim tudo fica alinhado.
+                '<div class="medeve-slot">' + (d.forma === 'fatura' ? '<i class="bi bi-credit-card-2-back medeve-slot-icon" title="Crédito"></i>' : status) + '</div>' +
                 '<div class="medeve-desc">' + escHtml(d.nome || '—') + recBadge + '</div>' +
+                '<div class="medeve-st">' + (d.forma === 'fatura' ? status : '') + '</div>' +
                 '<div class="medeve-cat">' + catHtml + '</div>' +
                 '<div class="medeve-data">' + dataFmt + '</div>' +
                 '<div class="medeve-val">R$ ' + d.valor.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>' +
+                '<button class="item-del medeve-desvincular" title="Tirar desta pessoa (a despesa continua sua)"' +
+                    ' data-tipo="' + (d.origem === 'recorrente' ? 'recorrente' : 'gasto') + '"' +
+                    ' data-id="' + (d.origem === 'recorrente' ? d.recorrente_id : d.id) + '"' +
+                    ' data-nome="' + escHtml(d.nome || '') + '"><i class="bi bi-person-dash"></i></button>' +
             '</div>';
         });
     }
 
-    var fmtTotal = 'R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2});
+    var fmt = function (v) { return 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2}); };
     var footer =
         '<div class="pessoa-footer">' +
             '<div class="ft-grupo">' +
-                '<div class="ft-item"><label>Total no mês</label><span style="color:var(--cor-sucesso);">' + fmtTotal + '</span></div>' +
+                '<div class="ft-item"><label>Em aberto</label><span style="color:var(--cor-sucesso);">' + fmt(aberto) + '</span></div>' +
+                '<div class="ft-item"><label>Já recebido</label><span style="color:var(--cor-texto-off);">' + fmt(recebido) + '</span></div>' +
             '</div>' +
-            '<small style="color:var(--cor-texto-off);font-size:0.75rem;">Despesas lançadas com responsável = esta pessoa</small>' +
+            '<small style="color:var(--cor-texto-off);font-size:0.75rem;">Crédito é quitado ao pagar a fatura; Pix/débito, pelo check</small>' +
         '</div>';
 
     $panel.html(rows + footer);
 }
 
+// ── Tirar despesa da pessoa ────────────────────────────────────
+$(document).on('click', '.medeve-desvincular', function (e) {
+    e.stopPropagation();
+    var $b     = $(this);
+    var respId = $b.closest('.pessoa-card').data('id');
+    var tipo   = $b.data('tipo');
+    var aviso  = tipo === 'recorrente'
+        ? 'É um recorrente: sai desta pessoa em todos os meses.'
+        : 'Se for parcelado, todas as parcelas saem desta pessoa.';
+    Swal.fire({
+        title: 'Tirar "' + $b.data('nome') + '" desta pessoa?',
+        text: 'A despesa continua sua, só deixa de ser cobrada dela. ' + aviso,
+        icon: 'question', showCancelButton: true,
+        confirmButtonText: 'Tirar', cancelButtonText: 'Cancelar'
+    }).then(function (r) {
+        if (!r.isConfirmed) return;
+        $.ajax({
+            type: 'POST', url: App.ctrl.responsaveis,
+            data: { acao: 'contas.desvincular', tipo: tipo, id: $b.data('id') }, dataType: 'json',
+            success: function (ok) {
+                if (!ok) { toastr.error('Não foi possível alterar.'); return; }
+                toastr.success('Despesa retirada da pessoa.');
+                carregaItensMeDeve(respId);
+                atualizaPillMeDeve(respId);
+            },
+            error: function () { toastr.error('Erro ao alterar.'); }
+        });
+    });
+});
+
+// ── Marcar recebido ("ela me deve", Pix/débito/dinheiro) ────────
+$(document).on('click', '.medeve-check', function (e) {
+    e.stopPropagation();
+    var $c     = $(this);
+    var respId = $c.closest('.pessoa-card').data('id');
+    var marcar = $c.closest('.item-row').hasClass('pago') ? 0 : 1;
+    $.ajax({
+        type: 'POST', url: App.ctrl.responsaveis,
+        data: { acao: 'contas.recebido', alvo: $c.data('alvo'), id: $c.data('id'), recebido: marcar }, dataType: 'json',
+        success: function (ok) {
+            if (!ok) { toastr.error('Não foi possível atualizar.'); return; }
+            carregaItensMeDeve(respId);
+            atualizaPillMeDeve(respId);
+        },
+        error: function () { toastr.error('Erro ao salvar.'); }
+    });
+});
+
+// "Se abater": quando os dois lados têm valor, mostra o saldo líquido — quem paga
+// quanto para o outro depois de compensar uma dívida com a outra.
+function pillAbater(meDeve, euDevo) {
+    if (!(meDeve > 0 && euDevo > 0)) return '';
+    var liq = Math.round((meDeve - euDevo) * 100) / 100;
+    var fmt = 'R$ ' + Math.abs(liq).toLocaleString('pt-BR', {minimumFractionDigits:2});
+    var cls = liq > 0 ? 'bp-medeve' : (liq < 0 ? 'bp-eudevo' : 'bp-zero');
+    var lbl = liq > 0 ? 'abatido: ela me paga' : (liq < 0 ? 'abatido: eu pago' : 'abatido: quites');
+    return '<div class="balance-sep bp-abater-sep"></div>' +
+        '<div class="balance-pill bp-abater" title="Se abater: me deve − devo a ela">' +
+            '<div class="bp-val ' + cls + '">' + (liq === 0 ? 'R$ 0,00' : fmt) + '</div>' +
+            '<div class="bp-label">' + lbl + '</div>' +
+        '</div>';
+}
+
+// Atualiza só o valor "me deve" do cabeçalho, sem recarregar a lista (que fecharia o card)
+function atualizaPillMeDeve(respId) {
+    $.ajax({
+        type: 'POST', url: App.ctrl.responsaveis,
+        data: { acao: 'contas.resumo', mes: mesSel, ano: anoSel }, dataType: 'json',
+        success: function (data) {
+            var p = (data || []).find(function (x) { return String(x.id) === String(respId); });
+            if (!p) return;
+            var v = parseFloat(p.me_deve_aberto) || 0;
+            $('#card-' + respId + ' .bp-medeve')
+                .text('R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2}))
+                .toggleClass('bp-zero', v === 0);
+            var $bal = $('#card-' + respId + ' .pessoa-balances');
+            $bal.find('.bp-abater, .bp-abater-sep').remove();
+            $bal.append(pillAbater(v, parseFloat(p.eu_devo) || 0));
+        }
+    });
+}
+
 // ── Marcar pago / reabrir ───────────────────────────────────────
 $(document).on('click', '.item-check', function () {
+    if ($(this).hasClass('medeve-check')) return; // "ela me deve" tem handler próprio
     var row    = $(this).closest('.item-row');
+    if (row.hasClass('cf-item')) {
+        // Conta fixa paga por meio da pessoa: registra/desfaz o pagamento da conta
+        var rId  = row.closest('.pessoa-card').data('id');
+        var pagar = !row.hasClass('pago');
+        $.ajax({
+            type: 'POST', url: App.ctrl.contasFixas,
+            data: pagar
+                ? { acao: 'marcarPago', id: row.data('id'), mes: mesSel, ano: anoSel,
+                    data: moment().format('YYYY-MM-DD'), valor_pago: String(row.data('valor')).replace('.', ','), responsavel: rId }
+                : { acao: 'desmarcarPago', id: row.data('id'), mes: mesSel, ano: anoSel },
+            dataType: 'json',
+            success: function () { carregaItensEuDevo(rId); carregaContas(); },
+            error: function () { toastr.error('Erro ao atualizar a conta fixa.'); }
+        });
+        return;
+    }
     var id     = row.data('id');
     var isPago = row.hasClass('pago') ? 0 : 1;
     var respId = row.closest('.pessoa-card').data('id');
@@ -551,6 +736,7 @@ $(document).on('click', '.item-check', function () {
 // ── Remover item ────────────────────────────────────────────────
 $(document).on('click', '.item-del', function (e) {
     e.stopPropagation();
+    if ($(this).hasClass('medeve-desvincular') || !$(this).data('id')) return;
     var id     = $(this).data('id');
     var respId = $(this).closest('.pessoa-card').data('id');
     Swal.fire({
@@ -683,31 +869,52 @@ $('#salvarItem').click(function () {
 });
 
 function salvarParcelado(respId, desc, total, n, dataInicio) {
-    var parcela    = (total / n).toFixed(2);
-    var promessas  = [];
-    var dataMoment = moment(dataInicio);
-    var catId      = $('#itemCategoria').val();
-    var metodo     = $('#itemMetodo').val();
-    for (var i = 1; i <= n; i++) {
-        promessas.push($.ajax({
+    // Em centavos, com a última parcela absorvendo o resíduo (100/3 = 33,33 + 33,33 + 33,34),
+    // mesma regra do parcelamento de crédito — antes a soma das parcelas ficava abaixo do total.
+    var totalCent   = Math.round(total * 100);
+    var parcelaCent = Math.floor(totalCent / n);
+    var dataMoment  = moment(dataInicio);
+    var catId       = $('#itemCategoria').val();
+    var metodo      = $('#itemMetodo').val();
+    var $btn        = $('#salvarItem').prop('disabled', true);
+
+    function concluir() {
+        $btn.prop('disabled', false);
+        carregaItensEuDevo(respId);
+        carregaContas();
+    }
+
+    // Uma parcela por vez: em paralelo elas eram gravadas fora de ordem, e uma
+    // falha no meio não dizia quantas já tinham sido salvas.
+    function salvar(i) {
+        if (i > n) {
+            toastr.success(n + ' parcelas adicionadas!');
+            $('#modalNovoItem').modal('hide');
+            concluir();
+            return;
+        }
+        var cent = (i === n) ? totalCent - parcelaCent * (n - 1) : parcelaCent;
+        $.ajax({
             type: 'POST', url: App.ctrl.responsaveis,
             data: {
                 acao: 'contas.adicionar', id: respId,
                 descricao: desc + ' (' + i + '/' + n + ')',
-                valor: parcela.replace('.', ','),
+                valor: (cent / 100).toFixed(2).replace('.', ','),
                 data:  dataMoment.clone().add(i - 1, 'months').format('YYYY-MM-DD'),
                 categoria: catId,
                 metodo_pagamento: metodo
             },
             dataType: 'json'
-        }));
+        }).then(function (ok) {
+            if (ok) { salvar(i + 1); return; }
+            toastr.error('Erro ao salvar a parcela ' + i + '/' + n + ' (' + (i - 1) + ' salvas).');
+            concluir();
+        }, function () {
+            toastr.error('Erro ao salvar a parcela ' + i + '/' + n + ' (' + (i - 1) + ' salvas).');
+            concluir();
+        });
     }
-    $.when.apply($, promessas).then(function () {
-        toastr.success(n + ' parcelas adicionadas!');
-        $('#modalNovoItem').modal('hide');
-        carregaItensEuDevo(respId);
-        carregaContas();
-    }).fail(function () { toastr.error('Erro ao salvar parcelas!'); });
+    salvar(1);
 }
 
 // ── Navegação mês ───────────────────────────────────────────────

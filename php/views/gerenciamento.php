@@ -34,9 +34,11 @@ $tipoDespesa = 'recorrente';
         <button class="gtab-btn" data-tab="Conta">
             <i class="bi bi-person-gear"></i> Conta
         </button>
+        <?php if (($_SESSION['usuario_id'] ?? 0) == 1): /* backup é da base inteira: só admin */ ?>
         <button class="gtab-btn" data-tab="Backup">
             <i class="bi bi-database-down"></i> Backup
         </button>
+        <?php endif; ?>
     </div>
 
     <!-- ── CARTÕES ──────────────────────────────────────────────── -->
@@ -244,7 +246,8 @@ $tipoDespesa = 'recorrente';
         </div>
         <?php endif; ?>
 
-        <!-- Usuários -->
+        <?php if (($_SESSION['usuario_id'] ?? 0) == 1): ?>
+        <!-- Usuários (só admin: o controller responde 403 aos demais) -->
         <div class="painel">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <h6 class="titulo mb-0"><i class="bi bi-people-fill titulo-azul me-2"></i>Usuários</h6>
@@ -256,6 +259,7 @@ $tipoDespesa = 'recorrente';
                 <div class="text-center py-3"><div class="spinner-border spinner-border-sm" style="color:var(--cor-azul);"></div></div>
             </div>
         </div>
+        <?php endif; ?>
 
     </div>
 
@@ -517,6 +521,20 @@ $tipoDespesa = 'recorrente';
                             <input type="number" class="form-control" id="cfDia" placeholder="Ex: 10" min="1" max="31">
                         </div>
                     </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Quem paga</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
+                        <select class="form-select" id="cfResponsavel">
+                            <option value="">Eu mesmo</option>
+                        </select>
+                    </div>
+                    <small style="color:var(--cor-texto-off);font-size:0.75rem;">
+                        Se outra pessoa paga com o seu dinheiro, a conta aparece em Pessoas → "Devo a ela".
+                        Vale para os meses ainda não pagos; os já pagos mantêm o histórico.
+                    </small>
                 </div>
 
                 <div class="mb-2">
@@ -908,6 +926,14 @@ $('#adicionarGasto').click(function () {
 });
 
 $('#adicionarDespesa').click(function () {
+    // Sem isto, o envio vazio só retornava "Erro ao criar recorrente!" sem dizer o que faltava.
+    var faltando = [];
+    if (!$('#descricao').val().trim()) faltando.push('Descrição');
+    var vr = parseFloat(($('#valor').val() || '').replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.'));
+    if (!vr || vr <= 0) faltando.push('Valor');
+    if (!$('#categoria').val()) faltando.push('Categoria');
+    if (faltando.length) { toastr.warning('Preencha: ' + faltando.join(', ')); return; }
+
     $.ajax({
         type: 'POST', url: '../controllers/GastosController.php',
         data: {
@@ -929,10 +955,47 @@ $('#adicionarDespesa').click(function () {
 });
 
 $('#editarDespesa').click(function () {
-    editaGasto($('#gastoId').val());
+    var id  = $('#gastoId').val();
+    var rec = (window.recorrentesArray || {})[id];
+    if (!rec) { editaGasto(id); return; }
+
+    // Valor ou cartão mudou (e o recorrente está ativo): pergunta a partir de qual
+    // mês vale. Os meses anteriores continuam com o valor antigo.
+    var valorAntigo = parseFloat(String(rec.valor).replace(/\./g, '').replace(',', '.')) || 0;
+    var valorNovo   = bancValorGest ? bancValorGest.getValue() : valorAntigo;
+    var mudou = Math.abs(valorNovo - valorAntigo) > 0.001 ||
+                String($('#cartao').val() || '') !== String(rec.id_cartao || '');
+    if (!mudou || rec.ativo !== 'S') { editaGasto(id); return; }
+
+    var hoje  = moment().format('YYYY-MM');
+    var minimo = rec.mes_inicio ? String(rec.mes_inicio).substring(0, 7) : '';
+
+    // O modal do Bootstrap prende o foco; sem soltar, o campo do Swal não recebe clique.
+    var bsModal = bootstrap.Modal.getInstance(document.getElementById('modalAdiciona'));
+    if (bsModal && bsModal._focustrap) bsModal._focustrap.deactivate();
+
+    Swal.fire({
+        title: 'Vale a partir de qual mês?',
+        html: '<p style="font-size:0.85rem;color:var(--cor-texto-off);margin-bottom:0.75rem;">' +
+              'Os meses anteriores continuam com R$ ' + escHtml(rec.valor) + '.</p>' +
+              '<input id="swalAPartir" type="month" class="form-control" value="' + hoje + '"' +
+              (minimo ? ' min="' + minimo + '"' : '') + '>',
+        showCancelButton: true,
+        confirmButtonText: 'Salvar', cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#22C55E', cancelButtonColor: '#6B7280',
+        preConfirm: function () {
+            var v = document.getElementById('swalAPartir').value;
+            if (!v) { Swal.showValidationMessage('Escolha o mês.'); return false; }
+            if (minimo && v < minimo) { Swal.showValidationMessage('O recorrente começou em ' + moment(minimo + '-01').format('MM/YYYY') + '.'); return false; }
+            return v;
+        }
+    }).then(function (r) {
+        if (bsModal && bsModal._focustrap) bsModal._focustrap.activate();
+        if (r.isConfirmed) editaGasto(id, r.value);
+    });
 });
 
-function editaGasto(id) {
+function editaGasto(id, aPartir) {
     $.ajax({
         type: 'POST', url: '../controllers/GastosController.php',
         data: {
@@ -940,7 +1003,9 @@ function editaGasto(id) {
             nome:      $('#descricao').val(),
             valor:     $('#valor').val(),
             categoria: $('#categoria').val(),
-            cartao:    $('#cartao').val()
+            cartao:    $('#cartao').val(),
+            responsavel: $('#responsavel').val() || '',
+            a_partir:  aPartir || ''
         },
         dataType: 'json',
         success: function () { buscaRecorrentes(); toastr.success('Recorrente atualizado!'); $('#modalAdiciona').modal('hide'); },
@@ -1004,6 +1069,9 @@ function buscaRecorrentes() {
                 let rastro = '';
                 if (ativo && r.mes_inicio) {
                     rastro = `<small style="color:var(--cor-texto-off);font-size:0.7rem;"> desde ${moment(r.mes_inicio).format('MM/YYYY')}</small>`;
+                } else if (!ativo && r.inativado_em && moment(r.inativado_em).date() === 1) {
+                    // Substituído por valor novo "a partir de" um mês: vale até o mês anterior
+                    rastro = `<small style="color:var(--cor-texto-off);font-size:0.7rem;"> até ${moment(r.inativado_em).subtract(1, 'month').format('MM/YY')}</small>`;
                 } else if (!ativo && r.inativado_em) {
                     rastro = `<small style="color:#EF4444;font-size:0.7rem;"> inativ. ${moment(r.inativado_em).format('DD/MM/YY')}</small>`;
                 }
@@ -1049,6 +1117,8 @@ function preencheRecorrente(arr) {
             `<span class="cat-dot" style="background:${cor};flex-shrink:0;"></span>${icone}<span class="ms-1" style="color:${cor};">${escHtml(cat.nome)}</span>`
         );
     }
+    // Pessoa salva no recorrente (o 'show' do modal volta para "Eu").
+    setResponsavelModal(rec.responsavel_id);
     $('#cartao').val(rec.id_cartao || '');
     $('.cartao-mini-modal').removeClass('selecionado');
     if (rec.id_cartao) {
@@ -1125,18 +1195,18 @@ function inativaRecorrente(id) {
         var id   = $(this).data('id');
         var nome = $(this).data('nome');
         Swal.fire({
-            title: 'Remover "' + nome + '"?',
-            text: 'As despesas vinculadas ficarão sem responsável.',
+            title: 'Arquivar "' + escHtml(nome) + '"?',
+            text: 'Ela some das listas, mas as despesas e dívidas dos meses passados continuam no histórico.',
             icon: 'warning', showCancelButton: true,
             confirmButtonColor: '#EF4444', cancelButtonColor: '#6B7280',
-            confirmButtonText: 'Sim, remover', cancelButtonText: 'Cancelar'
+            confirmButtonText: 'Sim, arquivar', cancelButtonText: 'Cancelar'
         }).then(function (r) {
             if (r.isConfirmed) {
                 $.ajax({
                     type: 'POST', url: App.ctrl.responsaveis,
                     data: { acao: 'excluir', id: id }, dataType: 'json',
                     success: function (ok) {
-                        if (ok) { toastr.success('Removido!'); buscaResponsaveis(); carregarResponsaveis(); }
+                        if (ok) { toastr.success('Arquivada!'); buscaResponsaveis(); carregarResponsaveis(); }
                         else    { toastr.error('Erro ao remover!'); }
                     }
                 });
@@ -1189,12 +1259,27 @@ function buscaResponsaveis() {
     window.montaSeletorCor('#cfCorSwatches', '#cfCor');
     var bancCfValor = bancInput(document.getElementById('cfValor'));
 
+    // Pessoas para o "Quem paga" (recarrega ao abrir o modal)
+    function carregaCfResponsaveis(selecionado) {
+        $.ajax({
+            type: 'POST', url: App.ctrl.responsaveis, data: { acao: 'buscar' }, dataType: 'json',
+            success: function (lista) {
+                var html = '<option value="">Eu mesmo</option>';
+                $.each(lista || [], function (_, r) {
+                    html += '<option value="' + r.id + '">' + escHtml(r.nome) + '</option>';
+                });
+                $('#cfResponsavel').html(html).val(selecionado ? String(selecionado) : '');
+            }
+        });
+    }
+
     $('#adicionarContaFixa').click(function () {
         $('#cfId').val(0);
         $('#cfNome').val('');
         bancCfValor.setValue(0);
         $('#cfDia').val('');
         $('#cfCorSwatches').data('setCor')('#3B82F6');
+        carregaCfResponsaveis(null);
         $('#modalCFTitulo').text('Nova Conta Fixa');
         $('#modalContaFixa').modal('show');
     });
@@ -1209,6 +1294,7 @@ function buscaResponsaveis() {
         bancCfValor.setValue(cf.valor);
         $('#cfDia').val(cf.dia_vencimento);
         $('#cfCorSwatches').data('setCor')(cor);
+        carregaCfResponsaveis(cf.responsavel_id);
         $('#modalCFTitulo').text(cf.nome);
         $('#modalContaFixa').modal('show');
     });
@@ -1222,7 +1308,8 @@ function buscaResponsaveis() {
         if (!nome || !valor || !dia) { toastr.warning('Preencha todos os campos!'); return; }
         $.ajax({
             type: 'POST', url: App.ctrl.contasFixas,
-            data: { acao: id > 0 ? 'editar' : 'adicionar', id: id, nome: nome, valor: valor, dia_vencimento: dia, cor: cor },
+            data: { acao: id > 0 ? 'editar' : 'adicionar', id: id, nome: nome, valor: valor, dia_vencimento: dia, cor: cor,
+                    responsavel: $('#cfResponsavel').val() || '' },
             dataType: 'json',
             success: function (ok) {
                 if (ok) {
@@ -1252,18 +1339,18 @@ function buscaResponsaveis() {
         var id   = $(this).data('id');
         var nome = $(this).data('nome');
         Swal.fire({
-            title: 'Remover "' + nome + '"?',
-            text: 'O histórico de pagamentos também será removido.',
+            title: 'Arquivar "' + escHtml(nome) + '"?',
+            text: 'Ela some da lista e para de contar daqui em diante; os meses passados e os pagamentos continuam no histórico.',
             icon: 'warning', showCancelButton: true,
             confirmButtonColor: '#EF4444', cancelButtonColor: '#6B7280',
-            confirmButtonText: 'Sim, remover', cancelButtonText: 'Cancelar'
+            confirmButtonText: 'Sim, arquivar', cancelButtonText: 'Cancelar'
         }).then(function (r) {
             if (r.isConfirmed) {
                 $.ajax({
                     type: 'POST', url: App.ctrl.contasFixas,
                     data: { acao: 'excluir', id: id }, dataType: 'json',
                     success: function (ok) {
-                        if (ok) { toastr.success('Removida!'); buscaContasFixas(); }
+                        if (ok) { toastr.success('Arquivada!'); buscaContasFixas(); }
                         else    { toastr.error('Erro ao remover!'); }
                     }
                 });
@@ -1298,7 +1385,8 @@ function buscaContasFixas() {
                             '<span class="cfi-dot" style="background:' + cor + ';"></span>' +
                             '<div>' +
                                 '<div class="cfi-nome">' + escHtml(cf.nome) + '</div>' +
-                                '<div class="cfi-detalhe"><i class="bi bi-calendar3 me-1"></i>Vence dia ' + cf.dia_vencimento + '</div>' +
+                                '<div class="cfi-detalhe"><i class="bi bi-calendar3 me-1"></i>Vence dia ' + cf.dia_vencimento +
+                                    (cf.responsavel_nome ? ' · <i class="bi bi-person-fill me-1"></i>' + escHtml(cf.responsavel_nome) + ' paga' : '') + '</div>' +
                             '</div>' +
                         '</div>' +
                         '<div class="cfi-center">' +
@@ -1478,6 +1566,7 @@ function renderAvatarNavbar(foto) {
 
 // ── Usuários ────────────────────────────────────────────────────
 function buscaUsuarios() {
+    if (!$('#listaUsuarios').length) return; // painel só existe para o admin
     $.ajax({
         type: 'POST', url: App.ctrl.usuarios,
         data: { acao: 'listar' }, dataType: 'json',
@@ -1540,7 +1629,7 @@ $(document).on('click', '.btnRemoverUsuario', function () {
     var id   = $(this).data('id');
     var nome = $(this).data('nome');
     Swal.fire({
-        title: 'Remover ' + nome + '?',
+        title: 'Remover ' + escHtml(nome) + '?',
         text: 'O usuário perderá o acesso ao sistema.',
         icon: 'warning', showCancelButton: true,
         confirmButtonColor: '#EF4444', cancelButtonColor: '#6B7280',

@@ -49,7 +49,8 @@ $conn = Database::getConnection();
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet" />
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="<?= BASE_URL ?>/styles/style.css" />
+  <!-- ?v= muda quando o arquivo muda: sem isso o navegador segue com o CSS antigo em cache -->
+  <link rel="stylesheet" href="<?= BASE_URL ?>/styles/style.css?v=<?= @filemtime(BASE_PATH . '/styles/style.css') ?>" />
 
   <!-- Tema: aplica antes do render para evitar flash -->
   <script>
@@ -69,7 +70,7 @@ $conn = Database::getConnection();
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
   <!-- Projeção de faturas (compartilhado entre Simulador e Lista de Desejos) -->
-  <script src="<?= BASE_URL ?>/src/js/faturas.js"></script>
+  <script src="<?= BASE_URL ?>/src/js/faturas.js?v=<?= @filemtime(BASE_PATH . '/src/js/faturas.js') ?>"></script>
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -348,10 +349,17 @@ $conn = Database::getConnection();
           var cor = r.cor || '#6B7280';
           var sel = selected && String(r.id) === selected ? ' selecionado' : '';
           html += '<div class="resp-chip' + sel + '" data-id="' + r.id + '" style="--resp-cor:' + cor + ';">' +
-                  '<span class="resp-dot"></span>' + r.nome + '</div>';
+                  '<span class="resp-dot"></span>' + escHtml(r.nome) + '</div>';
       });
       $('#responsavelSelector').html(html);
   }
+
+  // Marca a pessoa no modal de lançamento (edição/repetição). Chamar no
+  // 'shown.bs.modal': o 'show' abaixo zera o campo para "Eu" a cada abertura.
+  window.setResponsavelModal = function (id) {
+      $('#responsavel').val(id ? String(id) : '');
+      renderResponsaveisMiniModal();
+  };
 
   $(document).on('click', '.resp-chip', function () {
       $('.resp-chip').removeClass('selecionado');

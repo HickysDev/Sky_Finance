@@ -13,7 +13,7 @@ class CofrinhoModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             SELECT * FROM cofrinhos
-            WHERE usuario_id = @uid
+            WHERE usuario_id = @uid AND arquivado_em IS NULL
             ORDER BY created_at DESC
         ");
         $stmt->execute();
@@ -61,7 +61,9 @@ class CofrinhoModel {
 
     public static function remover(int $id): bool {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("DELETE FROM cofrinhos WHERE id = :id AND usuario_id = @uid");
+        // Arquiva em vez de apagar: o DELETE levava os aportes junto (CASCADE) e
+        // mudava o "guardado" e o saldo dos meses passados.
+        $stmt = $conn->prepare("UPDATE cofrinhos SET arquivado_em = CURDATE() WHERE id = :id AND usuario_id = @uid");
         return $stmt->execute([':id' => $id]);
     }
 
@@ -71,7 +73,7 @@ class CofrinhoModel {
         // Confirma que o cofrinho é do usuário antes de inserir. cofrinho_aportes
         // não tem coluna usuario_id, então sem esta checagem um usuário conseguia
         // inserir aportes no cofrinho de outro (IDOR). Mesmo padrão de retirar().
-        $dono = $conn->prepare("SELECT 1 FROM cofrinhos WHERE id = :id AND usuario_id = @uid");
+        $dono = $conn->prepare("SELECT 1 FROM cofrinhos WHERE id = :id AND usuario_id = @uid AND arquivado_em IS NULL");
         $dono->execute([':id' => $cofrinhoId]);
         if (!$dono->fetchColumn()) {
             return false;
@@ -113,8 +115,9 @@ class CofrinhoModel {
                       AND MONTH(ca.data_aporte) = :mes
                       AND YEAR(ca.data_aporte)  = :ano
                 ), 0) AS aportes_mes
-            FROM cofrinhos WHERE usuario_id = @uid
+            FROM cofrinhos WHERE usuario_id = @uid AND arquivado_em IS NULL
         ");
+        // aportes_mes não filtra arquivados: é histórico do mês e entra no saldo.
         $stmt->execute([':mes' => $mes, ':ano' => $ano]);
         $totais = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -125,7 +128,7 @@ class CofrinhoModel {
 
         $stmt2 = $conn->prepare("
             SELECT id, nome, cor, valor_atual, meta_valor, data_limite
-            FROM cofrinhos WHERE usuario_id = @uid ORDER BY created_at DESC LIMIT 10
+            FROM cofrinhos WHERE usuario_id = @uid AND arquivado_em IS NULL ORDER BY created_at DESC LIMIT 10
         ");
         $stmt2->execute();
         $totais['lista'] = $stmt2->fetchAll(PDO::FETCH_ASSOC);
@@ -149,7 +152,7 @@ class CofrinhoModel {
 
     public static function retirar(int $cofrinhoId, float $valor, string $data, string $obs = ''): array {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("SELECT valor_atual FROM cofrinhos WHERE id = :id AND usuario_id = @uid");
+        $stmt = $conn->prepare("SELECT valor_atual FROM cofrinhos WHERE id = :id AND usuario_id = @uid AND arquivado_em IS NULL");
         $stmt->execute([':id' => $cofrinhoId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 

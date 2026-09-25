@@ -547,10 +547,12 @@ $(document).ready(function () {
 
                 $.each(data, function (i, r) {
                     const cfg     = tipoConfig[r.tipo] || tipoConfig['Outros'];
-                    const inativo = r.ativo === 'N';
+                    const inativo = r.ativo === 'N';            // estado atual (botões)
                     const isRec   = parseInt(r.recorrente) === 1;
+                    // Pausada depois deste mês ainda conta aqui (histórico preservado)
+                    const contaNoMes = parseInt(r.conta_no_mes) === 1;
 
-                    if (!inativo) totalMes += parseFloat(r.valor);
+                    if (contaNoMes) totalMes += parseFloat(r.valor);
 
                     var vigLabel = '';
                     if (isRec && r.vigencia_inicio) {
@@ -565,22 +567,24 @@ $(document).ready(function () {
 
                     html += `
                     <div class="renda-item d-flex align-items-center justify-content-between py-3 ${i > 0 ? 'renda-sep' : ''}"
-                         style="${inativo ? 'opacity:0.45;' : ''}">
+                         style="${contaNoMes ? '' : 'opacity:0.45;'}">
                         <div class="d-flex align-items-center gap-3">
                             <div class="renda-icon-wrap" style="background:${cfg.cor}22;color:${cfg.cor};">
                                 <i class="bi ${cfg.icon}"></i>
                             </div>
                             <div>
-                                <div class="renda-desc">${r.descricao}</div>
+                                <div class="renda-desc">${escHtml(r.descricao)}</div>
                                 <div class="d-flex gap-2 mt-1 flex-wrap">
-                                    <span class="badge renda-badge-tipo" style="background:${cfg.cor}22;color:${cfg.cor};">${r.tipo}</span>
+                                    <span class="badge renda-badge-tipo" style="background:${cfg.cor}22;color:${cfg.cor};">${escHtml(r.tipo)}</span>
                                     ${aplicBadge}
-                                    ${inativo ? '<span class="badge bg-secondary">Inativo</span>' : ''}
+                                    ${inativo && contaNoMes && r.inativado_em
+                                        ? '<span class="badge bg-secondary">Pausada a partir de ' + mNomesRenda[parseInt(r.inativado_em.substring(5,7))] + '/' + r.inativado_em.substring(0,4) + '</span>'
+                                        : (inativo ? '<span class="badge bg-secondary">Inativo</span>' : '')}
                                 </div>
                             </div>
                         </div>
                         <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-                            <span class="renda-valor ${inativo ? '' : 'text-success'}">
+                            <span class="renda-valor ${contaNoMes ? 'text-success' : ''}">
                                 + R$ ${formatarBR(r.valor)}
                             </span>
                             <div class="d-flex gap-1">
@@ -596,8 +600,8 @@ $(document).ready(function () {
                                 </button>
                                 <button class="btn btn-sm btn-outline-warning btnEditaRenda"
                                         data-id="${r.id}"
-                                        data-descricao="${r.descricao}"
-                                        data-tipo="${r.tipo}"
+                                        data-descricao="${escHtml(r.descricao)}"
+                                        data-tipo="${escHtml(r.tipo)}"
                                         data-recorrente="${r.recorrente}"
                                         data-mes="${r.mes || ''}"
                                         data-ano="${r.ano || ''}"
@@ -623,11 +627,18 @@ $(document).ready(function () {
         });
     }
 
+    // O campo usa bancInput: escrever com .val() deixava "3200.00" cru no campo e,
+    // ao salvar sem mexer, o servidor lia o ponto como milhar (virava 320000).
+    function setValorRenda(v) {
+        var el = document.getElementById('rendaValor');
+        if (el && el._banc) el._banc.setValue(v); else $(el).val(v);
+    }
+
     function resetModalRenda() {
         $('#rendaId').val('');
         $('#rendaDescricao').val('');
         $('#rendaTipo').val('Salário');
-        $('#rendaValor').val('');
+        setValorRenda(0);
         $('.renda-aplic-btn[data-aplic="recorrente"]').addClass('active');
         $('.renda-aplic-btn[data-aplic="especifico"]').removeClass('active');
         $('#rendaMesAnoWrap').hide();
@@ -661,7 +672,7 @@ $(document).ready(function () {
         $('#rendaId').val($btn.data('id'));
         $('#rendaDescricao').val($btn.data('descricao'));
         $('#rendaTipo').val($btn.data('tipo'));
-        $('#rendaValor').val($btn.data('valor'));
+        setValorRenda(parseFloat($btn.data('valor')) || 0);
 
         if (!isRec) {
             $('.renda-aplic-btn[data-aplic="recorrente"]').removeClass('active');
@@ -757,7 +768,7 @@ $(document).ready(function () {
             title: '<i class="bi bi-graph-up-arrow me-2" style="color:#22C55E;"></i>Registrar mudança de renda',
             html: `
                 <div class="text-start mb-3">
-                    <small class="text-muted">Fonte: <strong>${desc}</strong></small>
+                    <small class="text-muted">Fonte: <strong>${escHtml(desc)}</strong></small>
                 </div>
                 <div class="mb-3 text-start">
                     <label class="form-label">Novo valor mensal</label>
@@ -861,6 +872,9 @@ $(document).ready(function () {
             }
         });
     }
+    // O bloco de cofrinhos (outro <script>) chama isto após aporte/retirada;
+    // sem expor, dava "atualizaMeta is not defined" e a meta não se atualizava.
+    window.atualizaMeta = atualizaMeta;
 
     // ─── ORÇAMENTO POR CATEGORIA ─────────────────────────────────────────
 
@@ -966,8 +980,14 @@ $(document).ready(function () {
 
     function abrirModalOrcamento(id, catId, limite, meses, anos) {
         $('#orcId').val(id || '');
-        $('#orcLimite').val(limite || '');
+        // Via bancInput: .val('500.00') cru era salvo como 50000 se não fosse redigitado.
+        var elLim = document.getElementById('orcLimite');
+        if (elLim && elLim._banc) elLim._banc.setValue(parseFloat(limite) || 0); else $(elLim).val(limite || '');
         $('#orcModalTitulo').text(id ? 'Editar Orçamento' : 'Definir Orçamento');
+
+        // String(): jQuery .data() converte "2026" ou "9" em número, e number.split quebrava o modal.
+        meses = meses === null || meses === undefined ? '' : String(meses);
+        anos  = anos  === null || anos  === undefined ? '' : String(anos);
 
         // Pre-seleciona meses
         $('.orc-mes-btn').removeClass('active');
@@ -999,7 +1019,7 @@ $(document).ready(function () {
                 $.each(cats, function (_, c) {
                     var sel = String(c.id) === String(catId) ? ' selected' : '';
                     opts += '<option value="' + c.id + '"' + sel + '>' +
-                            (c.icone ? c.icone + ' ' : '') + c.nome + '</option>';
+                            (c.icone ? escHtml(c.icone) + ' ' : '') + escHtml(c.nome) + '</option>';
                 });
                 $('#orcCategoria').html(opts);
                 $('#orcCategoria').prop('disabled', !!id);
@@ -1538,16 +1558,16 @@ $(document).ready(function () {
     $(document).on('click', '.btnRemoveCof', function () {
         var id = $(this).data('id');
         Swal.fire({
-            title: 'Remover cofrinho?', text: 'Todos os aportes serão apagados.',
+            title: 'Arquivar cofrinho?', text: 'Ele some da lista, mas os aportes continuam no histórico dos meses passados.',
             icon: 'warning', showCancelButton: true,
             confirmButtonColor: '#EF4444', cancelButtonColor: '#6B7280',
-            confirmButtonText: 'Sim, remover', cancelButtonText: 'Cancelar'
+            confirmButtonText: 'Sim, arquivar', cancelButtonText: 'Cancelar'
         }).then(function (r) {
             if (r.isConfirmed) {
                 $.ajax({
                     type: 'POST', url: App.ctrl.cofrinho,
                     data: { acao: 'remover', id: id }, dataType: 'json',
-                    success: function () { toastr.success('Cofrinho removido!'); buscaCofrinhos(); },
+                    success: function () { toastr.success('Cofrinho arquivado!'); buscaCofrinhos(); },
                     error:   function () { toastr.error('Erro ao remover!'); }
                 });
             }
@@ -1678,9 +1698,7 @@ $(document).ready(function () {
         return parseFloat(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function escHtml(str) {
-        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
+    // escHtml vem do header.php (global) — a cópia local não escapava aspas simples.
 
     function shadeColor(hex, pct) {
         var num = parseInt(hex.replace('#',''), 16);

@@ -28,7 +28,7 @@ $mesAtual = date('n');
             <i class="bi bi-arrow-left-square-fill botao" id="anoEsquerda"></i>
             <span id="anoDisplay" style="font-size:0.95rem;font-weight:700;min-width:44px;text-align:center;"><?= date('Y') ?></span>
             <i class="bi bi-arrow-right-square-fill botao" id="anoDireita"></i>
-            <a href="gerenciamento.php?tab=ContasFixas" class="btn btn-outline-secondary btn-sm ms-1">
+            <a href="gerenciamento.php?tab=ContasFixas" class="btn btn-gerenciar btn-sm ms-1">
                 <i class="bi bi-gear-fill me-1"></i>Gerenciar
             </a>
         </div>
@@ -121,7 +121,10 @@ $(document).ready(function () {
 
             var statusHtml, actionHtml;
 
-            if (pago) {
+            if (c.pulado) {
+                statusHtml = '<span class="cfi-badge" style="background:#6B728022;color:var(--cor-texto-off);"><i class="bi bi-skip-forward-fill me-1"></i>Não paga este mês</span>';
+                actionHtml = '<button class="btn btn-sm btn-outline-secondary cfi-btn-desmarcar" data-id="' + c.id + '"><i class="bi bi-arrow-counterclockwise me-1"></i>Desfazer</button>';
+            } else if (pago) {
                 totalPago += c.valor_pago || c.valor;
                 var dataPago = c.data_pagamento ? moment(c.data_pagamento).format('DD/MM') : '';
                 statusHtml = '<span class="cfi-badge pago"><i class="bi bi-check-circle-fill me-1"></i>Pago' + (dataPago ? ' em ' + dataPago : '') + '</span>';
@@ -129,11 +132,11 @@ $(document).ready(function () {
             } else if (vencido) {
                 totalVencido += c.valor;
                 statusHtml = '<span class="cfi-badge vencido"><i class="bi bi-exclamation-circle-fill me-1"></i>Vencido</span>';
-                actionHtml = '<button class="btn btn-sm btn-danger cfi-btn-pagar" data-id="' + c.id + '" data-valor="' + c.valor + '"><i class="bi bi-check-lg me-1"></i>Pagar</button>';
+                actionHtml = '<button class="btn btn-sm btn-danger cfi-btn-pagar" data-id="' + c.id + '" data-valor="' + c.valor + '" data-resp="' + (c.responsavel_id || '') + '"><i class="bi bi-check-lg me-1"></i>Pagar</button>';
             } else {
                 totalAberto += c.valor;
                 statusHtml = '<span class="cfi-badge aberto"><i class="bi bi-clock me-1"></i>A pagar</span>';
-                actionHtml = '<button class="btn btn-sm btn-outline-success cfi-btn-pagar" data-id="' + c.id + '" data-valor="' + c.valor + '"><i class="bi bi-check-lg me-1"></i>Pagar</button>';
+                actionHtml = '<button class="btn btn-sm btn-outline-success cfi-btn-pagar" data-id="' + c.id + '" data-valor="' + c.valor + '" data-resp="' + (c.responsavel_id || '') + '"><i class="bi bi-check-lg me-1"></i>Pagar</button>';
             }
 
             html +=
@@ -141,13 +144,16 @@ $(document).ready(function () {
                     '<div class="cfi-left">' +
                         '<span class="cfi-dot" style="background:' + cor + ';"></span>' +
                         '<div>' +
-                            '<div class="cfi-nome">' + c.nome + '</div>' +
-                            '<div class="cfi-detalhe"><i class="bi bi-calendar3 me-1"></i>Vence dia ' + c.dia_vencimento + '</div>' +
+                            '<div class="cfi-nome">' + escHtml(c.nome) + '</div>' +
+                            '<div class="cfi-detalhe"><i class="bi bi-calendar3 me-1"></i>Vence dia ' + c.dia_vencimento +
+                                (c.responsavel_nome && !c.pulado
+                                    ? ' · <i class="bi bi-person-fill me-1"></i>' + (pago ? 'dinheiro para ' : 'via ') + escHtml(c.responsavel_nome)
+                                    : '') + '</div>' +
                         '</div>' +
                     '</div>' +
                     '<div class="cfi-center">' + statusHtml + '</div>' +
                     '<div class="cfi-right">' +
-                        '<span class="cfi-valor">' + fmtR(pago ? (c.valor_pago || c.valor) : c.valor) + '</span>' +
+                        '<span class="cfi-valor">' + fmtR(c.pulado ? 0 : (pago ? (c.valor_pago || c.valor) : c.valor)) + '</span>' +
                         actionHtml +
                     '</div>' +
                 '</div>';
@@ -172,10 +178,18 @@ $(document).ready(function () {
         var valorPadrao = parseFloat($(this).data('valor') || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
         var mes        = $('#mes').val();
         var ano        = getAno();
+        var respPadrao = String($(this).data('resp') || '');
+        var optsResp   = '<option value="">Eu mesmo</option>' + (window._cfPessoas || []).map(function (r) {
+            return '<option value="' + r.id + '"' + (String(r.id) === respPadrao ? ' selected' : '') + '>Dei o dinheiro para ' + escHtml(r.nome) + '</option>';
+        }).join('');
 
         Swal.fire({
             title: 'Registrar pagamento',
             html:
+                '<div class="mb-3 text-start">' +
+                    '<label class="form-label">Quem pagou</label>' +
+                    '<select id="swalRespPago" class="form-select">' + optsResp + '</select>' +
+                '</div>' +
                 '<div class="mb-3 text-start">' +
                     '<label class="form-label">Valor pago</label>' +
                     '<input id="swalValorPago" class="form-control" value="' + valorPadrao + '">' +
@@ -195,14 +209,15 @@ $(document).ready(function () {
             preConfirm: function () {
                 return {
                     valor: $('#swalValorPago').val(),
-                    data:  $('#swalDataPago').val()
+                    data:  $('#swalDataPago').val(),
+                    resp:  $('#swalRespPago').val() || ''
                 };
             }
         }).then(function (result) {
             if (!result.isConfirmed) return;
             $.ajax({
                 type: 'POST', url: App.ctrl.contasFixas,
-                data: { acao: 'marcarPago', id: id, mes: mes, ano: ano, data: result.value.data, valor_pago: result.value.valor },
+                data: { acao: 'marcarPago', id: id, mes: mes, ano: ano, data: result.value.data, valor_pago: result.value.valor, responsavel: result.value.resp },
                 dataType: 'json',
                 success: function () { toastr.success('Pagamento registrado!'); carregar(); },
                 error: function () { toastr.error('Erro ao registrar pagamento!'); }
@@ -234,6 +249,12 @@ $(document).ready(function () {
                 error: function () { toastr.error('Erro!'); }
             });
         });
+    });
+
+    // Pessoas para o "Quem pagou" do pagamento
+    $.ajax({
+        type: 'POST', url: App.ctrl.responsaveis, data: { acao: 'buscar' }, dataType: 'json',
+        success: function (lista) { window._cfPessoas = lista || []; }
     });
 
     carregar();

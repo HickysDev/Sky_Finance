@@ -89,12 +89,20 @@ $mesAtual = date('n');
         </div>
         <div class="col-12 col-md-7 col-lg-8">
             <div class="painel h-100" style="overflow-y:auto;max-height:260px;">
+                <div class="d-flex justify-content-end mb-1">
+                    <select id="ordemCatFatura" class="form-select form-select-sm" style="width:auto;" title="Ordenar categorias">
+                        <option value="maior">Maior valor</option>
+                        <option value="menor">Menor valor</option>
+                        <option value="nome">Nome (A-Z)</option>
+                    </select>
+                </div>
                 <div id="faturaChartLegenda"></div>
             </div>
         </div>
     </div>
 
     <!-- FATURAS -->
+    <div id="filtroCatFaturaAviso" class="aviso-marco mb-3" style="display:none;"></div>
     <div id="faturasDiv"></div>
 
     <input type="hidden" id="cartaoAtual" value="">
@@ -155,6 +163,7 @@ $mesAtual = date('n');
 
     $(document).ready(function () {
 
+        var _itemDestaque = new URLSearchParams(window.location.search).get('item');
         var _cartoesOk    = false;
         var _categoriasOk = false;
 
@@ -168,6 +177,30 @@ $mesAtual = date('n');
         var _modoEditCC = false;
         var _pendingRepetirCC = null;
         var _faturaChart = null;
+
+        // Ordenação da legenda de categorias — escolha salva neste navegador.
+        var ORDEM_CAT_FATURA_KEY = 'skyOrdemCatFatura';
+        function ordemCatFatura() {
+            try { return localStorage.getItem(ORDEM_CAT_FATURA_KEY) || 'maior'; } catch (e) { return 'maior'; }
+        }
+        function ordenaLegendaFatura() {
+            var ordem = ordemCatFatura();
+            var $leg  = $('#faturaChartLegenda');
+            var itens = $leg.children('.leg-cat-fatura').get();
+            itens.sort(function (a, b) {
+                var va = parseFloat($(a).data('val')) || 0, vb = parseFloat($(b).data('val')) || 0;
+                if (ordem === 'maior') return vb - va;
+                if (ordem === 'menor') return va - vb;
+                return String($(a).data('cat')).localeCompare(String($(b).data('cat')), 'pt-BR', { sensitivity: 'base' });
+            });
+            $leg.append(itens);
+        }
+        $(function () {
+            $('#ordemCatFatura').val(ordemCatFatura()).on('change', function () {
+                try { localStorage.setItem(ORDEM_CAT_FATURA_KEY, this.value); } catch (e) {}
+                ordenaLegendaFatura();
+            });
+        });
 
         // ─── MODAL ───────────────────────────────────────────────────────────────
         $('#modalAdiciona').on('show.bs.modal', function () {
@@ -190,12 +223,26 @@ $mesAtual = date('n');
             resetCatSelect();
         });
 
-        $('#modalAdiciona').on('hidden.bs.modal', function () { _modoEditCC = false; _pendingRepetirCC = null; limpaErrosModalCC(); });
+        // Volta o modal ao modo "adicionar": sem isto, depois de uma edição o próximo
+        // lançamento abria com o botão de editar e sobrescrevia a despesa editada.
+        $('#modalAdiciona').on('hidden.bs.modal', function () {
+            _modoEditCC = false;
+            _pendingRepetirCC = null;
+            $('#adicionarDespesa').show();
+            $('#editarDespesa').hide();
+            $('#gastoId').val('');
+            $('#descricao').val('');
+            limpaErrosModalCC();
+        });
+
+        var _respEditCC = '';
 
         $('#modalAdiciona').on('shown.bs.modal', function () {
+            if (_modoEditCC) { setResponsavelModal(_respEditCC); return; }
             if (!_pendingRepetirCC) return;
             var d = _pendingRepetirCC;
             _pendingRepetirCC = null;
+            setResponsavelModal(d.responsavel);
             $('#descricao').val(d.descricao);
             valorCleaveCC.setValue(parseFloat(String(d.valor).replace(/\./g, '').replace(',', '.')));
             var hoje = new Date();
@@ -243,16 +290,16 @@ $mesAtual = date('n');
             $(this).addClass('selecionado');
             $('#cartaoAtual').val($(this).data('id') ?? '');
 
-            // Recalcula mês baseado no vencimento do cartão selecionado
-            const venc = $(this).data('vencimento');
+            // Recalcula o mês pelo fechamento do cartão selecionado
+            const fech = $(this).data('fechamento');
             // Reseta para mês atual antes de recalcular
             $('#mes').val(<?= date('n') ?>);
             $('#anoDisplay').text(<?= date('Y') ?>);
-            if (venc) {
-                ajustaMesPorVencimento(venc);
+            if (fech) {
+                ajustaMesPorFechamento(fech);
             } else {
-                // "Todos" — usa menor vencimento entre os cartões
-                ajustaMesPorVencimento(vencimentoMinimo(window.cartoesArray || {}));
+                // "Todos" — usa o menor fechamento entre os cartões
+                ajustaMesPorFechamento(fechamentoMinimo(window.cartoesArray || {}));
             }
             buscaFatura($('#mes').val());
         });
@@ -456,6 +503,9 @@ $mesAtual = date('n');
                 success: function () {
                     toastr.success('Despesa criada com sucesso!');
                     $('#modalAdiciona').modal('hide');
+                    // Recorrente não tem data de compra; os demais podem cair em
+                    // outra fatura que não a exibida — vai até ela.
+                    if (!isRecorrente) irParaFaturaDaCompra(payload.data, payload.cartao);
                     buscaFatura($('#mes').val());
                 },
                 error: function () { toastr.error('Erro ao criar despesa!'); }
@@ -473,18 +523,22 @@ $mesAtual = date('n');
                     let cor = cartao.cor || '#3B82F6';
                     html += `<div class="cartao-mini-modal" data-id="${cartao.id}" style="--cartao-cor:${cor};">
                         <i class="bi bi-credit-card-fill" style="color:${cor};"></i>
-                        ${cartao.nome_cartao}
+                        ${escHtml(cartao.nome_cartao)}
                     </div>`;
                 });
             }
             $('#cartaoSelectorModal').html(html || '<span style="color:#6B7280;font-size:.85rem;">Nenhum cartão cadastrado</span>');
         }
 
-        // Ajusta mês/ano se já passou do vencimento do cartão
-        function ajustaMesPorVencimento(vencimentoDia) {
-            if (vencimentoDia) {
+        // Abre a tela na fatura que está ABERTA hoje — a mesma em que cairia uma
+        // compra feita agora. Usa o FECHAMENTO, não o vencimento: a partir do dia
+        // do fechamento a compra já vai para a fatura seguinte, então usar o
+        // vencimento criava uma janela (do fechamento até o vencimento) em que a
+        // despesa era lançada num mês e a tela mostrava outro — ela "sumia".
+        function ajustaMesPorFechamento(fechamentoDia) {
+            if (fechamentoDia) {
                 const diaHoje = new Date().getDate();
-                if (diaHoje >= parseInt(vencimentoDia)) {
+                if (diaHoje >= parseInt(fechamentoDia)) {
                     let mes = parseInt($('#mes').val()) + 1;
                     let ano = parseInt($('#anoDisplay').text());
                     if (mes > 12) { mes = 1; ano++; }
@@ -500,13 +554,42 @@ $mesAtual = date('n');
             }
         }
 
-        function vencimentoMinimo(cartoesObj) {
+        // Menor dia de fechamento entre os cartões: com "Todos" selecionado, é ele
+        // que determina a partir de quando a fatura corrente já não recebe compras.
+        function fechamentoMinimo(cartoesObj) {
             let min = null;
             $.each(cartoesObj, function (_, c) {
-                const v = parseInt(c.vencimento_dia);
+                const v = parseInt(c.fechamento_dia);
                 if (!isNaN(v) && (min === null || v < min)) min = v;
             });
             return min;
+        }
+
+        // Em qual fatura (mês/ano) uma compra nesta data, neste cartão, vai cair.
+        // Mesma regra do servidor (GastosModel::adicionarGasto): dia >= fechamento
+        // joga para o mês seguinte.
+        function faturaDaCompra(dataStr, cartaoId) {
+            const c = window.cartoesArray && window.cartoesArray[cartaoId];
+            if (!c || !dataStr) return null;
+            const p   = String(dataStr).split('-');
+            let   ano = parseInt(p[0], 10);
+            let   mes = parseInt(p[1], 10);
+            const dia = parseInt(p[2], 10);
+            if (dia >= parseInt(c.fechamento_dia, 10)) { mes++; if (mes > 12) { mes = 1; ano++; } }
+            return { mes: mes, ano: ano };
+        }
+
+        // Depois de salvar, leva a tela até a fatura em que o lançamento caiu.
+        // Sem isso a despesa "some": ela é gravada numa fatura futura enquanto a
+        // tela continua exibindo a atual.
+        function irParaFaturaDaCompra(dataStr, cartaoId) {
+            const alvo = faturaDaCompra(dataStr, cartaoId);
+            if (!alvo) return;
+            if (alvo.mes !== parseInt($('#mes').val(), 10) || alvo.ano !== getAno()) {
+                $('#mes').val(alvo.mes);
+                $('#anoDisplay').text(alvo.ano);
+                toastr.info('Lançado na fatura de ' + _MESES_CURTOS[alvo.mes - 1] + '/' + alvo.ano + '.');
+            }
         }
 
         function buscaCartoes() {
@@ -525,7 +608,7 @@ $mesAtual = date('n');
 
                     $.each(data, function (idx, cartao) {
                         let cor = cartao.cor || '#3B82F6';
-                        html += `<div class="cartao-mini" data-id="${cartao.id}" data-vencimento="${cartao.vencimento_dia}" style="--cartao-cor:${cor};">
+                        html += `<div class="cartao-mini" data-id="${cartao.id}" data-vencimento="${cartao.vencimento_dia}" data-fechamento="${cartao.fechamento_dia}" style="--cartao-cor:${cor};">
                             <i class="bi bi-credit-card-fill" style="color:${cor};font-size:1.6rem;"></i>
                             <span>${escHtml(cartao.nome_cartao)}</span>
                         </div>`;
@@ -533,8 +616,21 @@ $mesAtual = date('n');
 
                     $('#cartoesRow').html(html);
 
-                    // Ajusta para próximo mês se já passou do menor vencimento
-                    ajustaMesPorVencimento(vencimentoMinimo(data));
+                    // Link vindo de outra tela (ex.: Pessoas): ?mes=&ano=&cartao= abre direto
+                    // naquela fatura. Sem parâmetros, abre na fatura que recebe compras hoje.
+                    var _qs = new URLSearchParams(window.location.search);
+                    if (_qs.get('mes') && _qs.get('ano')) {
+                        var _cid = _qs.get('cartao');
+                        if (_cid && $('.cartao-mini[data-id="' + _cid + '"]').length) {
+                            $('.cartao-mini').removeClass('selecionado');
+                            $('.cartao-mini[data-id="' + _cid + '"]').addClass('selecionado');
+                            $('#cartaoAtual').val(_cid);
+                        }
+                        $('#mes').val(parseInt(_qs.get('mes'), 10));
+                        $('#anoDisplay').text(parseInt(_qs.get('ano'), 10));
+                    } else {
+                        ajustaMesPorFechamento(fechamentoMinimo(data));
+                    }
                     _cartoesOk = true;
                     _verificaECarrega();
                 },
@@ -581,6 +677,7 @@ $mesAtual = date('n');
                             </div>`);
                         $('#totalGeral').text('R$ 0,00');
                         $('#faturaGraficoRow').hide();
+                        $('#filtroCatFaturaAviso').hide().empty();
                         if (_faturaChart) { _faturaChart.destroy(); _faturaChart = null; }
                         atualizaStatusFatura();
                         return;
@@ -592,7 +689,8 @@ $mesAtual = date('n');
                     var ano = getAno();
 
                     $.each(data, function (idCartao, valoresCartao) {
-                        let nomeCartao = valoresCartao[0]?.nome_cartao || 'Cartão';
+                        // Compras de cartão excluído ficam com cartao_id NULL (grupo ""): continuam no histórico
+                        let nomeCartao = valoresCartao[0]?.nome_cartao || (idCartao === '' ? 'Cartão excluído' : 'Cartão');
                         let cartaoInfo = window.cartoesArray && window.cartoesArray[idCartao];
                         let cor = cartaoInfo ? (cartaoInfo.cor || '#3B82F6') : '#3B82F6';
 
@@ -680,12 +778,14 @@ $mesAtual = date('n');
                                         data-categoria="${gasto.categoria_id || ''}"
                                         data-cartao="${idCartao}"
                                         data-data="${gasto.data_gasto || ''}"
+                                        data-responsavel="${gasto.responsavel_id || ''}"
                                         title="Editar"><i class="bi bi-pencil-fill" style="font-size:.75rem;"></i></button>
                                     <button class="btn btn-sm btn-outline-secondary btn-repetir-gasto-cc py-0 px-1 me-1"
                                         data-descricao="${descEsc}"
                                         data-valor="${gasto.valor_parcela}"
                                         data-categoria="${gasto.categoria_id || ''}"
                                         data-cartao="${idCartao}"
+                                        data-responsavel="${gasto.responsavel_id || ''}"
                                         title="Repetir no mês atual"><i class="bi bi-arrow-repeat" style="font-size:.75rem;"></i></button>`;
                                 } else {
                                     btnEditar = `<button class="btn btn-sm btn-outline-secondary btn-editar-simples py-0 px-1 me-1"
@@ -704,7 +804,7 @@ $mesAtual = date('n');
                             var _vOrd = parseFloat(String(gasto.valor_parcela).replace(/\./g,'').replace(',','.')) || 0;
                             var _dOrd = gasto.tipo === 'NORMAL' ? (gasto.data_gasto || '0') : '0';
                             var _pOrd = gasto.tipo === 'NORMAL' ? (gasto.numero_parcela ?? 0) : 0;
-                            html += `<tr class="linha-clicavel" data-valor="${gasto.valor_parcela}">
+                            html += `<tr class="linha-clicavel" data-item="${gasto.tipo === 'RECORRENTE' ? 'recorrente' : 'gasto'}-${gasto.id}" data-valor="${gasto.valor_parcela}" data-cat="${escHtml(nomeCategoriaFatura(gasto))}">
                                 <td><span class="linha-check"><i class="bi bi-check-circle-fill"></i></span>${descEsc}</td>
                                 <td>${catBadgeHtml(gasto.categoria)}</td>
                                 <td data-order="${_pOrd}">${infoParcela}</td>
@@ -751,10 +851,84 @@ $mesAtual = date('n');
                             }
                         });
                     });
+
+                    // Mantém o filtro ao trocar mês/cartão se a categoria ainda existir
+                    var aindaExiste = _filtroCatFatura && $('.leg-cat-fatura').filter(function () {
+                        return this.getAttribute('data-cat') === _filtroCatFatura;
+                    }).length;
+                    aplicaFiltroCatFatura(aindaExiste ? _filtroCatFatura : null);
+
+                    // Veio de um link com ?item=: já deixa a compra selecionada (só na 1ª carga)
+                    if (_itemDestaque) {
+                        var $alvo = $('tr[data-item="' + _itemDestaque + '"]');
+                        _itemDestaque = null;
+                        if ($alvo.length) {
+                            $alvo.addClass('linha-selecionada');
+                            atualizaBarraSelecao();
+                            $alvo[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
                 },
                 error: function () { toastr.error('Erro ao buscar fatura!'); }
             });
         }
+
+        // Nome da categoria como aparece no gráfico — as linhas da fatura usam o
+        // mesmo nome (data-cat) para o filtro por clique casar exatamente.
+        function nomeCategoriaFatura(gasto) {
+            var catObj = window.categoriaMap ? window.categoriaMap[String(gasto.categoria_id || '')] : null;
+            return catObj ? catObj.nome : (gasto.categoria || 'Outros');
+        }
+
+        // ─── FILTRO POR CATEGORIA (clique na legenda / fatia) ────────────────
+        var _filtroCatFatura = null;
+
+        // Filtro global do DataTables, restrito às tabelas de fatura desta tela.
+        $.fn.dataTable.ext.search.push(function (settings, _data, idx) {
+            if (!_filtroCatFatura || settings.nTable.id.indexOf('faturaTabela_') !== 0) return true;
+            var tr = new $.fn.dataTable.Api(settings).row(idx).node();
+            return tr && tr.getAttribute('data-cat') === _filtroCatFatura;
+        });
+
+        function aplicaFiltroCatFatura(nome) {
+            _filtroCatFatura = nome || null;
+
+            $('[id^="faturaTabela_"]').each(function () {
+                if (!$.fn.DataTable.isDataTable(this)) return;
+                var dt = $(this).DataTable().draw();
+                // Esconde o cartão que não tem nenhum lançamento da categoria
+                var visiveis = dt.rows({ search: 'applied' }).count();
+                $(this).closest('.painel').toggle(!_filtroCatFatura || visiveis > 0);
+            });
+
+            $('.leg-cat-fatura').each(function () {
+                var ativo = _filtroCatFatura && this.getAttribute('data-cat') === _filtroCatFatura;
+                $(this).toggleClass('leg-cat-ativa', !!ativo)
+                       .css('opacity', _filtroCatFatura && !ativo ? 0.45 : 1);
+            });
+
+            var $aviso = $('#filtroCatFaturaAviso');
+            if (_filtroCatFatura) {
+                var $leg = $('.leg-cat-fatura').filter(function () { return this.getAttribute('data-cat') === _filtroCatFatura; });
+                $aviso.html(
+                    '<div class="d-flex align-items-center justify-content-between gap-3 flex-wrap w-100">' +
+                        '<span><i class="bi bi-funnel-fill me-2"></i>Mostrando só <strong>' + escHtml(_filtroCatFatura) + '</strong>' +
+                        ($leg.length ? ' · ' + escHtml($leg.find('.fw-600').text()) : '') + '</span>' +
+                        '<button type="button" id="limparFiltroCatFatura" class="btn btn-sm py-0 px-2"' +
+                        ' style="border:1px solid currentColor;color:inherit;border-radius:20px;font-size:0.78rem;background:transparent;">' +
+                        '<i class="bi bi-x-lg me-1"></i>Mostrar todas</button>' +
+                    '</div>'
+                ).show();
+            } else {
+                $aviso.hide().empty();
+            }
+        }
+
+        $(document).on('click', '.leg-cat-fatura', function () {
+            var nome = this.getAttribute('data-cat');
+            aplicaFiltroCatFatura(_filtroCatFatura === nome ? null : nome);
+        });
+        $(document).on('click', '#limparFiltroCatFatura', function () { aplicaFiltroCatFatura(null); });
 
         function renderFaturaChart(data) {
             // Agrega valor_parcela por categoria
@@ -764,7 +938,7 @@ $mesAtual = date('n');
                     if (i === 'valortotal') return;
                     var catId  = String(gasto.categoria_id || '');
                     var catObj = window.categoriaMap ? window.categoriaMap[catId] : null;
-                    var nome   = catObj ? catObj.nome : (gasto.categoria || 'Outros');
+                    var nome   = nomeCategoriaFatura(gasto);
                     var cor    = catObj ? (catObj.cor || '#6B7280') : '#6B7280';
                     var val    = parseFloat(String(gasto.valor_parcela || '0').replace(/\./g, '').replace(',', '.')) || 0;
                     if (!catTotais[nome]) catTotais[nome] = { total: 0, cor: cor };
@@ -790,6 +964,15 @@ $mesAtual = date('n');
                 },
                 options: {
                     cutout: '68%',
+                    // Clique na fatia filtra as faturas pela categoria (igual à legenda)
+                    onClick: function (_evt, els) {
+                        if (!els.length) return;
+                        var nome = nomes[els[0].index];
+                        aplicaFiltroCatFatura(_filtroCatFatura === nome ? null : nome);
+                    },
+                    onHover: function (evt, els) {
+                        evt.native.target.style.cursor = els.length ? 'pointer' : 'default';
+                    },
                     plugins: { legend: { display: false }, tooltip: {
                         callbacks: {
                             label: function(ctx) {
@@ -808,16 +991,18 @@ $mesAtual = date('n');
             nomes.forEach(function (nome, i) {
                 var pct = ((valores[i] / total) * 100).toFixed(1);
                 var vlr = valores[i].toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2});
-                legHtml += '<div class="d-flex align-items-center justify-content-between py-1" style="border-bottom:1px solid var(--cor-borda);font-size:0.82rem;">' +
+                legHtml += '<div class="leg-cat-fatura d-flex align-items-center justify-content-between py-1" data-cat="' + escHtml(nome) + '" data-val="' + valores[i] + '"' +
+                    ' title="Clique para ver só esta categoria" style="border-bottom:1px solid var(--cor-borda);font-size:0.82rem;cursor:pointer;">' +
                     '<div class="d-flex align-items-center gap-2">' +
                     '<span style="width:10px;height:10px;border-radius:50%;background:' + cores[i] + ';flex-shrink:0;display:inline-block;"></span>' +
-                    '<span>' + nome + '</span></div>' +
+                    '<span>' + escHtml(nome) + '</span></div>' +
                     '<div class="d-flex align-items-center gap-3">' +
                     '<span style="color:var(--cor-texto-off);">' + pct + '%</span>' +
                     '<span class="fw-600">R$ ' + vlr + '</span>' +
                     '</div></div>';
             });
             $('#faturaChartLegenda').html(legHtml);
+            ordenaLegendaFatura();
             $('#faturaGraficoRow').fadeIn(200);
         }
 
@@ -990,7 +1175,8 @@ $mesAtual = date('n');
                 descricao: $(this).data('descricao'),
                 valor:     $(this).data('valor'),
                 categoria: $(this).data('categoria'),
-                cartao:    $(this).data('cartao')
+                cartao:    $(this).data('cartao'),
+                responsavel: $(this).data('responsavel')
             };
             bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdiciona')).show();
         });
@@ -998,6 +1184,7 @@ $mesAtual = date('n');
         $(document).on('click', '.btn-editar-gasto-cc', function () {
             var $btn = $(this);
             _modoEditCC = true;
+            _respEditCC = $btn.data('responsavel') || '';
             $('#adicionarDespesa').hide();
             $('#editarDespesa').show();
             $('#gastoId').val($btn.data('id'));
@@ -1047,6 +1234,7 @@ $mesAtual = date('n');
                     metodo:    'Crédito',
                     cartao:    $('#cartao').val(),
                     data:      $('#data').val(),
+                    responsavel: $('#responsavel').val() || '',
                 },
                 dataType: 'json',
                 success: function () {

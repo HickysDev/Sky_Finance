@@ -269,6 +269,16 @@ body {
   --cor-painel: rgba(38, 40, 60, 0.94);
 }
 
+/* Com painel 94% opaco o blur de fundo não aparece, e o backdrop-filter sobre o
+   fundo com padrão fazia o Chrome deixar "restos" de painel ao rolar a página
+   (retângulos vazios cobrindo o conteúdo). Desligado só neste tema. */
+.tema-gatos .painel,
+.tema-gatos .kpi-card,
+.tema-gatos .kpi-sm {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .tema-gatos .modal-content {
   background: rgba(30, 32, 50, 0.96) !important;
 }
@@ -878,6 +888,24 @@ table.dataTable td.dt-type-date {
   background-color: var(--cor-azul-hover) !important;
   border-color: var(--cor-azul-hover) !important;
 }
+
+/* Atalho "Gerenciar" nos cabeçalhos (Fixas, Pessoas): o outline-secondary
+   ficava apagado no tema escuro/gatos. Mesmo azul das setas de navegação. */
+.btn-gerenciar {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.6);
+  color: var(--cor-texto);
+  font-weight: 500;
+}
+.btn-gerenciar i { color: var(--cor-azul); }
+.btn-gerenciar:hover,
+.btn-gerenciar:focus {
+  background: var(--cor-azul);
+  border-color: var(--cor-azul);
+  color: #fff;
+}
+.btn-gerenciar:hover i,
+.btn-gerenciar:focus i { color: #fff; }
 
 .btn-expansivo {
   transition: transform var(--trans);

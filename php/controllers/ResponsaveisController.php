@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../conn/config.php';
+require_once __DIR__ . '/../middleware/auth.php';
 include_once __DIR__ . '/../models/ResponsaveisModel.php';
 include_once __DIR__ . '/../models/ContasPessoaModel.php';
 
@@ -70,6 +72,15 @@ switch ($acao) {
         $mesFiltro = isset($_POST['mes']) && $_POST['mes'] !== '' ? (int) $_POST['mes'] : null;
         $anoFiltro = isset($_POST['ano']) && $_POST['ano'] !== '' ? (int) $_POST['ano'] : null;
         $retorno = ContasPessoaModel::listar($id, $mesFiltro, $anoFiltro);
+        if ($mesFiltro && $anoFiltro) {
+            foreach (ContasFixasModel::daPessoa($id, $mesFiltro, $anoFiltro) as $cf) {
+                $retorno[] = [
+                    'id' => $cf['id'], 'origem' => 'conta_fixa', 'descricao' => $cf['nome'],
+                    'valor' => $cf['valor'], 'data' => $cf['data'], 'pago' => $cf['pago'] ? 'S' : 'N',
+                    'categoria' => null,
+                ];
+            }
+        }
         break;
 
     case 'contas.adicionar':
@@ -82,6 +93,23 @@ switch ($acao) {
     case 'contas.pago':
         if (!$id) { http_response_code(400); echo json_encode(['erro' => 'ID inválido']); exit; }
         $retorno = ContasPessoaModel::marcarPago($id, $pago);
+        break;
+
+    case 'contas.recebido':
+        // "Ela me deve": marca que a pessoa pagou (só Pix/débito/dinheiro e recorrente sem cartão)
+        $alvo = $_POST['alvo'] ?? '';
+        if (!$id || !in_array($alvo, ['gasto', 'lancamento'], true)) {
+            http_response_code(400); echo json_encode(['erro' => 'Dados inválidos']); exit;
+        }
+        $retorno = ContasPessoaModel::marcarRecebido($alvo, $id, (bool) (int) ($_POST['recebido'] ?? 1));
+        break;
+
+    case 'contas.desvincular':
+        $tipo = $_POST['tipo'] ?? '';
+        if (!$id || !in_array($tipo, ['gasto', 'recorrente'], true)) {
+            http_response_code(400); echo json_encode(['erro' => 'Dados inválidos']); exit;
+        }
+        $retorno = ContasPessoaModel::desvincular($tipo, $id);
         break;
 
     case 'contas.remover':

@@ -6,7 +6,8 @@ class ResponsaveisModel {
 
     public static function buscar(): array {
         $conn = Database::getConnection();
-        $stmt = $conn->prepare("SELECT * FROM responsaveis WHERE usuario_id = @uid ORDER BY nome");
+        // Arquivadas não aparecem para seleção/gerência; o histórico delas segue nas telas por mês.
+        $stmt = $conn->prepare("SELECT * FROM responsaveis WHERE usuario_id = @uid AND arquivado_em IS NULL ORDER BY nome");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -25,12 +26,9 @@ class ResponsaveisModel {
 
     public static function excluir(int $id): bool {
         $conn = Database::getConnection();
-        // Remove vínculo das despesas antes de excluir
-        $conn->prepare("UPDATE gastos SET responsavel_id = NULL WHERE responsavel_id = :id AND usuario_id = @uid")
-             ->execute([':id' => $id]);
-        $conn->prepare("UPDATE gastos_recorrentes SET responsavel_id = NULL WHERE responsavel_id = :id AND usuario_id = @uid")
-             ->execute([':id' => $id]);
-        $stmt = $conn->prepare("DELETE FROM responsaveis WHERE id = :id AND usuario_id = @uid");
+        // Arquiva em vez de apagar: o DELETE levava junto (CASCADE) os "eu devo" dela
+        // e desvinculava as compras em que ela devia — mudando os totais do passado.
+        $stmt = $conn->prepare("UPDATE responsaveis SET arquivado_em = CURDATE() WHERE id = :id AND usuario_id = @uid");
         return $stmt->execute([':id' => $id]);
     }
 

@@ -65,6 +65,23 @@ $mesAtual = date('n');
         <div id="faturasDashList" class="d-flex flex-column gap-2"></div>
     </div>
 
+    <!-- Parcelas que terminam no mês -->
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="painel">
+                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                    <h6 class="titulo fs-secao-titulo mb-0">
+                        <i class="bi bi-flag-fill titulo-azul me-2"></i>Parcelas que terminam neste mês
+                    </h6>
+                    <span style="font-size:0.8rem;color:var(--cor-texto-off);">
+                        Alívio no próximo mês: <strong id="parcTermTotal" style="color:#22C55E;">—</strong>
+                    </span>
+                </div>
+                <div id="parcTermLista"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- LINHA 2: Gráfico+Categorias | Últimas Despesas -->
     <div class="row g-3 mb-3">
 
@@ -142,6 +159,13 @@ $mesAtual = date('n');
                 <div class="d-flex justify-content-between mt-2" style="font-size:0.8rem;">
                     <span style="color:var(--cor-texto-off);">R$ 0</span>
                     <span id="pctRenda" style="font-weight:700;"></span>
+                </div>
+                <!-- Se me pagarem: gasto − o que as pessoas me devem -->
+                <div id="pagaremRow" class="d-flex justify-content-between align-items-center mt-2" style="font-size:0.8rem;display:none !important;">
+                    <span style="color:var(--cor-texto-off);">
+                        <i class="bi bi-person-check me-1" style="color:#14B8A6;"></i>Se me pagarem
+                    </span>
+                    <span><strong id="pagaremVal"></strong> <span id="pagaremPct" style="font-weight:700;"></span></span>
                 </div>
                 <!-- Meta economia -->
                 <div id="metaEcoRow" class="mt-3 pt-3" style="border-top:1px solid var(--cor-borda);display:none;">
@@ -403,6 +427,8 @@ $(document).ready(function () {
             error: function () { toastr.error('Erro ao carregar dashboard!'); }
         });
 
+        carregaParcelasTerminando(mes, ano);
+
         $.ajax({
             type: 'POST', url: 'php/controllers/CofrinhoController.php',
             data: { acao: 'dashboard', mes: mes, ano: ano }, dataType: 'json',
@@ -422,6 +448,42 @@ $(document).ready(function () {
         });
     }
 
+    // ─── PARCELAS QUE TERMINAM NO MÊS ────────────────────────────────────
+    function carregaParcelasTerminando(mes, ano) {
+        $('#parcTermTotal').text('—');
+        $('#parcTermLista').html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm" style="color:var(--cor-azul);" role="status"></div></div>');
+        $.ajax({
+            type: 'POST', url: 'php/controllers/GastosController.php',
+            data: { acao: 'parcelasTerminando', mes: mes, ano: ano }, dataType: 'json',
+            success: function (lista) {
+                if (!lista || !lista.length) {
+                    $('#parcTermTotal').text('R$ 0,00');
+                    $('#parcTermLista').html('<p class="text-center py-3 mb-0" style="color:var(--cor-texto-off);">Nenhuma parcela termina neste mês.</p>');
+                    return;
+                }
+                var total = 0, rows = '';
+                $.each(lista, function (_, p) {
+                    total += p.valor_parcela;
+                    rows += '<tr>' +
+                        '<td>' + escHtml(p.descricao) + '</td>' +
+                        '<td>' + escHtml(p.nome_cartao || 'Cartão excluído') + '</td>' +
+                        '<td class="text-center">' + p.parcelas_total + '/' + p.parcelas_total + '</td>' +
+                        '<td>' + moment(p.data_gasto).format('DD/MM/YYYY') + '</td>' +
+                        '<td class="text-end">R$ ' + formatBR(p.valor_parcela) + '</td>' +
+                    '</tr>';
+                });
+                $('#parcTermTotal').text('R$ ' + formatBR(total));
+                $('#parcTermLista').html(
+                    '<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:0.85rem;">' +
+                        '<thead><tr><th>Descrição</th><th>Cartão</th><th class="text-center">Parcela</th><th>Compra</th><th class="text-end">Valor</th></tr></thead>' +
+                        '<tbody>' + rows + '</tbody>' +
+                    '</table></div>'
+                );
+            },
+            error: function () { $('#parcTermLista').html('<p class="text-center py-3 mb-0" style="color:var(--cor-texto-off);">Erro ao carregar.</p>'); }
+        });
+    }
+
     // ─── KPI CARDS ───────────────────────────────────────────────────────
     function renderKPI(d) {
         const pos      = d.saldo >= 0;
@@ -430,9 +492,15 @@ $(document).ready(function () {
         // ── Linha 1: 3 cards grandes ──
         const main = [
             { icon: 'bi-arrow-down-circle-fill',                          cor: '#22C55E', label: 'Renda estimada', sub: 'fontes de renda ativas',   valor: formatBR(d.totalRenda) },
-            { icon: 'bi-arrow-up-circle-fill',                            cor: '#EF4444', label: 'Total gasto',    sub: 'todas as despesas do mês', valor: formatBR(d.totalGasto) },
+            { icon: 'bi-arrow-up-circle-fill',                            cor: '#EF4444', label: 'Total gasto',    sub: 'todas as despesas do mês', valor: formatBR(d.totalGasto),
+              extra: d.totalMeDeve > 0 ? { label: 'Se me pagarem', valor: formatBR(d.totalGasto - d.totalMeDeve), title: 'Total gasto − o que as pessoas me devem neste mês (R$ ' + formatBR(d.totalMeDeve) + ')' } : null },
             { icon: pos ? 'bi-graph-up-arrow' : 'bi-graph-down-arrow',   cor: saldoCor,  label: 'Saldo estimado', sub: 'renda − gastos − guardado',
-              valor: (pos ? '' : '− ') + formatBR(Math.abs(d.saldo)) },
+              valor: (pos ? '' : '− ') + formatBR(Math.abs(d.saldo)),
+              extra: d.totalMeDeve > 0 ? (function () {
+                  var liq = d.saldo + d.totalMeDeve;
+                  return { cor: liq >= 0 ? '#22C55E' : '#EF4444', label: 'Se me pagarem', valor: (liq >= 0 ? '' : '− ') + formatBR(Math.abs(liq)),
+                           title: 'Saldo estimado + o que as pessoas me devem neste mês (R$ ' + formatBR(d.totalMeDeve) + ')' };
+              })() : null },
         ];
 
         $('#kpiRow').html(main.map(c => `
@@ -444,8 +512,17 @@ $(document).ready(function () {
                         </div>
                         <span class="kpi-label">${c.label}</span>
                     </div>
-                    <div class="kpi-valor" style="color:${c.cor};">R$ ${c.valor}</div>
-                    <div class="kpi-sub">${c.sub}</div>
+                    <div class="d-flex align-items-end justify-content-between gap-2 flex-wrap">
+                        <div>
+                            <div class="kpi-valor" style="color:${c.cor};">R$ ${c.valor}</div>
+                            <div class="kpi-sub">${c.sub}</div>
+                        </div>
+                        ${c.extra ? `
+                        <div class="kpi-extra text-end" title="${c.extra.title}">
+                            <div class="kpi-extra-valor" style="color:${c.extra.cor || c.cor};">R$ ${c.extra.valor}</div>
+                            <div class="kpi-sub">${c.extra.label}</div>
+                        </div>` : ''}
+                    </div>
                 </div>
             </div>`).join(''));
 
@@ -464,6 +541,7 @@ $(document).ready(function () {
             { icon: 'bi-arrow-clockwise',  cor: '#8B5CF6', label: 'Recorrentes',    sub: recorrSub,                valor: recorrTodos,          href: base + 'gerenciamento.php?tab=Recorrentes' },
             { icon: 'bi-house-fill',       cor: '#F97316', label: 'Contas fixas',   sub: 'luz · água · internet',   valor: d.totalContasFixas || 0, href: base + 'contas_fixas.php' },
             { icon: 'bi-people-fill',      cor: '#EC4899', label: 'A pagar',        sub: 'devo a responsáveis',     valor: d.totalContas || 0,   href: base + 'responsaveis.php' },
+            { icon: 'bi-person-check-fill', cor: '#14B8A6', label: 'Me devem',      sub: (d.totalMeDeve || 0) > (d.totalMeDeveAberto || 0) ? 'em aberto · recebido R$ ' + formatBR(d.totalMeDeve - d.totalMeDeveAberto) : 'em aberto · pessoas', valor: d.totalMeDeveAberto || 0, href: base + 'responsaveis.php' },
         ];
 
         $('#kpiBreakdown').html(`<div class="row g-2">${sub.map(c => `
@@ -528,11 +606,11 @@ $(document).ready(function () {
             const pct  = total > 0 ? (val / total * 100) : 0;
             const cor  = catCores[i];
             const cat  = window.categoriaNomes[d.nome] || {};
-            const icon = cat.icone ? '<span class="me-1">' + cat.icone + '</span>' : '';
+            const icon = cat.icone ? '<span class="me-1">' + escHtml(cat.icone) + '</span>' : '';
 
             listHtml += '<tr class="cat-list-row" data-cat="' + escHtml(d.nome) + '" style="cursor:pointer;">' +
                 '<td class="cat-list-td-dot"><div class="cat-list-dot" style="background:' + cor + ';"></div></td>' +
-                '<td class="cat-list-td-nome" style="color:' + cor + ';">' + icon + d.nome + '</td>' +
+                '<td class="cat-list-td-nome" style="color:' + cor + ';">' + icon + escHtml(d.nome) + '</td>' +
                 '<td class="cat-list-td-pct">' + pct.toFixed(0) + '%</td>' +
                 '<td class="cat-list-td-val">R$ ' + formatBR(val) + '</td>' +
             '</tr>';
@@ -679,6 +757,18 @@ $(document).ready(function () {
         $('#pctRenda').text(pct.toFixed(1) + '%').css('color', cor);
         $('#lblTotalGasto').text('R$ ' + formatBR(d.totalGasto)).css('color', cor);
         $('#lblTotalRenda').text('R$ ' + formatBR(d.totalRenda));
+
+        if (d.totalMeDeve > 0) {
+            const liq    = d.totalGasto - d.totalMeDeve;
+            const pctLiq = Math.min((liq / d.totalRenda) * 100, 100);
+            const corLiq = pctLiq < 70 ? '#22C55E' : pctLiq < 90 ? '#F59E0B' : '#EF4444';
+            $('#pagaremVal').text('R$ ' + formatBR(liq)).css('color', corLiq);
+            $('#pagaremPct').text('· ' + pctLiq.toFixed(1) + '%').css('color', corLiq);
+            $('#pagaremRow').attr('style', 'font-size:0.8rem;');
+        } else {
+            $('#pagaremRow').attr('style', 'font-size:0.8rem;display:none !important;');
+        }
+
         $('#colProgresso').show();
         $('#colCofrinhos').removeClass('col-xl-12').addClass('col-xl-8');
         $('#painelProgresso').fadeIn();
@@ -705,10 +795,10 @@ $(document).ready(function () {
             <div class="recente-item ${i > 0 ? 'recente-sep' : ''}">
                 <div class="d-flex justify-content-between align-items-center gap-2">
                     <div class="overflow-hidden">
-                        <div class="recente-desc text-truncate">${g.descricao}</div>
+                        <div class="recente-desc text-truncate">${escHtml(g.descricao)}</div>
                         <div class="d-flex gap-2 align-items-center mt-1">
                             ${catInlineHtml(g.categoria)}
-                            <span class="badge" style="background:${m.bg};color:${m.cor};font-size:0.72rem;padding:2px 7px;">${g.metodo_pagamento}</span>
+                            <span class="badge" style="background:${m.bg};color:${m.cor};font-size:0.72rem;padding:2px 7px;">${escHtml(g.metodo_pagamento)}</span>
                         </div>
                     </div>
                     <div class="text-end flex-shrink-0">
@@ -796,6 +886,12 @@ $(document).ready(function () {
 
     // ─── AÇÕES RÁPIDAS ───────────────────────────────────────────────────
     function carregaAcoesRapidas(mes, ano) {
+        // Antes do marco inicial não há controle: nada a pagar nem a marcar.
+        if (window.antesDoMarco && window.antesDoMarco(mes, ano)) {
+            $('#arContasFixas, #arFaturas').html('<div class="ar-empty">Antes do início do controle.</div>');
+            $('#arLoader').hide();
+            return;
+        }
         $('#arLoader').show();
 
         var cfItems     = null;
@@ -865,19 +961,30 @@ $(document).ready(function () {
         var html = '';
         items.forEach(function (cf) {
             var pago = cf.pago;
-            html += '<div class="ar-item" data-id="' + cf.id + '">' +
+            var acoes;
+            if (cf.pulado) {
+                acoes = '<button class="ar-btn ar-btn-pulado ar-desfaz-pulo" data-id="' + cf.id + '" data-mes="' + mes + '" data-ano="' + ano + '" title="Desfazer — voltar a pagar este mês">' +
+                            '<i class="bi bi-skip-forward-fill me-1"></i>Pulado</button>';
+            } else {
+                acoes = (pago ? '' :
+                        '<button class="ar-btn ar-btn-pular" data-id="' + cf.id + '" data-mes="' + mes + '" data-ano="' + ano + '" title="Não vou pagar este mês">' +
+                            '<i class="bi bi-skip-forward me-1"></i>Pular</button>') +
+                    '<button class="ar-btn ' + (pago ? 'ar-btn-pago' : 'ar-btn-pagar') + '" ' +
+                        'data-tipo="cf" data-id="' + cf.id + '" data-mes="' + mes + '" data-ano="' + ano + '" ' +
+                        'data-valor="' + cf.valor + '" data-pago="' + (pago ? 1 : 0) + '">' +
+                        (pago ? '<i class="bi bi-check-circle-fill me-1"></i>Pago' : '<i class="bi bi-check-circle me-1"></i>Pagar') +
+                    '</button>';
+            }
+            html += '<div class="ar-item' + (cf.pulado ? ' ar-item-pulado' : '') + '" data-id="' + cf.id + '">' +
                 '<div class="ar-item-info">' +
                     '<span class="ar-item-dot" style="background:' + (cf.cor || '#F97316') + ';"></span>' +
                     '<div>' +
                         '<div class="ar-item-nome">' + escHtml(cf.nome) + '</div>' +
-                        '<div class="ar-item-val">R$ ' + formatBR(cf.valor) + '</div>' +
+                        '<div class="ar-item-val">R$ ' + formatBR(cf.valor) +
+                            (cf.responsavel_nome && !cf.pulado ? ' · <i class="bi bi-person-fill"></i> ' + escHtml(cf.responsavel_nome) : '') + '</div>' +
                     '</div>' +
                 '</div>' +
-                '<button class="ar-btn ' + (pago ? 'ar-btn-pago' : 'ar-btn-pagar') + '" ' +
-                    'data-tipo="cf" data-id="' + cf.id + '" data-mes="' + mes + '" data-ano="' + ano + '" ' +
-                    'data-valor="' + cf.valor + '" data-pago="' + (pago ? 1 : 0) + '">' +
-                    (pago ? '<i class="bi bi-check-circle-fill me-1"></i>Pago' : '<i class="bi bi-check-circle me-1"></i>Pagar') +
-                '</button>' +
+                '<div class="d-flex gap-1">' + acoes + '</div>' +
             '</div>';
         });
         $('#arContasFixas').html(html);
@@ -924,7 +1031,7 @@ $(document).ready(function () {
 
         // ── Contas Fixas ──
         (cfItems || []).forEach(function (cf) {
-            if (cf.pago) return;
+            if (cf.pago || cf.pulado) return;
             var dias = parseInt(cf.dia_vencimento) - diaHoje;
             if (dias < 0) {
                 avisos.push({ nivel: 'danger', icon: 'bi-exclamation-triangle-fill',
@@ -978,8 +1085,25 @@ $(document).ready(function () {
         $('#avisosSection').html(html).show();
     }
 
+    // Conta fixa: "não vou pagar este mês" e desfazer
+    $(document).on('click', '.ar-btn-pular, .ar-desfaz-pulo', function () {
+        var $btn = $(this);
+        var pular = $btn.hasClass('ar-btn-pular');
+        var mes = $btn.data('mes'), ano = $btn.data('ano');
+        $btn.prop('disabled', true);
+        $.ajax({
+            type: 'POST', url: 'php/controllers/ContasFixasController.php',
+            data: { acao: pular ? 'pularMes' : 'desmarcarPago', id: $btn.data('id'), mes: mes, ano: ano }, dataType: 'json',
+            success: function () {
+                toastr.success(pular ? 'Conta fora deste mês.' : 'Conta de volta para este mês.');
+                carregaDashboard(mes, ano); // totais mudam
+            },
+            error: function () { toastr.error('Erro ao atualizar.'); $btn.prop('disabled', false); }
+        });
+    });
+
     // Handlers dos botões de ação rápida
-    $(document).on('click', '.ar-btn', function () {
+    $(document).on('click', '.ar-btn[data-tipo]', function () {
         var $btn  = $(this);
         var tipo  = $btn.data('tipo');
         var id    = $btn.data('id');
@@ -1032,9 +1156,8 @@ $(document).ready(function () {
     function formatBR(n) {
         return parseFloat(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-    function escHtml(str) {
-        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
+    // escHtml vem do header.php (global). Não redefinir aqui: a cópia local
+    // não escapava aspas simples e sombreava a versão completa.
 
     // Carrega categorias primeiro para o gráfico ter as cores corretas
     $.ajax({
@@ -1052,6 +1175,7 @@ $(document).ready(function () {
 
 <style>
 /* ── KPI Cards — 3 principais ── */
+.kpi-extra-valor { font-size: 1.15rem; font-weight: 700; line-height: 1.2; opacity: .85; }
 .kpi-card {
     height: 100%;
     border-left: 3px solid var(--kpi-accent, var(--cor-azul));
@@ -1121,6 +1245,11 @@ $(document).ready(function () {
 .ar-btn-pagar:hover { background: #EF4444; color: #fff; }
 .ar-btn-pago  { background: #22C55E22; color: #22C55E; }
 .ar-btn-pago:hover { background: #22C55E33; }
+.ar-btn-pular  { background: transparent; color: var(--cor-texto-off); border: 1px solid var(--cor-borda); }
+.ar-btn-pular:hover { color: #F59E0B; border-color: #F59E0B; }
+.ar-btn-pulado { background: #6B728022; color: var(--cor-texto-off); }
+.ar-btn-pulado:hover { background: #6B728044; }
+.ar-item-pulado .ar-item-nome, .ar-item-pulado .ar-item-val { text-decoration: line-through; opacity: .6; }
 
 /* ── Últimas despesas ── */
 .recente-item  { padding: 0.55rem 0; }

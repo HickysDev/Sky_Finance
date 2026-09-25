@@ -2,6 +2,7 @@
 
 include_once __DIR__ . '/../../conn/conn.php';
 include_once __DIR__ . '/ConfigModel.php';
+include_once __DIR__ . '/ContasFixasModel.php';
 
 class FinancasModel {
 
@@ -15,7 +16,8 @@ class FinancasModel {
         $conn   = Database::getConnection();
         $target = sprintf('%04d-%02d-01', $ano, $mes);
         $stmt   = $conn->prepare("
-            SELECT *, (mes IS NULL) AS recorrente
+            SELECT *, (mes IS NULL) AS recorrente,
+                   (ativo = 'S' OR (mes IS NULL AND inativado_em > :target2)) AS conta_no_mes
             FROM renda_mensal
             WHERE usuario_id = @uid
               AND (
@@ -26,10 +28,9 @@ class FinancasModel {
               )
             ORDER BY (mes IS NULL) DESC, vigencia_inicio DESC, ativo DESC, id DESC
         ");
-        $stmt->execute([':mes' => $mes, ':ano' => $ano, ':target' => $target]);
+        $stmt->execute([':mes' => $mes, ':ano' => $ano, ':target' => $target, ':target2' => $target]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-
     public function registrarMudancaRenda(int $id, string $novoValor, int $mesMudanca, int $anoMudanca): bool {
         $conn   = Database::getConnection();
         $target = sprintf('%04d-%02d-01', $anoMudanca, $mesMudanca);
@@ -104,7 +105,8 @@ class FinancasModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("
             UPDATE renda_mensal
-            SET ativo = IF(ativo = 'S', 'N', 'S')
+            SET inativado_em = IF(ativo = 'S', DATE_FORMAT(CURDATE(), '%Y-%m-01'), NULL),
+                ativo        = IF(ativo = 'S', 'N', 'S')
             WHERE id = :id AND usuario_id = @uid
         ");
         return $stmt->execute([':id' => $id]);
@@ -116,6 +118,12 @@ class FinancasModel {
         return $stmt->execute([':id' => $id]);
     }
 
+    /**
+     * Total gasto no mês. Mesma composição de GastosModel::buscarResumoMes()
+     * (débito + crédito + recorrentes + contas de pessoas + contas fixas) —
+     * antes faltavam contas_pessoa e contas_fixas aqui, e as duas telas
+     * mostravam "gasto do mês" diferente para o mesmo mês.
+     */
     public function totalGastosMes(int $mes, int $ano): float {
         if (ConfigModel::antesDoMarco($mes, $ano)) return 0.0;
         $conn = Database::getConnection();
@@ -149,8 +157,22 @@ class FinancasModel {
                 SELECT grl.valor AS v
                 FROM gastos_recorrentes_lancamentos grl
                 INNER JOIN gastos_recorrentes gr ON gr.id = grl.gasto_recorrente_id
-                WHERE gr.ativo = 'S' AND gr.usuario_id = @uid
+                WHERE gr.usuario_id = @uid
                   AND MONTH(grl.mes_referencia) = :m4 AND YEAR(grl.mes_referencia) = :a4
+
+                UNION ALL
+
+                SELECT cp.valor AS v
+                FROM contas_pessoa cp
+                WHERE cp.usuario_id = @uid
+                  AND MONTH(cp.data) = :m5 AND YEAR(cp.data) = :a5
+
+                UNION ALL
+
+                -- Contas fixas: mesma regra do dashboard (ContasFixasModel::sqlValeNoMes)
+                SELECT " . ContasFixasModel::sqlValorNoMes('cf', $mes, $ano) . " AS v
+                FROM contas_fixas cf
+                WHERE cf.usuario_id = @uid AND " . ContasFixasModel::sqlValeNoMes('cf', $mes, $ano) . "
             ) t
         ");
         $stmt->execute([
@@ -158,6 +180,7 @@ class FinancasModel {
             ':m2' => $mes, ':a2' => $ano,
             ':m3' => $mes, ':a3' => $ano,
             ':m4' => $mes, ':a4' => $ano,
+            ':m5' => $mes, ':a5' => $ano,
         ]);
         return (float) $stmt->fetchColumn();
     }

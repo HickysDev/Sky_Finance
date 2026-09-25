@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -rlnE \"SELECT |INSERT INTO|UPDATE |DELETE FROM\" php/views/ index.php)",
+      "Bash(grep -rlnE \"->query\\\\\\(|->prepare\\\\\\(|SELECT |INSERT INTO|UPDATE |DELETE FROM\" php/controllers/)",
+      "Bash(grep -rnE \"->query\\\\\\(|->prepare\\\\\\(|SELECT \" php/templates/)",
+      "Bash(grep -rnE \"usuario_id\\\\s*=\\\\s*1\\\\b|VALUES \\\\\\(1\\\\b\" php/ index.php login.php)",
+      "Bash(grep -nE '\\\\$cartoes' php/views/gerenciamento.php)",
+      "Bash(grep -nE 'Database::|conn->prepare|conn->query|getConnection|SELECT |FROM |\\\\$conn' php/views/financas.php)",
+      "Bash(grep -ivE 'usuario_id = @uid|WHERE id = \\\\?|\\\\$meuId|FROM usuarios|setAttribute|SET FOREIGN|DELETE FROM .\\\\$tabela|getConnection')",
+      "PowerShell(& \"C:\\\\xampp\\\\htdocs\\\\Sky_Finance\\\\sql\\\\backup_auto.bat\"; Write-Output \"ExitCode: $LASTEXITCODE\"; Write-Output \"=== Conteudo da pasta ===\"; if \\(Test-Path \"C:\\\\SkyFinanceBackups\"\\) { Get-ChildItem \"C:\\\\SkyFinanceBackups\" | Select-Object Name, Length | Format-Table -AutoSize; Write-Output \"--- log ---\"; Get-Content \"C:\\\\SkyFinanceBackups\\\\backup.log\" -ErrorAction SilentlyContinue } else { Write-Output \"Pasta C:\\\\SkyFinanceBackups NAO foi criada\" })"
+    ]
+  }
+}

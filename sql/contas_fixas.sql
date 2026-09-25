@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS contas_fixas (
     valor           DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     dia_vencimento  TINYINT NOT NULL DEFAULT 1,
     cor             VARCHAR(7) NOT NULL DEFAULT '#3B82F6',
-    ativo           TINYINT(1) NOT NULL DEFAULT 1,
+    ativo           CHAR(1) NOT NULL DEFAULT 'S',
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

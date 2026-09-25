@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS `gastos` (
   `metodo_pagamento` ENUM('Dinheiro','Débito','Crédito','Pix','Outro') NOT NULL,
   `cartao_id`        INT           NULL DEFAULT NULL,
   `responsavel_id`   INT           NULL DEFAULT NULL,
+  `recebido_em`      DATE          NULL DEFAULT NULL,
   `parcelado`        VARCHAR(1)    NULL DEFAULT 'N',
   `dataVencimento`   DATE          NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -161,6 +162,7 @@ CREATE TABLE IF NOT EXISTS `gastos_recorrentes_lancamentos` (
   `categoria_id`        INT           NULL DEFAULT NULL,
   `cartao_id`           INT           NULL DEFAULT NULL,
   `usuario_id`          INT           NULL DEFAULT NULL,
+  `recebido_em`         DATE          NULL DEFAULT NULL,
   `criado_em`           DATETIME      NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_rec_mes` (`gasto_recorrente_id`, `mes_referencia`),
@@ -179,6 +181,7 @@ CREATE TABLE IF NOT EXISTS `renda_mensal` (
   `tipo`            VARCHAR(50)   NOT NULL DEFAULT 'Salário',
   `recorrencia`     ENUM('Mensal','Quinzenal','Semanal','Anual','Único') NOT NULL DEFAULT 'Mensal',
   `ativo`           ENUM('S','N') NOT NULL DEFAULT 'S',
+  `inativado_em`    DATE          NULL DEFAULT NULL,
   `data_registro`   DATE          NOT NULL DEFAULT (CURDATE()),
   `usuario_id`      INT           NOT NULL,
   `mes`             TINYINT UNSIGNED  NULL DEFAULT NULL,
@@ -189,6 +192,12 @@ CREATE TABLE IF NOT EXISTS `renda_mensal` (
   KEY `usuario_id` (`usuario_id`),
   CONSTRAINT `renda_mensal_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Bancos criados antes das colunas novas (CREATE TABLE IF NOT EXISTS não as adiciona).
+ALTER TABLE `renda_mensal` ADD COLUMN IF NOT EXISTS `inativado_em` DATE NULL DEFAULT NULL AFTER `ativo`;
+ALTER TABLE `gastos` ADD COLUMN IF NOT EXISTS `recebido_em` DATE NULL DEFAULT NULL AFTER `responsavel_id`;
+ALTER TABLE `gastos_recorrentes_lancamentos` ADD COLUMN IF NOT EXISTS `recebido_em` DATE NULL DEFAULT NULL AFTER `usuario_id`;
+ALTER TABLE `responsaveis` ADD COLUMN IF NOT EXISTS `arquivado_em` DATE NULL DEFAULT NULL;
 
 -- ------------------------------------------------------------
 -- CONTAS DE RESPONSÁVEIS (dívidas por pessoa)
@@ -221,9 +230,15 @@ CREATE TABLE IF NOT EXISTS `contas_fixas` (
   `dia_vencimento` TINYINT       NOT NULL DEFAULT 1,
   `cor`            VARCHAR(7)    NOT NULL DEFAULT '#3B82F6',
   `ativo`          CHAR(1)       NOT NULL DEFAULT 'S',
+  `inativado_em`   DATE          NULL DEFAULT NULL,
   `created_at`     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Bancos criados antes da coluna acima (CREATE TABLE IF NOT EXISTS não a adiciona).
+ALTER TABLE `contas_fixas` ADD COLUMN IF NOT EXISTS `inativado_em` DATE NULL DEFAULT NULL AFTER `ativo`;
+ALTER TABLE `contas_fixas` ADD COLUMN IF NOT EXISTS `responsavel_id` INT NULL DEFAULT NULL AFTER `cor`;
+ALTER TABLE `contas_fixas` ADD COLUMN IF NOT EXISTS `arquivado_em` DATE NULL DEFAULT NULL AFTER `inativado_em`;
 
 -- ------------------------------------------------------------
 -- PAGAMENTOS DAS CONTAS FIXAS
@@ -236,11 +251,15 @@ CREATE TABLE IF NOT EXISTS `contas_fixas_pagamentos` (
   `ano`            SMALLINT      NOT NULL,
   `data_pagamento` DATE          NOT NULL,
   `valor_pago`     DECIMAL(10,2) NOT NULL,
+  `pulado`         CHAR(1)       NOT NULL DEFAULT 'N',
+  `responsavel_id` INT           NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_conta_mes_ano` (`conta_fixa_id`, `mes`, `ano`),
   CONSTRAINT `contas_fixas_pagamentos_ibfk_1`
     FOREIGN KEY (`conta_fixa_id`) REFERENCES `contas_fixas`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+ALTER TABLE `contas_fixas_pagamentos` ADD COLUMN IF NOT EXISTS `pulado` CHAR(1) NOT NULL DEFAULT 'N' AFTER `valor_pago`;
+ALTER TABLE `contas_fixas_pagamentos` ADD COLUMN IF NOT EXISTS `responsavel_id` INT NULL DEFAULT NULL AFTER `pulado`;
 
 -- ------------------------------------------------------------
 -- FATURAS PAGAS (cartão de crédito)
@@ -275,8 +294,11 @@ CREATE TABLE IF NOT EXISTS `cofrinhos` (
   `cdi_taxa_anual` DECIMAL(5,2)  NULL DEFAULT NULL,
   `cor`            VARCHAR(7)    NOT NULL DEFAULT '#3B82F6',
   `created_at`     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `arquivado_em`   DATE          NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE `cofrinhos` ADD COLUMN IF NOT EXISTS `arquivado_em` DATE NULL DEFAULT NULL;
 
 -- ------------------------------------------------------------
 -- APORTES DOS COFRINHOS

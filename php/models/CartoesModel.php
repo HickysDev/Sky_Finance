@@ -40,7 +40,7 @@ class CartaoModel {
             ':fechamento'=> (int) $cartao['dataFechamento'],
             ':vencimento'=> (int) $cartao['dataVencimento'],
             ':cor'       => $this->parseCor($cartao['cor'] ?? '#3B82F6'),
-            ':auto'      => isset($cartao['fechamentoAuto']) && $cartao['fechamentoAuto'] ? 'S' : 'N',
+            ':auto'      => ($cartao['fechamentoAuto'] ?? 'N') === 'S' ? 'S' : 'N', // front envia 'S'/'N'; a string 'N' é truthy e virava 'S'
         ]);
     }
 
@@ -60,7 +60,7 @@ class CartaoModel {
             ':fechamento'=> (int) $cartao['dataFechamento'],
             ':vencimento'=> (int) $cartao['dataVencimento'],
             ':cor'       => $this->parseCor($cartao['cor'] ?? '#3B82F6'),
-            ':auto'      => isset($cartao['fechamentoAuto']) && $cartao['fechamentoAuto'] ? 'S' : 'N',
+            ':auto'      => ($cartao['fechamentoAuto'] ?? 'N') === 'S' ? 'S' : 'N', // front envia 'S'/'N'; a string 'N' é truthy e virava 'S'
             ':cartaoId'  => $this->getId(),
         ]);
     }

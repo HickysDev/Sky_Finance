@@ -127,9 +127,22 @@ $mesAtual = date('n');
             resetCatSelect();
         });
 
-        $('#modalAdiciona').on('hidden.bs.modal', function () { _modoEditDeb = false; _pendingRepetirDeb = null; limpaErrosModal(); });
+        // Volta o modal ao modo "adicionar": sem isto, depois de uma edição o próximo
+        // lançamento abria com o botão de editar e sobrescrevia a despesa editada.
+        $('#modalAdiciona').on('hidden.bs.modal', function () {
+            _modoEditDeb = false;
+            _pendingRepetirDeb = null;
+            $('#adicionarDespesa').show();
+            $('#editarDespesa').hide();
+            $('#gastoId').val('');
+            $('#descricao').val('');
+            limpaErrosModal();
+        });
+
+        var _respEditDeb = '';
 
         $('#modalAdiciona').on('shown.bs.modal', function () {
+            if (_modoEditDeb) { setResponsavelModal(_respEditDeb); return; }
             if (!_pendingRepetirDeb) return;
             var d = _pendingRepetirDeb;
             _pendingRepetirDeb = null;
@@ -327,6 +340,7 @@ $mesAtual = date('n');
         $(document).on('click', '.btn-editar-gasto', function () {
             var $btn = $(this);
             _modoEditDeb = true;
+            _respEditDeb = $btn.data('responsavel') || '';
 
             // Alterna botões no modal
             $('#adicionarDespesa').hide();
@@ -392,6 +406,7 @@ $mesAtual = date('n');
                     metodo:    $('#metodo').val(),
                     cartao:    $('#cartao').val() || '',
                     data:      $('#data').val(),
+                    responsavel: $('#responsavel').val() || '',
                 },
                 dataType: 'json',
                 success: function () {
@@ -424,7 +439,7 @@ $mesAtual = date('n');
                     let cor = cartao.cor || '#3B82F6';
                     html += `<div class="cartao-mini-modal" data-id="${cartao.id}" style="--cartao-cor:${cor};">
                         <i class="bi bi-credit-card-fill" style="color:${cor};"></i>
-                        ${cartao.nome_cartao}
+                        ${escHtml(cartao.nome_cartao)}
                     </div>`;
                 });
             }
@@ -492,6 +507,7 @@ $mesAtual = date('n');
                                         data-metodo="${gasto.metodo_pagamento}"
                                         data-cartao="${gasto.cartao_id || ''}"
                                         data-data="${gasto.data_gasto}"
+                                        data-responsavel="${gasto.responsavel_id || ''}"
                                         title="Editar">
                                         <i class="bi bi-pencil-fill" style="font-size:.75rem;"></i>
                                     </button>
