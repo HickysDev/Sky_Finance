@@ -249,14 +249,21 @@ $conn = Database::getConnection();
       digits = parseToDigits(valorInicial);
       render();
 
+      // Com texto selecionado, digitar substitui o valor (em vez de continuar dele)
+      function temSelecao() {
+          try { return el.selectionStart !== el.selectionEnd; } catch (_) { return false; }
+      }
+
       el.addEventListener('keydown', function (e) {
+          if (e.ctrlKey || e.metaKey || e.altKey) return; // Ctrl+A, Ctrl+C etc.
           if (e.key >= '0' && e.key <= '9') {
               e.preventDefault();
+              if (temSelecao()) digits = '';
               if (digits.length < 13) digits += e.key;
               render();
           } else if (e.key === 'Backspace') {
               e.preventDefault();
-              digits = digits.slice(0, -1);
+              digits = temSelecao() ? '' : digits.slice(0, -1);
               render();
           } else if (e.key === 'Delete') {
               e.preventDefault();
