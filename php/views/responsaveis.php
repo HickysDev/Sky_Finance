@@ -13,9 +13,11 @@
                 <option value="medeve">Quem me deve mais</option>
                 <option value="eudevo">A quem devo mais</option>
             </select>
-            <button class="btn btn-outline-secondary btn-sm" id="btnMesAnterior"><i class="bi bi-chevron-left"></i></button>
-            <span class="titulo fs-5" id="mesAnoDisplay" style="min-width:130px;text-align:center;"></span>
-            <button class="btn btn-outline-secondary btn-sm" id="btnMesSeguinte"><i class="bi bi-chevron-right"></i></button>
+            <div class="d-flex align-items-center gap-1 grupo-mes">
+                <button class="btn btn-outline-secondary btn-sm" id="btnMesAnterior" aria-label="Mês anterior"><i class="bi bi-chevron-left"></i></button>
+                <span class="titulo fs-5" id="mesAnoDisplay" style="min-width:130px;text-align:center;"></span>
+                <button class="btn btn-outline-secondary btn-sm" id="btnMesSeguinte" aria-label="Próximo mês"><i class="bi bi-chevron-right"></i></button>
+            </div>
             <a href="gerenciamento.php?tab=Responsaveis" class="btn btn-gerenciar btn-sm ms-2">
                 <i class="bi bi-gear me-1"></i>Gerenciar
             </a>

@@ -742,7 +742,7 @@ $mesAtual = date('n');
                                 <span class="titulo fs-fatura-val" style="color:${cor};">R$ ${totalCartao}</span>
                             </div>
                             <div class="table-responsive">
-                            <table id="faturaTabela_${idCartao}" class="table table-hover table-centro" style="width:100%;">
+                            <table id="faturaTabela_${idCartao}" class="table table-hover table-centro tabela-cards" style="width:100%;">
                                 <thead class="bg-secundary">
                                     <tr>
                                         <th>Produto</th>

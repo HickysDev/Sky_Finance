@@ -474,7 +474,7 @@ $(document).ready(function () {
                 });
                 $('#parcTermTotal').text('R$ ' + formatBR(total));
                 $('#parcTermLista').html(
-                    '<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:0.85rem;">' +
+                    '<div class="table-responsive"><table class="table table-hover mb-0 tabela-cards" style="font-size:0.85rem;">' +
                         '<thead><tr><th>Descrição</th><th>Cartão</th><th class="text-center">Parcela</th><th>Compra</th><th class="text-end">Valor</th></tr></thead>' +
                         '<tbody>' + rows + '</tbody>' +
                     '</table></div>'
@@ -675,7 +675,7 @@ $(document).ready(function () {
                         '<span class="titulo" style="color:var(--cor-azul);font-size:1.05rem;">Total: R$ ' + formatBR(total) + '</span>' +
                     '</div>' +
                     '<div class="table-responsive">' +
-                    '<table class="table table-hover mb-0" style="font-size:0.85rem;">' +
+                    '<table class="table table-hover mb-0 tabela-cards" style="font-size:0.85rem;">' +
                         '<thead><tr><th>Descrição</th><th>Método</th><th class="text-end">Valor</th><th>Data</th></tr></thead>' +
                         '<tbody>' + rows + '</tbody>' +
                     '</table></div>'
@@ -858,7 +858,7 @@ $(document).ready(function () {
                     '<div class="collapse" id="' + collapseId + '">' +
                         '<div class="fdc-body">' +
                             '<div class="table-responsive">' +
-                                '<table class="table table-hover mb-0" style="font-size:.82rem;">' +
+                                '<table class="table table-hover mb-0 tabela-cards" style="font-size:.82rem;">' +
                                     '<thead><tr>' +
                                         '<th>Descrição</th><th>Categoria</th><th>Parcela</th><th>Valor</th><th>Data</th>' +
                                     '</tr></thead>' +

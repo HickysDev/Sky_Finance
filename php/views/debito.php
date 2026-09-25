@@ -56,7 +56,7 @@ $mesAtual = date('n');
         </div>
 
         <div class="table-responsive" id="tabelaWrapper" style="display:none;">
-            <table id="gastosMes" class="table table-hover table-centro" style="width:100%;">
+            <table id="gastosMes" class="table table-hover table-centro tabela-cards" style="width:100%;">
                 <thead class="bg-secundary">
                     <tr>
                         <th>Produto</th>

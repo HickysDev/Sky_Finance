@@ -25,14 +25,14 @@
 
                     <!-- Linha 1: Descrição + Valor -->
                     <div class="row g-3 mb-3">
-                        <div class="col-7">
+                        <div class="col-12 col-sm-7">
                             <label for="descricao" class="form-label">Descrição</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-pencil-fill"></i></span>
                                 <input type="text" class="form-control" id="descricao" placeholder="Ex: Mercado">
                             </div>
                         </div>
-                        <div class="col-5">
+                        <div class="col-12 col-sm-5">
                             <label for="valor" class="form-label">Valor</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-cash-coin"></i></span>
@@ -43,7 +43,7 @@
 
                     <!-- Linha 2: Categoria + Data -->
                     <div class="row g-3 mb-3">
-                        <div class="col-7">
+                        <div class="col-12 col-sm-7">
                             <label for="categoria" class="form-label">Categoria</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-tag-fill"></i></span>
@@ -64,7 +64,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="col-5" id="dataWrapper">
+                        <div class="col-12 col-sm-5" id="dataWrapper">
                             <label for="data" class="form-label">Data</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-calendar3"></i></span>

@@ -156,7 +156,7 @@ require_once __DIR__ . '/../templates/header.php';
           <hr>
           <div class="d-flex gap-3 flex-wrap mb-3" id="simDesejoResumo"></div>
           <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
+            <table class="table table-sm align-middle mb-0 tabela-cards">
               <thead>
                 <tr style="font-size:.78rem;color:var(--cor-texto-off);">
                   <th>Fatura</th>

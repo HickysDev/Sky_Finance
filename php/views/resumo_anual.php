@@ -83,7 +83,7 @@ $anoAtual = (int) date('Y');
                 <h6 class="titulo fs-secao-titulo mb-3">
                     <i class="bi bi-table titulo-azul me-2"></i>Resumo Mensal
                 </h6>
-                <div class="table-responsive">
+                <div class="table-responsive tabela-rolagem">
                     <table class="table table-hover mb-0" style="font-size:0.83rem;" id="tabelaMensal">
                         <thead>
                             <tr>
@@ -244,9 +244,11 @@ $(document).ready(function () {
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
+                // Toque em qualquer ponto da coluna mostra o mês inteiro
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: {
-                        labels: { color: '#9CA3AF', font: { size: 12 }, boxWidth: 14, padding: 16 }
+                        labels: { color: '#9CA3AF', font: { size: 12 }, boxWidth: telaPequena() ? 10 : 14, padding: telaPequena() ? 10 : 16 }
                     },
                     tooltip: {
                         backgroundColor: '#2B2C3B', titleColor: '#F0F0F5', bodyColor: '#9CA3AF',
@@ -255,15 +257,24 @@ $(document).ready(function () {
                     }
                 },
                 scales: {
-                    x: { ticks: { color: '#9CA3AF' }, grid: { color: '#3F3F4622' } },
+                    x: { ticks: { color: '#9CA3AF', maxRotation: telaPequena() ? 0 : 50, autoSkipPadding: 6 }, grid: { color: '#3F3F4622' } },
                     y: {
-                        ticks: { color: '#9CA3AF', callback: v => 'R$ ' + formatBR(v) },
+                        ticks: { color: '#9CA3AF', callback: v => eixoValor(v) },
                         grid: { color: '#3F3F4644' },
                         beginAtZero: true,
                     }
                 }
             }
         });
+    }
+
+    // Celular: eixo Y compacto ("R$ 9 mil") e rótulos do eixo X sem rotação
+    function telaPequena() { return window.innerWidth < 576; }
+    function eixoValor(v) {
+        if (!telaPequena()) return 'R$ ' + formatBR(v);
+        var a = Math.abs(v);
+        if (a >= 1000) return (v < 0 ? '−' : '') + (a / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil';
+        return String(Math.round(v));
     }
 
     // ─── GRÁFICO CATEGORIAS ──────────────────────────────────────────────────
@@ -347,6 +358,8 @@ $(document).ready(function () {
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
+                // Toque em qualquer ponto da coluna mostra o mês inteiro
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
@@ -361,9 +374,9 @@ $(document).ready(function () {
                     }
                 },
                 scales: {
-                    x: { ticks: { color: '#9CA3AF' }, grid: { color: '#3F3F4622' } },
+                    x: { ticks: { color: '#9CA3AF', maxRotation: telaPequena() ? 0 : 50, autoSkipPadding: 6 }, grid: { color: '#3F3F4622' } },
                     y: {
-                        ticks: { color: '#9CA3AF', callback: v => 'R$ ' + formatBR(v) },
+                        ticks: { color: '#9CA3AF', callback: v => eixoValor(v) },
                         grid: { color: '#3F3F4644' },
                     }
                 }

@@ -141,7 +141,7 @@
             <div class="painel mb-4" id="simTabelaWrap" style="display:none;">
                 <h6 class="titulo mb-3"><i class="bi bi-calendar3 titulo-azul me-2"></i>Impacto nas Faturas</h6>
                 <div class="table-responsive">
-                    <table class="table table-borderless align-middle">
+                    <table class="table table-borderless align-middle tabela-cards">
                         <thead>
                             <tr style="font-size:0.78rem;color:var(--cor-texto-off);border-bottom:1px solid var(--cor-borda);">
                                 <th>Mês</th>
@@ -165,7 +165,7 @@
                             <h6 class="titulo mb-3" style="color:#3B82F6;"><i class="bi bi-calendar3 me-2"></i>Cenário A</h6>
                             <div id="simComparLabelA" class="mb-2" style="font-size:0.8rem;color:var(--cor-texto-off);"></div>
                             <div class="table-responsive">
-                                <table class="table table-borderless align-middle" style="font-size:0.82rem;">
+                                <table class="table table-borderless align-middle tabela-cards" style="font-size:0.82rem;">
                                     <thead>
                                         <tr style="font-size:0.75rem;color:var(--cor-texto-off);border-bottom:1px solid var(--cor-borda);">
                                             <th>Mês</th><th class="text-end">Atual</th><th class="text-end" style="color:#3B82F6;">+ Parcela</th><th class="text-end">Total</th>
@@ -181,7 +181,7 @@
                             <h6 class="titulo mb-3" style="color:#10B981;"><i class="bi bi-calendar3 me-2"></i>Cenário B</h6>
                             <div id="simComparLabelB" class="mb-2" style="font-size:0.8rem;color:var(--cor-texto-off);"></div>
                             <div class="table-responsive">
-                                <table class="table table-borderless align-middle" style="font-size:0.82rem;">
+                                <table class="table table-borderless align-middle tabela-cards" style="font-size:0.82rem;">
                                     <thead>
                                         <tr style="font-size:0.75rem;color:var(--cor-texto-off);border-bottom:1px solid var(--cor-borda);">
                                             <th>Mês</th><th class="text-end">Atual</th><th class="text-end" style="color:#10B981;">+ Parcela</th><th class="text-end">Total</th>

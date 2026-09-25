@@ -494,15 +494,14 @@ $navGrupos = [
       <span>Sky Finance</span>
     </a>
 
-    <!-- Toggler mobile -->
-    <button class="navbar-toggler-sky ms-auto" type="button"
-      data-bs-toggle="collapse" data-bs-target="#navbarNav"
-      aria-controls="navbarNav" aria-expanded="false">
-      <i class="bi bi-list"></i>
-    </button>
-
-    <!-- Links -->
-    <div class="navbar-collapse collapse" id="navbarNav" style="flex:1;display:flex;align-items:center;">
+    <!-- Links: barra no desktop; gaveta lateral no celular/tablet (< 992px) -->
+    <div class="nav-drawer" id="navbarNav" aria-label="Menu principal">
+      <div class="nav-drawer-topo">
+        <span class="titulo">Menu</span>
+        <button type="button" class="nav-drawer-fechar" id="navDrawerFechar" aria-label="Fechar menu">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
       <ul class="nav-sky">
 
         <?php foreach ($navGrupos as $grupo => $links): ?>
@@ -535,56 +534,62 @@ $navGrupos = [
 
       </ul>
 
-      <!-- Usuário -->
-      <?php
-        $navFoto = null;
-        try {
-          $sNav = $conn->prepare("SELECT foto FROM usuarios WHERE id = ?");
-          $sNav->execute([(int)($_SESSION['usuario_id'] ?? 0)]);
-          $navFoto = $sNav->fetchColumn() ?: null;
-        } catch (Exception $e) {}
-      ?>
-      <div class="dropdown nav-user-dropdown">
-        <button class="nav-avatar nav-avatar-toggle" id="navUserDropdown"
-                data-bs-toggle="dropdown" aria-expanded="false">
-          <?php if ($navFoto): ?>
-            <img src="<?= BASE_URL ?>/src/img/avatars/<?= htmlspecialchars($navFoto) ?>" alt="avatar" class="nav-avatar-img">
-          <?php else: ?>
-            <span><?= strtoupper(substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?></span>
-          <?php endif; ?>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end nav-user-menu">
-          <li class="nav-user-menu-header">
-            <strong><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></strong>
-          </li>
-          <li><hr class="dropdown-divider"></li>
-          <li>
-            <a class="dropdown-item" href="<?= BASE_URL ?>/php/views/gerenciamento.php?tab=Conta">
-              <i class="bi bi-person-gear me-2"></i>Minha conta
-            </a>
-          </li>
-          <li>
-            <button type="button" class="dropdown-item" id="btnToggleTheme">
-              <i class="bi bi-sun-fill me-2" id="iconeTheme"></i>
-              <span id="labelTheme">Modo claro</span>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="dropdown-item" id="btnTemaGatos">
-              <i class="bi bi-stars me-2" id="iconeGatos"></i>
-              <span id="labelGatos">Gatos espaciais</span>
-            </button>
-          </li>
-          <li><hr class="dropdown-divider"></li>
-          <li>
-            <a class="dropdown-item text-danger" href="<?= BASE_URL ?>/logout.php">
-              <i class="bi bi-box-arrow-right me-2"></i>Sair
-            </a>
-          </li>
-        </ul>
-      </div>
     </div>
+    <!-- Usuário -->
+    <?php
+      $navFoto = null;
+      try {
+        $sNav = $conn->prepare("SELECT foto FROM usuarios WHERE id = ?");
+        $sNav->execute([(int)($_SESSION['usuario_id'] ?? 0)]);
+        $navFoto = $sNav->fetchColumn() ?: null;
+      } catch (Exception $e) {}
+    ?>
+    <div class="dropdown nav-user-dropdown">
+      <button class="nav-avatar nav-avatar-toggle" id="navUserDropdown"
+              data-bs-toggle="dropdown" aria-expanded="false">
+        <?php if ($navFoto): ?>
+          <img src="<?= BASE_URL ?>/src/img/avatars/<?= htmlspecialchars($navFoto) ?>" alt="avatar" class="nav-avatar-img">
+        <?php else: ?>
+          <span><?= strtoupper(substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?></span>
+        <?php endif; ?>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end nav-user-menu">
+        <li class="nav-user-menu-header">
+          <strong><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></strong>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+          <a class="dropdown-item" href="<?= BASE_URL ?>/php/views/gerenciamento.php?tab=Conta">
+            <i class="bi bi-person-gear me-2"></i>Minha conta
+          </a>
+        </li>
+        <li>
+          <button type="button" class="dropdown-item" id="btnToggleTheme">
+            <i class="bi bi-sun-fill me-2" id="iconeTheme"></i>
+            <span id="labelTheme">Modo claro</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="dropdown-item" id="btnTemaGatos">
+            <i class="bi bi-stars me-2" id="iconeGatos"></i>
+            <span id="labelGatos">Gatos espaciais</span>
+          </button>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+          <a class="dropdown-item text-danger" href="<?= BASE_URL ?>/logout.php">
+            <i class="bi bi-box-arrow-right me-2"></i>Sair
+          </a>
+        </li>
+      </ul>
+    </div>
+    <!-- Botão do menu (só < 992px) -->
+    <button class="navbar-toggler-sky" type="button" id="navDrawerAbrir"
+      aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu">
+      <i class="bi bi-list"></i>
+    </button>
   </nav>
+  <div class="nav-drawer-fundo" id="navDrawerFundo" aria-hidden="true"></div>
 </header>
 
 <script>
@@ -638,5 +643,66 @@ $navGrupos = [
 })();
 </script>
 
+<script>
+// Gaveta do menu (celular/tablet): abre no ☰, fecha no X, no fundo, no Esc ou ao navegar
+(function () {
+  var body = document.body;
+  var abrir = document.getElementById('navDrawerAbrir');
+  function set(aberta) {
+    body.classList.toggle('nav-aberta', aberta);
+    if (abrir) abrir.setAttribute('aria-expanded', aberta ? 'true' : 'false');
+  }
+  if (abrir) abrir.addEventListener('click', function () { set(!body.classList.contains('nav-aberta')); });
+  ['navDrawerFechar', 'navDrawerFundo'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', function () { set(false); });
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') set(false); });
+  document.querySelectorAll('#navbarNav .nav-link-sky').forEach(function (a) {
+    a.addEventListener('click', function () { set(false); });
+  });
+  window.addEventListener('resize', function () { if (window.innerWidth >= 992) set(false); });
+})();
+</script>
+<script>
+// Tabelas responsivas:
+//  - table.tabela-cards: no celular cada linha vira um cartão; o rótulo de cada
+//    célula (data-label) vem do cabeçalho da coluna. Preenchido automaticamente,
+//    inclusive em tabelas montadas depois via AJAX/DataTables.
+//  - .tabela-rolagem: rolagem horizontal com sombra indicando que há mais conteúdo.
+(function () {
+  function rotula(tabela) {
+    var ths = tabela.querySelectorAll('thead th');
+    if (!ths.length) return;
+    var nomes = Array.prototype.map.call(ths, function (th) { return th.textContent.trim(); });
+    tabela.querySelectorAll('tbody tr').forEach(function (tr) {
+      Array.prototype.forEach.call(tr.children, function (td, i) {
+        if (!td.hasAttribute('data-label')) td.setAttribute('data-label', nomes[i] || '');
+      });
+    });
+  }
+  // A sombra fica no pai (não rola junto com a tabela)
+  function sombra(w) {
+    var pai = w.parentElement;
+    if (!pai) return;
+    pai.classList.add('tabela-rolagem-pai');
+    pai.classList.toggle('tem-mais-dir', w.scrollLeft + w.clientWidth < w.scrollWidth - 2);
+  }
+  function varre() {
+    document.querySelectorAll('table.tabela-cards').forEach(rotula);
+    document.querySelectorAll('.tabela-rolagem').forEach(function (w) {
+      if (!w._rolagem) { w._rolagem = true; w.addEventListener('scroll', function () { sombra(w); }, { passive: true }); }
+      sombra(w);
+    });
+  }
+  var t = null;
+  function agenda() { clearTimeout(t); t = setTimeout(varre, 60); }
+  document.addEventListener('DOMContentLoaded', function () {
+    varre();
+    new MutationObserver(agenda).observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', agenda);
+  });
+})();
+</script>
 <main>
   <div class="corpo-site">

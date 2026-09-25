@@ -87,7 +87,7 @@ $tipoDespesa = 'recorrente';
                 </button>
             </div>
             <div class="table-responsive">
-                <table class="table table-hover mb-0" id="recorrentesTable" style="font-size:0.88rem;">
+                <table class="table table-hover mb-0 tabela-cards" id="recorrentesTable" style="font-size:0.88rem;">
                     <thead>
                         <tr>
                             <th>Nome</th>
@@ -1575,7 +1575,7 @@ function buscaUsuarios() {
                 $('#listaUsuarios').html('<p style="color:var(--cor-texto-off);font-size:0.86rem;">Nenhum usuário.</p>');
                 return;
             }
-            var html = '<table class="table table-dark table-sm table-hover mb-0" style="font-size:0.84rem;">' +
+            var html = '<table class="table table-dark table-sm table-hover mb-0 tabela-cards" style="font-size:0.84rem;">' +
                        '<thead><tr><th>Nome</th><th>E-mail</th><th>Último login</th><th></th></tr></thead><tbody>';
             $.each(data, function (_, u) {
                 var login = u.ultimo_login ? moment(u.ultimo_login).format('DD/MM/YY HH:mm') : '—';

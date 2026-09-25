@@ -571,33 +571,104 @@ h1, h2, h3, h4, h5 {
 }
 .btn-logout:hover { color: var(--cor-perigo); }
 
-@media (max-width: 991px) {
+/* Menu: barra no desktop (>= 992px); gaveta lateral no celular/tablet */
+.nav-drawer { flex: 1; display: flex; align-items: center; min-width: 0; }
+.nav-drawer-topo, .nav-drawer-fundo { display: none; }
+
+@media (max-width: 991.98px) {
   .navbar-sky {
     padding: 0 1rem;
-    flex-wrap: wrap;
+    gap: .6rem;
+    /* backdrop-filter criaria um novo "containing block" e prenderia a
+       gaveta (position: fixed) dentro da barra */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(35, 36, 50, 0.97);
+    position: sticky; top: 0;
   }
-  .navbar-brand-sky { flex: 1; }
-  .navbar-collapse {
-    width: 100%;
-    order: 3;
+  .navbar-brand-sky { flex: 1; min-width: 0; }
+  .nav-user-dropdown { margin-left: 0; }
+  .nav-avatar-toggle { width: 40px; height: 40px; }
+  .navbar-toggler-sky {
+    width: 44px; height: 44px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
   }
+
+  .nav-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: min(300px, 84vw);
+    flex-direction: column; align-items: stretch;
+    background: #23243A;
+    border-left: 1px solid var(--cor-borda);
+    box-shadow: -8px 0 24px rgba(0,0,0,.45);
+    transform: translateX(100%);
+    transition: transform .25s ease;
+    z-index: 1060;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 0 1rem;
+  }
+  body.nav-aberta .nav-drawer { transform: translateX(0); }
+  /* A barra (sticky, z-index 10) cria um contexto de empilhamento: com a gaveta
+     aberta ela sobe acima do fundo escuro, senão a gaveta ficaria escurecida */
+  body.nav-aberta .navbar-sky { z-index: 1060; }
+  body.nav-aberta { overflow: hidden; }
+
+  .nav-drawer-topo {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .75rem 1rem;
+    border-bottom: 1px solid var(--cor-borda);
+    font-size: 1.4rem; color: var(--cor-texto);
+    position: sticky; top: 0; background: inherit; z-index: 1;
+  }
+  .nav-drawer-fechar {
+    width: 44px; height: 44px;
+    border: none; background: transparent; color: var(--cor-texto-sec);
+    font-size: 1.2rem; border-radius: var(--radius-sm);
+  }
+  .nav-drawer-fechar:hover { background: rgba(255,255,255,.06); color: var(--cor-texto); }
+
+  .nav-drawer-fundo {
+    display: block;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.55);
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s ease;
+    z-index: 1055;
+  }
+  body.nav-aberta .nav-drawer-fundo { opacity: 1; pointer-events: auto; }
+
   .nav-sky {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 2px;
-    padding: 0.5rem 0;
-    border-top: 1px solid var(--cor-borda);
-    width: 100%;
+    flex-direction: column; align-items: stretch;
+    gap: 2px; padding: .5rem; flex: none;
   }
-  .nav-sep { display: none; }
+  .nav-sep {
+    display: block; width: auto; height: 1px;
+    margin: .4rem .5rem; background: var(--cor-borda);
+  }
   .nav-sky .nav-link-sky {
-    flex-direction: row;
-    font-size: 0.78rem;
-    padding: 6px 10px;
+    flex-direction: row; gap: .8rem;
+    min-height: 48px; padding: 0 1rem;
+    font-size: .95rem; letter-spacing: 0;
   }
-  .nav-sky .nav-link-sky .nav-icon { font-size: 0.9rem; }
-  .nav-user-dropdown { margin-left: auto; }
+  .nav-sky .nav-link-sky .nav-icon { font-size: 1.15rem; width: 1.3rem; text-align: center; }
+  .nav-sky .nav-link-sky.ativo { background: rgba(59,130,246,.12); }
+  .nav-sky .nav-link-sky.ativo::after {
+    left: 0; top: 10px; bottom: 10px; width: 3px; height: auto;
+    border-radius: 0 2px 2px 0;
+  }
 }
+
+html.light-mode .nav-drawer { background: #F8FAFC; }
+html.light-mode .nav-drawer-topo { color: var(--cor-texto); }
+@media (max-width: 991.98px) {
+  html.light-mode .nav-drawer .nav-link-sky.ativo { background: rgba(59,130,246,.12) !important; color: var(--cor-azul) !important; }
+}
+@media (max-width: 991.98px) {
+  html.light-mode .navbar-sky { background: rgba(248, 250, 252, 0.98) !important; }
+}
+
 
 /* ─── 5. PAINEL ─────────────────────────────────── */
 .painel {
@@ -1598,4 +1669,205 @@ table.dataTable td.dt-type-date {
     background: var(--cor-azul);
     border-color: var(--cor-azul);
     color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   22. RESPONSIVO — celular (< 640px) e tablet (640–991px)
+   Breakpoints alinhados ao Bootstrap do projeto: 576 / 768 / 992.
+   Abaixo de 640px as tabelas de lançamentos viram cartões; no tablet
+   continuam tabela.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Cards de KPI: flex igual só no desktop; abaixo disso vale a grade col-* ── */
+@media (max-width: 991.98px) {
+  .kpi-col { flex: 0 0 auto !important; }
+}
+.kpi-sm-label, .kpi-label {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.kpi-valor, .kpi-extra-valor, .kpi-sm-valor { white-space: nowrap; }
+
+/* Gráficos nunca passam da largura do painel */
+canvas { max-width: 100%; }
+
+/* ── Tabela com rolagem horizontal + sombra indicando mais conteúdo ──
+   A sombra aparece do lado em que ainda há colunas (classes tem-mais-*
+   ligadas pelo script do header). */
+.tabela-rolagem {
+  position: relative;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tabela-rolagem table td, .tabela-rolagem table th { white-space: nowrap; }
+@media (max-width: 767.98px) {
+  /* Primeira coluna (ex.: mês) fica fixa enquanto rola */
+  .tabela-rolagem table th:first-child,
+  .tabela-rolagem table td:first-child {
+    position: sticky; left: 0; z-index: 2;
+    background: #2B2C3B;
+    box-shadow: 6px 0 8px -6px rgba(0,0,0,.6);
+  }
+  html.tema-gatos .tabela-rolagem table th:first-child,
+  html.tema-gatos .tabela-rolagem table td:first-child { background: #26283C; }
+  html.light-mode .tabela-rolagem table th:first-child,
+  html.light-mode .tabela-rolagem table td:first-child { background: #fff; box-shadow: 6px 0 8px -6px rgba(0,0,0,.15); }
+}
+.tabela-rolagem-pai { position: relative; }
+.tabela-rolagem-pai::after {
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 28px;
+  background: linear-gradient(to left, rgba(0,0,0,.45), transparent);
+  pointer-events: none; opacity: 0; transition: opacity .2s; border-radius: 0 8px 8px 0;
+}
+.tabela-rolagem-pai.tem-mais-dir::after { opacity: 1; }
+
+/* ── Celular: tabelas de lançamentos viram cartões empilhados ── */
+@media (max-width: 639.98px) {
+  table.tabela-cards { display: block; width: 100% !important; border-collapse: separate; border-spacing: 0; }
+  table.tabela-cards thead { display: none; }
+  table.tabela-cards tbody,
+  table.tabela-cards tr,
+  table.tabela-cards td { display: block; width: 100% !important; }
+
+  table.tabela-cards tr {
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--cor-borda);
+    border-radius: 10px;
+    padding: .55rem .8rem;
+    margin-bottom: .6rem;
+  }
+  table.tabela-cards td {
+    display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+    padding: .28rem 0 !important;
+    border: none !important;
+    background: transparent !important;
+    text-align: right !important;
+    overflow-wrap: anywhere;
+  }
+  table.tabela-cards td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    text-align: left;
+    font-size: .74rem; font-weight: 500;
+    color: var(--cor-texto-off);
+  }
+  table.tabela-cards td[data-label=""]::before { content: none; }
+  table.tabela-cards td[data-label=""] { justify-content: flex-end; }
+
+  /* 1ª célula = título do cartão */
+  table.tabela-cards td:first-child {
+    justify-content: flex-start;
+    text-align: left !important;
+    font-size: .95rem; font-weight: 600; color: var(--cor-texto);
+    padding-bottom: .45rem !important;
+    border-bottom: 1px solid var(--cor-borda) !important;
+    margin-bottom: .2rem;
+  }
+  table.tabela-cards td:first-child::before { content: none; }
+
+  /* Linha "vazia" (ex.: DataTables sem registros) */
+  table.tabela-cards td.dt-empty,
+  table.tabela-cards td[colspan] { justify-content: center; text-align: center !important; border-bottom: none !important; }
+  table.tabela-cards td.dt-empty::before,
+  table.tabela-cards td[colspan]::before { content: none; }
+
+  /* Seleção para soma (crédito/à vista): destaque no cartão todo */
+  table.tabela-cards tr.linha-selecionada {
+    border-color: var(--cor-azul);
+    background: rgba(59,130,246,.12);
+  }
+  table.tabela-cards tr.linha-selecionada td:first-child,
+  table.tabela-cards tr.linha-clicavel:not(.linha-selecionada) td:first-child { border-left: none !important; }
+
+  /* Botões de ação dentro dos cartões com área de toque confortável */
+  table.tabela-cards td .btn { min-width: 40px; min-height: 36px; }
+
+  /* Sem rolagem lateral: o cartão já cabe na tela */
+  .table-responsive:has(> table.tabela-cards) { overflow-x: visible; }
+}
+
+/* ── DataTables 2 (busca) no celular ── */
+@media (max-width: 639.98px) {
+  div.dt-container .dt-layout-row { display: block; }
+  div.dt-container .dt-layout-cell { display: block; width: 100%; padding: 0; }
+  div.dt-container .dt-search { text-align: left; margin-bottom: .5rem; }
+  div.dt-container .dt-search label { display: block; margin-bottom: .25rem; font-size: .8rem; }
+  div.dt-container .dt-search input { width: 100% !important; margin-left: 0 !important; min-height: 40px; }
+}
+
+/* ── Modais: tela cheia no celular ── */
+@media (max-width: 575.98px) {
+  .modal-dialog {
+    margin: 0;
+    max-width: none;
+    width: 100%;
+    min-height: 100%;
+    align-items: stretch;
+  }
+  .modal-content {
+    min-height: 100dvh;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  .modal-header {
+    position: sticky; top: 0; z-index: 5;
+    background: inherit;
+    padding: .75rem 1rem;
+  }
+  .modal-header .btn-close { padding: .9rem; margin: -.5rem -.5rem -.5rem auto; }
+  .modal-body { padding: 1rem; flex: 1 1 auto; }
+  .modal-footer {
+    position: sticky; bottom: 0; z-index: 5;
+    background: inherit;
+    padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom));
+    flex-wrap: nowrap; gap: .5rem;
+  }
+  .modal-footer > .btn { flex: 1 1 0; min-height: 46px; margin: 0; }
+
+  /* SweetAlert: largura da tela e botões grandes */
+  .swal2-popup { width: calc(100vw - 24px) !important; padding: 1.1rem !important; }
+  .swal2-actions { width: 100%; flex-wrap: nowrap; gap: .5rem; }
+  .swal2-actions .swal2-styled { flex: 1 1 0; min-height: 46px; margin: 0 !important; }
+}
+
+/* ── Toque: alvos mínimos e espaçamento ── */
+@media (max-width: 767.98px) {
+  .btn { min-height: 40px; }
+  .btn-sm { min-height: 36px; padding-left: .7rem; padding-right: .7rem; }
+  .botao { font-size: 1.9rem; line-height: 1; padding: 2px; }  /* setas de mês */
+  .form-control, .form-select { min-height: 44px; font-size: 16px; } /* 16px evita zoom no iOS */
+  .input-group-text { min-height: 44px; }
+  .dropdown-item { padding-top: .6rem; padding-bottom: .6rem; }
+  .resp-chip, .cartao-mini, .cartao-mini-modal { min-height: 40px; }
+
+  /* Grupos de botões que não cabem: quebram em vez de espremer */
+  .d-flex.gap-1:has(> .btn), .d-flex.gap-2:has(> .btn) { flex-wrap: wrap; }
+
+  /* Ações rápidas (dashboard) */
+  .ar-btn { min-height: 34px; padding: .35rem .8rem; }
+}
+
+/* ── Tipografia no celular ── */
+@media (max-width: 575.98px) {
+  body { font-size: .95rem; line-height: 1.55; }
+  .titulo-pagina { margin-bottom: 1.25rem; }
+  .kpi-valor { font-size: 1.35rem; }
+  .kpi-extra-valor { font-size: 1rem; }
+  /* Texto longo não estoura: quebra a palavra se precisar */
+  .painel, .modal-body { overflow-wrap: anywhere; }
+}
+
+/* ── Pessoas: cabeçalho e cartão de cada pessoa ── */
+@media (max-width: 575.98px) {
+  .grupo-mes { width: 100%; justify-content: space-between; }
+  .grupo-mes .btn { min-width: 44px; }
+  #ordemPessoas { flex: 1 1 auto; }
+  .pessoa-card-header { flex-wrap: wrap; row-gap: .6rem; padding: .9rem 1rem; }
+  .pessoa-balances {
+    order: 3; width: 100%; margin-left: 0;
+    justify-content: space-around;
+    padding-top: .6rem; border-top: 1px solid var(--cor-borda);
+  }
+  .pessoa-chevron { margin-left: auto; }
+  .balance-pill { align-items: center; }
+  .balance-pill .bp-val { white-space: nowrap; }
 }
