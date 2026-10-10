@@ -120,6 +120,7 @@ switch ($acao) {
             'link'       => $_POST['link']       ?? '',
             'valor'      => $_POST['valor']      ?? '0',
             'prioridade' => $_POST['prioridade'] ?? 'media',
+            'categoria_id' => $_POST['categoria_id'] ?? '',
             'imagem'     => $imagemUrl !== '' ? $imagemUrl : null,
         ];
 
@@ -155,6 +156,19 @@ switch ($acao) {
             if (is_file($caminho)) @unlink($caminho);
         }
         echo json_encode(['ok' => $ok]);
+        break;
+
+    case 'registrarCompra':
+        $id = (int) ($_POST['id'] ?? 0);
+        if (!$id) { http_response_code(400); echo json_encode(['erro' => 'ID inválido']); break; }
+        $gid = (int) ($_POST['gasto_id'] ?? 0) ?: null;
+        echo json_encode(['ok' => ListaDesejosModel::registrarCompra($id, $gid)]);
+        break;
+
+    case 'reverterCompra':
+        $id = (int) ($_POST['id'] ?? 0);
+        if (!$id) { http_response_code(400); echo json_encode(['erro' => 'ID inválido']); break; }
+        echo json_encode(ListaDesejosModel::reverterCompra($id));
         break;
 
     case 'comprado':

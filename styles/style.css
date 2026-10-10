@@ -283,6 +283,40 @@ body {
   background: rgba(30, 32, 50, 0.96) !important;
 }
 
+/* ─── TEMA: GATOS ASTRONAUTAS ──────────────────────
+   Mesmo esquema do tema dos gatos. Estampa roxa (Vecteezy, licença
+   gratuita: crédito no rodapé). Véu no mesmo tom para não brigar com os
+   números; painéis no roxo escuro da estampa. */
+.tema-astronautas .aurora {
+  background-image:
+    linear-gradient(rgba(26, 14, 38, 0.70), rgba(26, 14, 38, 0.70)),
+    url("../src/img/temas/gatos-astronautas.jpg");
+  background-repeat: no-repeat, repeat;
+  background-size: cover, 480px 480px;
+  background-position: center, center;
+  /* Estampa azulada: gira o matiz do roxo para o azul (o desenho não muda;
+     o véu gira junto e vira azul-marinho) */
+  filter: hue-rotate(-50deg) saturate(1.1);
+}
+.tema-astronautas .aurora-blob { display: none; }
+.tema-astronautas {
+  --cor-painel: rgba(44, 28, 60, 0.95);
+}
+.tema-astronautas .painel,
+.tema-astronautas .kpi-card,
+.tema-astronautas .kpi-sm {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.tema-astronautas .modal-content { background: rgba(38, 24, 54, 0.97) !important; }
+.tema-astronautas .navbar-sky { background: rgba(34, 20, 48, 0.92); }
+
+.credito-tema {
+  text-align: center; font-size: .7rem; color: var(--cor-texto-off);
+  padding: .25rem 0 1rem; position: relative; z-index: 1;
+}
+.credito-tema a { color: inherit; text-decoration: underline; }
+
 /* O padrão é azul-marinho escuro — o tema claro tornaria o texto ilegível.
    Por isso "gatos" e "light-mode" são mutuamente exclusivos no header. */
 
@@ -322,6 +356,11 @@ h1, h2, h3, h4, h5 {
 .titulo-pagina i {
   color: var(--cor-azul);
 }
+/* Botões sólidos no cabeçalho: o ícone acompanha a cor do texto do botão
+   (senão ficava azul sobre azul e sumia) */
+.titulo-pagina .btn-primary i,
+.titulo-pagina .btn-success i,
+.titulo-pagina .btn-danger i { color: inherit; }
 
 .underline {
   text-decoration: underline;
@@ -1709,6 +1748,8 @@ canvas { max-width: 100%; }
   }
   html.tema-gatos .tabela-rolagem table th:first-child,
   html.tema-gatos .tabela-rolagem table td:first-child { background: #26283C; }
+  html.tema-astronautas .tabela-rolagem table th:first-child,
+  html.tema-astronautas .tabela-rolagem table td:first-child { background: #2C1C3C; }
   html.light-mode .tabela-rolagem table th:first-child,
   html.light-mode .tabela-rolagem table td:first-child { background: #fff; box-shadow: 6px 0 8px -6px rgba(0,0,0,.15); }
 }
@@ -1870,4 +1911,81 @@ canvas { max-width: 100%; }
   .pessoa-chevron { margin-left: auto; }
   .balance-pill { align-items: center; }
   .balance-pill .bp-val { white-space: nowrap; }
+}
+
+/* ─── 23. CALCULADORA DOS CAMPOS DE VALOR ─────────── */
+.btn-calc {
+  background: var(--cor-input);
+  border: 1px solid var(--cor-borda);
+  color: var(--cor-azul);
+  padding: 0 .75rem;
+}
+.btn-calc:hover, .btn-calc[aria-expanded="true"] { background: rgba(59,130,246,.15); color: var(--cor-azul); border-color: var(--cor-azul); }
+
+.calc-painel {
+  width: 260px;
+  padding: .75rem;
+  background: #23243A;
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  box-shadow: var(--sombra-md);
+}
+.calc-painel .calc-expr { text-align: right; font-size: 1.1rem; font-weight: 600; }
+.calc-resultado {
+  text-align: right; margin: .35rem .1rem .6rem;
+  font-size: .85rem; color: var(--cor-texto-off);
+}
+.calc-res-valor { color: var(--cor-sucesso); font-size: 1rem; }
+.calc-teclas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: .6rem; }
+.calc-tecla {
+  height: 42px;
+  border: 1px solid var(--cor-borda);
+  background: rgba(255,255,255,.04);
+  color: var(--cor-texto);
+  border-radius: 8px;
+  font-size: 1.05rem; font-weight: 600;
+  transition: background var(--trans);
+}
+.calc-tecla:hover  { background: rgba(255,255,255,.1); }
+.calc-tecla:active { transform: scale(.96); }
+.calc-op    { color: var(--cor-azul); background: rgba(59,130,246,.1); }
+.calc-fn    { color: var(--cor-texto-off); }
+.calc-igual { background: var(--cor-azul); border-color: var(--cor-azul); color: #fff; }
+.calc-igual:hover { background: var(--cor-azul-hover, #2563EB); }
+
+html.light-mode .calc-painel { background: #fff; }
+html.light-mode .calc-tecla  { background: rgba(0,0,0,.03); }
+
+@media (max-width: 575.98px) {
+  .calc-painel { width: min(300px, calc(100vw - 32px)); }
+  .calc-tecla  { height: 48px; }
+  .btn-calc    { min-width: 46px; }
+}
+
+/* ─── 24. DESPESA DIVIDIDA ("Quanto é dela?") ─────── */
+.divisao-wrap {
+  padding: .6rem .75rem;
+  border: 1px dashed var(--cor-borda);
+  border-radius: 10px;
+  background: rgba(255,255,255,.02);
+}
+.divisao-titulo { font-size: .8rem; color: var(--cor-texto-off); margin-bottom: .4rem; }
+.divisao-opcao {
+  border: 1px solid var(--cor-borda);
+  background: transparent;
+  color: var(--cor-texto-sec);
+  border-radius: 20px;
+  padding: .3rem .9rem;
+  font-size: .82rem; font-weight: 500;
+  min-height: 34px;
+  transition: all var(--trans);
+}
+.divisao-opcao:hover { border-color: var(--cor-azul); color: var(--cor-texto); }
+.divisao-opcao.selecionado { background: rgba(59,130,246,.15); border-color: var(--cor-azul); color: var(--cor-azul); }
+.divisao-valor { width: 170px; }
+.divisao-resumo { font-size: .8rem; color: var(--cor-texto-off); margin-top: .4rem; }
+.divisao-resumo strong { color: var(--cor-texto); }
+@media (max-width: 575.98px) {
+  .divisao-valor { width: 100%; }
+  .divisao-opcao { flex: 1 1 0; min-height: 40px; }
 }

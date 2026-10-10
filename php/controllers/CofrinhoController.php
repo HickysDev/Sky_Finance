@@ -27,7 +27,8 @@ switch ($acao) {
         $valor = (float) str_replace(',', '.', $raw);
         $data  = $_POST['data_aporte'] ?? date('Y-m-d');
         $obs   = trim($_POST['observacao'] ?? '');
-        echo json_encode(CofrinhoModel::aporte($cofrinhoId, $valor, $data, $obs));
+        $inicial = ($_POST['saldo_inicial'] ?? '') === 'S';
+        echo json_encode(CofrinhoModel::aporte($cofrinhoId, $valor, $data, $obs, $inicial));
         break;
 
     case 'dashboard':

@@ -25,12 +25,14 @@ class ListaDesejosModel {
         $conn = Database::getConnection();
         // Não comprados primeiro; entre eles, prioridade alta antes; depois mais recentes.
         $stmt = $conn->prepare("
-            SELECT id, nome, link, imagem, valor, prioridade, comprado, created_at
-            FROM lista_desejos
-            WHERE usuario_id = @uid
-            ORDER BY comprado ASC,
-                     FIELD(prioridade, 'alta', 'media', 'baixa'),
-                     created_at DESC
+            SELECT d.id, d.nome, d.link, d.imagem, d.valor, d.prioridade, d.comprado, d.gasto_id, d.created_at,
+                   d.categoria_id, c.nome AS categoria, c.cor AS categoria_cor, c.icone AS categoria_icone
+            FROM lista_desejos d
+            LEFT JOIN categorias c ON c.id = d.categoria_id AND c.usuario_id = d.usuario_id
+            WHERE d.usuario_id = @uid
+            ORDER BY d.comprado ASC,
+                     FIELD(d.prioridade, 'alta', 'media', 'baixa'),
+                     d.created_at DESC
         ");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -49,6 +51,13 @@ class ListaDesejosModel {
         $imagem     = trim($data['imagem'] ?? '') ?: null;
         $valor      = self::parseValor($data['valor'] ?? '0');
         $prioridade = self::normalizaPrioridade($data['prioridade'] ?? 'media');
+        // Categoria: só aceita uma do próprio usuário; vazio = sem categoria
+        $categoria  = (int) ($data['categoria_id'] ?? 0) ?: null;
+        if ($categoria) {
+            $c = $conn->prepare("SELECT id FROM categorias WHERE id = ? AND usuario_id = @uid");
+            $c->execute([$categoria]);
+            if (!$c->fetchColumn()) $categoria = null;
+        }
 
         if ($id > 0) {
             // COALESCE na imagem: se o form não enviar imagem nova, mantém a atual.
@@ -56,23 +65,23 @@ class ListaDesejosModel {
                 UPDATE lista_desejos
                 SET nome = :nome, link = :link,
                     imagem = COALESCE(:imagem, imagem),
-                    valor = :valor, prioridade = :prioridade
+                    valor = :valor, prioridade = :prioridade, categoria_id = :categoria
                 WHERE id = :id AND usuario_id = @uid
             ");
             $stmt->execute([
                 ':nome' => $nome, ':link' => $link, ':imagem' => $imagem,
-                ':valor' => $valor, ':prioridade' => $prioridade, ':id' => $id,
+                ':valor' => $valor, ':prioridade' => $prioridade, ':categoria' => $categoria, ':id' => $id,
             ]);
             return $id;
         }
 
         $stmt = $conn->prepare("
-            INSERT INTO lista_desejos (usuario_id, nome, link, imagem, valor, prioridade)
-            VALUES (@uid, :nome, :link, :imagem, :valor, :prioridade)
+            INSERT INTO lista_desejos (usuario_id, nome, link, imagem, valor, prioridade, categoria_id)
+            VALUES (@uid, :nome, :link, :imagem, :valor, :prioridade, :categoria)
         ");
         $stmt->execute([
             ':nome' => $nome, ':link' => $link, ':imagem' => $imagem,
-            ':valor' => $valor, ':prioridade' => $prioridade,
+            ':valor' => $valor, ':prioridade' => $prioridade, ':categoria' => $categoria,
         ]);
         return (int) $conn->lastInsertId();
     }
@@ -91,6 +100,57 @@ class ListaDesejosModel {
         $conn = Database::getConnection();
         $stmt = $conn->prepare("DELETE FROM lista_desejos WHERE id = :id AND usuario_id = @uid");
         return $stmt->execute([':id' => $id]);
+    }
+
+    /** Marca como comprado guardando a despesa lançada (para poder reverter). */
+    public static function registrarCompra(int $id, ?int $gastoId): bool {
+        $conn = Database::getConnection();
+        // Só aceita uma despesa do próprio usuário
+        if ($gastoId) {
+            $g = $conn->prepare("SELECT id FROM gastos WHERE id = ? AND usuario_id = @uid");
+            $g->execute([$gastoId]);
+            if (!$g->fetchColumn()) $gastoId = null;
+        }
+        $stmt = $conn->prepare("
+            UPDATE lista_desejos SET comprado = 'S', gasto_id = :g
+            WHERE id = :id AND usuario_id = @uid
+        ");
+        return $stmt->execute([':g' => $gastoId, ':id' => $id]);
+    }
+
+    /**
+     * Reverte a compra: apaga a despesa lançada (e as parcelas) e devolve o item
+     * para a lista. Retorna se havia despesa vinculada para apagar.
+     */
+    public static function reverterCompra(int $id): array {
+        $conn = Database::getConnection();
+        $s = $conn->prepare("SELECT gasto_id FROM lista_desejos WHERE id = ? AND usuario_id = @uid");
+        $s->execute([$id]);
+        $gastoId = (int) $s->fetchColumn();
+
+        $conn->beginTransaction();
+        try {
+            $apagou = false;
+            if ($gastoId) {
+                $conn->prepare("DELETE FROM parcelas WHERE gasto_id = ? AND gasto_id IN (SELECT id FROM gastos WHERE usuario_id = @uid)")
+                     ->execute([$gastoId]);
+                $d = $conn->prepare("DELETE FROM gastos WHERE id = ? AND usuario_id = @uid");
+                $d->execute([$gastoId]);
+                $apagou = $d->rowCount() > 0;
+            }
+            // Compra agrupada: todos os itens ligados à mesma despesa voltam juntos
+            if ($gastoId) {
+                $conn->prepare("UPDATE lista_desejos SET comprado = 'N', gasto_id = NULL WHERE gasto_id = ? AND usuario_id = @uid")
+                     ->execute([$gastoId]);
+            }
+            $conn->prepare("UPDATE lista_desejos SET comprado = 'N', gasto_id = NULL WHERE id = ? AND usuario_id = @uid")
+                 ->execute([$id]);
+            $conn->commit();
+            return ['ok' => true, 'despesa_apagada' => $apagou];
+        } catch (Exception $e) {
+            $conn->rollBack();
+            return ['ok' => false, 'despesa_apagada' => false];
+        }
     }
 
     public static function toggleComprado(int $id): bool {

@@ -37,6 +37,9 @@
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-cash-coin"></i></span>
                                 <input type="text" class="form-control" id="valor" placeholder="R$ 0,00">
+                                <button type="button" class="btn btn-calc" data-calc-alvo="#valor" title="Calculadora" aria-label="Calculadora">
+                                    <i class="bi bi-calculator"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -115,6 +118,22 @@
                         </label>
                         <input type="hidden" id="responsavel" name="responsavel">
                         <div class="d-flex gap-2 flex-wrap" id="responsavelSelector"></div>
+
+                        <!-- Despesa dividida: quanto é da pessoa (aparece ao escolher alguém) -->
+                        <div id="divisaoWrapper" class="divisao-wrap mt-2" style="display:none;">
+                            <input type="hidden" id="responsavelParte" value="">
+                            <div class="divisao-titulo">Quanto é <span id="divisaoNome">dela</span>?</div>
+                            <div class="d-flex gap-2 flex-wrap align-items-center">
+                                <button type="button" class="divisao-opcao selecionado" data-modo="tudo">Tudo</button>
+                                <button type="button" class="divisao-opcao" data-modo="metade">Metade</button>
+                                <button type="button" class="divisao-opcao" data-modo="outro">Outro valor</button>
+                                <div class="input-group divisao-valor" id="divisaoValorWrap" style="display:none;">
+                                    <span class="input-group-text">dela</span>
+                                    <input type="text" class="form-control" id="divisaoValor" placeholder="R$ 0,00">
+                                </div>
+                            </div>
+                            <div class="divisao-resumo" id="divisaoResumo"></div>
+                        </div>
                     </div>
 
                     <!-- Tipo de lançamento -->

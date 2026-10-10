@@ -7,6 +7,9 @@ include_once __DIR__ . '/ContasFixasModel.php';
 
 class GastosModel {
 
+    /** Id da última despesa (tabela gastos) criada por adicionarGasto, ou null. */
+    public static $ultimoGastoId = null;
+
     public static function buscarGastosPorMes($mes, $ano, $cartaoId, $tipo) {
         if (ConfigModel::antesDoMarco($mes, $ano)) {
             return ['valortotal' => number_format(0, 2, ',', '.')];
@@ -16,13 +19,13 @@ class GastosModel {
         $params = [(int) $mes, (int) ($ano ?: date("Y"))];
 
         if ($tipo === 'debito') {
-            $sql = "SELECT g.id, g.descricao, g.valor, g.categoria_id, c.nome, g.metodo_pagamento, g.cartao_id, g.data_gasto, g.parcelado, g.responsavel_id, cc.nome_cartao
+            $sql = "SELECT g.id, g.descricao, g.valor, g.categoria_id, c.nome, g.metodo_pagamento, g.cartao_id, g.data_gasto, g.parcelado, g.responsavel_id, g.responsavel_parte, cc.nome_cartao
                     FROM gastos g
                     INNER JOIN categorias c ON c.id = g.categoria_id
                     LEFT JOIN cartoes_credito cc ON cc.id = g.cartao_id
                     WHERE g.usuario_id = @uid AND MONTH(data_gasto) = ? AND metodo_pagamento IN ('Dinheiro', 'Débito', 'Pix') AND YEAR(data_gasto) = ?";
         } else {
-            $sql = "SELECT g.id, g.descricao, g.valor, g.categoria_id, c.nome, g.metodo_pagamento, g.cartao_id, g.data_gasto, g.parcelado, g.responsavel_id, cc.nome_cartao
+            $sql = "SELECT g.id, g.descricao, g.valor, g.categoria_id, c.nome, g.metodo_pagamento, g.cartao_id, g.data_gasto, g.parcelado, g.responsavel_id, g.responsavel_parte, cc.nome_cartao
                     FROM gastos g
                     INNER JOIN categorias c ON c.id = g.categoria_id
                     LEFT JOIN cartoes_credito cc ON cc.id = g.cartao_id
@@ -48,7 +51,7 @@ class GastosModel {
         return $gastos;
     }
 
-    public static function adicionarGasto($desc, $valor, $categoria, $pagamento = null, $cartao = null, $data = null, $parcelado = null, $num_parcelas = null, $tipo, $recorrente = null, $responsavel = null) {
+    public static function adicionarGasto($desc, $valor, $categoria, $pagamento = null, $cartao = null, $data = null, $parcelado = null, $num_parcelas = null, $tipo, $recorrente = null, $responsavel = null, $parte = null) {
         $conn = Database::getConnection();
 
         if ($cartao === "") {
@@ -115,8 +118,8 @@ class GastosModel {
         }
 
         $adicionar = $conn->prepare("
-            INSERT INTO gastos (usuario_id, categoria_id, descricao, valor, data_gasto, metodo_pagamento, cartao_id, parcelado, responsavel_id)
-            VALUES (@uid, :categoria, :desc, :valor, :data, :pagamento, :cartao, :parcelado, :responsavel)
+            INSERT INTO gastos (usuario_id, categoria_id, descricao, valor, data_gasto, metodo_pagamento, cartao_id, parcelado, responsavel_id, responsavel_parte)
+            VALUES (@uid, :categoria, :desc, :valor, :data, :pagamento, :cartao, :parcelado, :responsavel, :parte)
         ");
 
         $queryAdicionar = $adicionar->execute([
@@ -128,9 +131,11 @@ class GastosModel {
             ':cartao'      => $cartao ? (int) $cartao : null,
             ':parcelado'   => $parcelado,
             ':responsavel' => $responsavel,
+            ':parte'       => $responsavel ? $parte : null,
         ]);
 
         $gastoId = $conn->lastInsertId();
+        self::$ultimoGastoId = $queryAdicionar ? (int) $gastoId : null;
 
         if ($tipo === 'credito' && $parcelado === "N" && $cartao) {
             $buscaCartao = $conn->prepare("SELECT fechamento_dia, vencimento_dia FROM cartoes_credito WHERE id = ?");
@@ -316,6 +321,7 @@ class GastosModel {
                 g.id,
                 cc.nome_cartao,
                 g.responsavel_id,
+                g.responsavel_parte,
                 'NORMAL' as tipo
             FROM gastos g
             LEFT JOIN parcelas p ON p.gasto_id = g.id
@@ -343,6 +349,7 @@ class GastosModel {
                 gr.id,
                 cc.nome_cartao,
                 gr.responsavel_id,
+                NULL AS responsavel_parte,
                 'RECORRENTE' as tipo
             FROM gastos_recorrentes gr
             INNER JOIN gastos_recorrentes_lancamentos grl ON grl.gasto_recorrente_id = gr.id
@@ -914,7 +921,7 @@ class GastosModel {
                 SELECT MONTH(ca.data_aporte) AS mes, COALESCE(SUM(ca.valor),0) AS total
                 FROM cofrinho_aportes ca
                 JOIN cofrinhos c ON c.id = ca.cofrinho_id
-                WHERE c.usuario_id = @uid AND YEAR(ca.data_aporte) = ?
+                WHERE c.usuario_id = @uid AND ca.saldo_inicial = 'N' AND YEAR(ca.data_aporte) = ?
                 GROUP BY MONTH(ca.data_aporte)
             ");
             $s->execute([$ano]);
@@ -993,7 +1000,7 @@ class GastosModel {
                 SELECT COALESCE(SUM(ca.valor), 0)
                 FROM cofrinho_aportes ca
                 INNER JOIN cofrinhos c ON c.id = ca.cofrinho_id
-                WHERE c.usuario_id = @uid AND YEAR(ca.data_aporte) = ?{$mAporte}
+                WHERE c.usuario_id = @uid AND ca.saldo_inicial = 'N' AND YEAR(ca.data_aporte) = ?{$mAporte}
             ");
             $s->execute([$ano]);
             $guardado = (float) $s->fetchColumn();
@@ -1029,6 +1036,19 @@ class GastosModel {
         ];
     }
 
+    /**
+     * Quanto da despesa é da pessoa (1–100 %). NULL = 100 %. Só para despesa que
+     * já está no nome de alguém; vale para todas as parcelas.
+     */
+    public static function definirParteResponsavel(int $id, ?float $parte): bool {
+        $conn = Database::getConnection();
+        $stmt = $conn->prepare("
+            UPDATE gastos SET responsavel_parte = :parte
+            WHERE id = :id AND usuario_id = @uid AND responsavel_id IS NOT NULL
+        ");
+        return $stmt->execute([':parte' => $parte, ':id' => $id]);
+    }
+
     public static function editarGastoSimples($id, $descricao, $categoriaId) {
         $conn = Database::getConnection();
         // COALESCE: se nenhuma categoria for enviada, mantém a atual (não zera)
@@ -1045,14 +1065,15 @@ class GastosModel {
         return ['success' => true];
     }
 
-    public static function editarGasto($id, $descricao, $valor, $categoriaId, $metodo, $cartaoId, $data, $responsavelId = null) {
+    public static function editarGasto($id, $descricao, $valor, $categoriaId, $metodo, $cartaoId, $data, $responsavelId = null, $parte = null) {
         $conn = Database::getConnection();
         // responsavel_id: antes a edição não gravava, então trocar a pessoa não tinha efeito.
         // Só aceita um responsável do próprio usuário; vazio = "Eu" (NULL).
         $stmt = $conn->prepare("
             UPDATE gastos
             SET descricao = ?, valor = ?, categoria_id = COALESCE(?, categoria_id), metodo_pagamento = ?, cartao_id = ?, data_gasto = ?,
-                responsavel_id = (SELECT r.id FROM responsaveis r WHERE r.id = ? AND r.usuario_id = @uid)
+                responsavel_id = (SELECT r.id FROM responsaveis r WHERE r.id = ? AND r.usuario_id = @uid),
+                responsavel_parte = ?
             WHERE id = ? AND usuario_id = @uid
         ");
         $stmt->execute([
@@ -1063,6 +1084,7 @@ class GastosModel {
             $cartaoId ?: null,
             $data,
             $responsavelId ?: null,
+            $responsavelId ? $parte : null,
             (int) $id,
         ]);
 

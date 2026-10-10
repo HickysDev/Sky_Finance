@@ -436,6 +436,14 @@ $conn = Database::getConnection();
                     <label class="form-label">Observação <span class="text-muted" style="font-size:0.8rem;">(opcional)</span></label>
                     <input type="text" class="form-control" id="aporteObs" placeholder="">
                 </div>
+                <!-- Só ao guardar: valor que já estava no cofrinho antes de usar o sistema -->
+                <div class="form-check mt-3" id="aporteInicialWrap">
+                    <input class="form-check-input" type="checkbox" id="aporteInicial">
+                    <label class="form-check-label" for="aporteInicial">
+                        Valor que já existia no cofrinho
+                        <div style="font-size:.75rem;color:var(--cor-texto-off);">Soma no saldo do cofrinho, mas não conta como guardado no mês (não mexe no saldo estimado nem no resumo).</div>
+                    </label>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
@@ -1602,6 +1610,8 @@ $(document).ready(function () {
             String(hoje.getMonth() + 1).padStart(2, '0') + '-' +
             String(hoje.getDate()).padStart(2, '0'));
         $('#aporteObs').val('');
+        $('#aporteInicial').prop('checked', false);
+        $('#aporteInicialWrap').toggle(!isRetirar);
         $('#modalAporte').modal('show');
     }
 
@@ -1622,12 +1632,14 @@ $(document).ready(function () {
         if (!val || !data) { toastr.warning('Preencha o valor e a data.'); return; }
         $.ajax({
             type: 'POST', url: App.ctrl.cofrinho,
-            data: { acao: acao, cofrinho_id: $('#aporteCofId').val(), valor: val, data_aporte: data, observacao: $('#aporteObs').val() },
+            data: { acao: acao, cofrinho_id: $('#aporteCofId').val(), valor: val, data_aporte: data, observacao: $('#aporteObs').val(),
+                    saldo_inicial: acao !== 'retirar' && $('#aporteInicial').is(':checked') ? 'S' : '' },
             dataType: 'json',
             success: function (res) {
                 var ok = (typeof res === 'object') ? res.ok : res;
                 if (ok) {
-                    toastr.success(acao === 'retirar' ? 'Retirada registrada!' : 'Aporte registrado!');
+                    toastr.success(acao === 'retirar' ? 'Retirada registrada!'
+                        : ($('#aporteInicial').is(':checked') ? 'Saldo existente registrado!' : 'Aporte registrado!'));
                     $('#modalAporte').modal('hide');
                     buscaCofrinhos();
                     atualizaMeta();
@@ -1675,7 +1687,9 @@ $(document).ready(function () {
                     rows += '<tr>' +
                         '<td style="padding:0.5rem 1rem;white-space:nowrap;">' + dataFmt + '</td>' +
                         '<td style="padding:0.5rem 1rem;white-space:nowrap;color:' + valCor + ';font-weight:600;">' + valTxt + ' ' + tipoBadge + '</td>' +
-                        '<td style="padding:0.5rem 1rem;color:var(--cor-texto-off);">' + escHtml(a.observacao || '—') + '</td>' +
+                        '<td style="padding:0.5rem 1rem;color:var(--cor-texto-off);">' +
+                            (a.saldo_inicial === 'S' ? '<span class="badge-saldo-inicial">Saldo que já existia</span> ' : '') +
+                            escHtml(a.observacao || (a.saldo_inicial === 'S' ? '' : '—')) + '</td>' +
                     '</tr>';
                 });
                 $('#tbodyHist').html(rows);
@@ -1769,4 +1783,10 @@ $(document).ready(function () {
 .cof-info { margin-top: 0.2rem; }
 </style>
 
+<style>
+.badge-saldo-inicial {
+  font-size: .68rem; padding: 1px 7px; border-radius: 10px;
+  background: rgba(59,130,246,.15); color: var(--cor-azul); border: 1px solid rgba(59,130,246,.3);
+}
+</style>
 <?php require_once __DIR__ . '/../templates/footer.php'; ?>

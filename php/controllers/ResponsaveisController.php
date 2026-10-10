@@ -73,6 +73,7 @@ switch ($acao) {
         $anoFiltro = isset($_POST['ano']) && $_POST['ano'] !== '' ? (int) $_POST['ano'] : null;
         $retorno = ContasPessoaModel::listar($id, $mesFiltro, $anoFiltro);
         if ($mesFiltro && $anoFiltro) {
+            $retorno = array_merge(ContasPessoaModel::pendentesAnteriores($id, $mesFiltro, $anoFiltro), $retorno);
             foreach (ContasFixasModel::daPessoa($id, $mesFiltro, $anoFiltro) as $cf) {
                 $retorno[] = [
                     'id' => $cf['id'], 'origem' => 'conta_fixa', 'descricao' => $cf['nome'],

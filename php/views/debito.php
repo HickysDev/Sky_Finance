@@ -139,10 +139,10 @@ $mesAtual = date('n');
             limpaErrosModal();
         });
 
-        var _respEditDeb = '';
+        var _respEditDeb = '', _parteEditDeb = '';
 
         $('#modalAdiciona').on('shown.bs.modal', function () {
-            if (_modoEditDeb) { setResponsavelModal(_respEditDeb); return; }
+            if (_modoEditDeb) { setResponsavelModal(_respEditDeb); setParteModal(_parteEditDeb); return; }
             if (!_pendingRepetirDeb) return;
             var d = _pendingRepetirDeb;
             _pendingRepetirDeb = null;
@@ -314,6 +314,7 @@ $mesAtual = date('n');
                     data:        $('#data').val(),
                     tipo:        'debito',
                     responsavel: $('#responsavel').val() || '',
+                    responsavel_parte: parteResponsavel(),
                 },
                 dataType: 'json',
                 success: function () {
@@ -341,6 +342,7 @@ $mesAtual = date('n');
             var $btn = $(this);
             _modoEditDeb = true;
             _respEditDeb = $btn.data('responsavel') || '';
+            _parteEditDeb = $btn.data('parte') || '';
 
             // Alterna botões no modal
             $('#adicionarDespesa').hide();
@@ -407,6 +409,7 @@ $mesAtual = date('n');
                     cartao:    $('#cartao').val() || '',
                     data:      $('#data').val(),
                     responsavel: $('#responsavel').val() || '',
+                    responsavel_parte: parteResponsavel(),
                 },
                 dataType: 'json',
                 success: function () {
@@ -507,7 +510,7 @@ $mesAtual = date('n');
                                         data-metodo="${gasto.metodo_pagamento}"
                                         data-cartao="${gasto.cartao_id || ''}"
                                         data-data="${gasto.data_gasto}"
-                                        data-responsavel="${gasto.responsavel_id || ''}"
+                                        data-responsavel="${gasto.responsavel_id || ''}" data-parte="${gasto.responsavel_parte || ''}"
                                         title="Editar">
                                         <i class="bi bi-pencil-fill" style="font-size:.75rem;"></i>
                                     </button>

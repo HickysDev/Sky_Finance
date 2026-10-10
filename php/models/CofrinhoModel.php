@@ -67,7 +67,9 @@ class CofrinhoModel {
         return $stmt->execute([':id' => $id]);
     }
 
-    public static function aporte(int $cofrinhoId, float $valor, string $data, string $obs = ''): bool {
+    // $saldoInicial: valor que já existia no cofrinho — soma no saldo, mas não
+    // conta como dinheiro guardado no mês (fica fora do saldo estimado/resumo).
+    public static function aporte(int $cofrinhoId, float $valor, string $data, string $obs = '', bool $saldoInicial = false): bool {
         $conn = Database::getConnection();
 
         // Confirma que o cofrinho é do usuário antes de inserir. cofrinho_aportes
@@ -82,10 +84,10 @@ class CofrinhoModel {
         $conn->beginTransaction();
         try {
             $stmt = $conn->prepare("
-                INSERT INTO cofrinho_aportes (cofrinho_id, valor, data_aporte, observacao)
-                VALUES (:cid, :val, :dt, :obs)
+                INSERT INTO cofrinho_aportes (cofrinho_id, valor, data_aporte, observacao, saldo_inicial)
+                VALUES (:cid, :val, :dt, :obs, :ini)
             ");
-            $stmt->execute([':cid' => $cofrinhoId, ':val' => $valor, ':dt' => $data, ':obs' => $obs ?: null]);
+            $stmt->execute([':cid' => $cofrinhoId, ':val' => $valor, ':dt' => $data, ':obs' => $obs ?: null, ':ini' => $saldoInicial ? 'S' : 'N']);
 
             $stmt2 = $conn->prepare("
                 UPDATE cofrinhos SET valor_atual = valor_atual + :val WHERE id = :id AND usuario_id = @uid
@@ -111,7 +113,7 @@ class CofrinhoModel {
                     SELECT SUM(ca.valor)
                     FROM cofrinho_aportes ca
                     INNER JOIN cofrinhos cc ON cc.id = ca.cofrinho_id
-                    WHERE cc.usuario_id = @uid
+                    WHERE cc.usuario_id = @uid AND ca.saldo_inicial = 'N'
                       AND MONTH(ca.data_aporte) = :mes
                       AND YEAR(ca.data_aporte)  = :ano
                 ), 0) AS aportes_mes
@@ -142,7 +144,7 @@ class CofrinhoModel {
             SELECT COALESCE(SUM(ca.valor), 0)
             FROM cofrinho_aportes ca
             JOIN cofrinhos c ON c.id = ca.cofrinho_id
-            WHERE c.usuario_id = @uid
+            WHERE c.usuario_id = @uid AND ca.saldo_inicial = 'N'
               AND MONTH(ca.data_aporte) = :mes
               AND YEAR(ca.data_aporte)  = :ano
         ");

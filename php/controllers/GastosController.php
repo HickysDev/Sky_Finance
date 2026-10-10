@@ -26,6 +26,11 @@ $nome         = trim($_POST['nome']    ?? '');
 
 $responsavel = isset($_POST['responsavel']) && $_POST['responsavel'] !== '' ? (int) $_POST['responsavel'] : null;
 
+// Despesa dividida: % que é da pessoa (0 < p < 100). Fora disso = tudo dela (NULL).
+$parte = isset($_POST['responsavel_parte']) && $_POST['responsavel_parte'] !== '' ? (float) $_POST['responsavel_parte'] : null;
+if ($parte !== null && ($parte <= 0 || $parte >= 100)) $parte = null;
+if ($parte !== null) $parte = round($parte, 4);
+
 $retorno = null;
 
 switch ($acao) {
@@ -39,7 +44,11 @@ switch ($acao) {
             $num_parcelas = null;
         }
 
-        $retorno = GastosModel::adicionarGasto($descricao, $valor, $categoria, $metodo, $cartao, $data, $parcelado, $num_parcelas, $tipo, $recorrente, $responsavel);
+        $retorno = GastosModel::adicionarGasto($descricao, $valor, $categoria, $metodo, $cartao, $data, $parcelado, $num_parcelas, $tipo, $recorrente, $responsavel, $parte);
+        // Compra da lista de desejos precisa do id para poder reverter depois
+        if (!empty($_POST['retornar_id'])) {
+            $retorno = ['ok' => $retorno === 1, 'gasto_id' => GastosModel::$ultimoGastoId];
+        }
         break;
 
     case 'buscar':
@@ -79,7 +88,12 @@ switch ($acao) {
         if (!$id) { http_response_code(400); echo json_encode(['erro' => 'ID inválido']); exit; }
         $valorEdit = str_replace(['R$', ' ', '.'], '', $valor);
         $valorEdit = (float) str_replace(',', '.', $valorEdit);
-        $retorno = GastosModel::editarGasto($id, $descricao, $valorEdit, $categoria, $metodo, $cartao, $data, $responsavel);
+        $retorno = GastosModel::editarGasto($id, $descricao, $valorEdit, $categoria, $metodo, $cartao, $data, $responsavel, $parte);
+        break;
+
+    case 'definirParte':
+        if (!$id) { http_response_code(400); echo json_encode(['erro' => 'ID inválido']); exit; }
+        $retorno = GastosModel::definirParteResponsavel((int) $id, $parte);
         break;
 
     case 'editarSimples':

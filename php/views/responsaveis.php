@@ -284,6 +284,13 @@
 .medeve-link-fatura { text-decoration: none; color: var(--cor-texto-off); display: inline-flex; align-items: center; gap: .35rem; font-size: 0.75rem; }
 .medeve-link-fatura:hover .medeve-status, .medeve-link-fatura:hover { color: var(--cor-azul); border-color: var(--cor-azul); }
 .medeve-status.ok { color: var(--cor-sucesso); border-color: var(--cor-sucesso); }
+.medeve-atrasado { background: rgba(245,158,11,.15) !important; color: #F59E0B !important; border-color: rgba(245,158,11,.35) !important; text-transform: lowercase; }
+.item-row.item-atrasado:not(.pago) { box-shadow: inset 3px 0 0 #F59E0B; }
+.aviso-atrasado {
+    margin: .6rem 1.25rem 0; padding: .5rem .75rem; border-radius: 8px; font-size: .8rem;
+    background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3); color: #F59E0B;
+}
+.medeve-dividido { background: rgba(236,72,153,.15) !important; color: #EC4899 !important; border-color: rgba(236,72,153,.35) !important; }
 .medeve-origem {
     font-size: 0.67rem; padding: 1px 6px; border-radius: 10px;
     background: rgba(59,130,246,0.15); color: var(--cor-azul);
@@ -516,8 +523,14 @@ function renderEuDevo(respId, data) {
             // Conta fixa: pagar aqui = pagar a conta (mesmo registro da tela Contas Fixas).
             // Sem lixeira — para tirar da pessoa, edite a conta ou pague como "eu mesmo".
             var cfBadge  = ehCF ? ' <span class="medeve-origem ms-1" style="background:rgba(249,115,22,0.15);color:#F97316;border-color:rgba(249,115,22,0.3);">Conta fixa</span>' : '';
+            // Não pago em mês anterior: continua aparecendo até ser pago
+            if (item.atrasado) {
+                var mo = moment(item.data);
+                cfBadge += ' <span class="medeve-origem medeve-atrasado ms-1" title="Pendente desde ' + mo.format('DD/MM/YYYY') + '">' +
+                           '<i class="bi bi-hourglass-split me-1"></i>de ' + ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][mo.month()] + '/' + mo.format('YY') + '</span>';
+            }
             rows +=
-            '<div class="item-row' + (p ? ' pago' : '') + (ehCF ? ' cf-item' : '') + '" data-id="' + item.id + '"' +
+            '<div class="item-row' + (p ? ' pago' : '') + (ehCF ? ' cf-item' : '') + (item.atrasado ? ' item-atrasado' : '') + '" data-id="' + item.id + '"' +
                 (ehCF ? ' data-valor="' + item.valor + '"' : '') + '>' +
                 '<div class="item-check" title="' + (p ? 'Reabrir' : (ehCF ? 'Dei o dinheiro — marcar conta paga' : 'Marcar pago')) + '"><i class="bi bi-check-lg"></i></div>' +
                 '<div class="item-desc">' + escHtml(item.descricao) + cfBadge + (catHtml ? '<br><span class="mt-1 d-inline-block">' + catHtml + '</span>' : '') + '</div>' +
@@ -544,7 +557,15 @@ function renderEuDevo(respId, data) {
             '</button>') +
         '</div>';
 
-    $panel.html(rows + footer);
+    var atrasados = (data || []).filter(function (x) { return x.atrasado; });
+    var aviso = '';
+    if (atrasados.length) {
+        var totAtr = atrasados.reduce(function (s, x) { return s + x.valor; }, 0);
+        aviso = '<div class="aviso-atrasado"><i class="bi bi-exclamation-circle-fill me-2"></i>' +
+            atrasados.length + ' ' + (atrasados.length === 1 ? 'item' : 'itens') + ' de meses anteriores ainda não ' +
+            (atrasados.length === 1 ? 'pago' : 'pagos') + ': <strong>R$ ' + totAtr.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</strong> (já somado em "devo a ela")</div>';
+    }
+    $panel.html(aviso + rows + footer);
 }
 
 // ── ABA: Ela me deve ────────────────────────────────────────────
@@ -571,6 +592,12 @@ function renderMeDeve(respId, data) {
             var dataFmt   = d.data ? moment(d.data).format('DD/MM/YY') : '';
             var catHtml   = catBadgeHtml(d.categoria);
             var recBadge  = d.origem === 'recorrente' ? '<span class="medeve-origem ms-1">Recorrente</span>' : '';
+            // Dividida: mostra a fração e o valor cheio (a lista já traz só a parte dela)
+            if (d.parte) {
+                var fr = Math.abs(d.parte - 50) < 0.001 ? 'Metade' : (Math.round(d.parte * 10) / 10).toLocaleString('pt-BR') + '%';
+                recBadge += '<span class="medeve-origem medeve-dividido ms-1" title="Dividido: ' + fr + ' de R$ ' +
+                    d.valor_total.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '"><i class="bi bi-pie-chart-fill me-1"></i>' + fr + '</span>';
+            }
             var quando    = d.recebido_em ? moment(d.recebido_em).format('DD/MM/YY') : '';
 
             // Crédito: status vem da fatura paga (sem botão). Demais: check manual.
@@ -602,6 +629,10 @@ function renderMeDeve(respId, data) {
                 '<div class="medeve-cat">' + catHtml + '</div>' +
                 '<div class="medeve-data">' + dataFmt + '</div>' +
                 '<div class="medeve-val">R$ ' + d.valor.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div>' +
+                (d.origem === 'recorrente' ? '<span class="item-del" style="visibility:hidden;"></span>' :
+                '<button class="item-del medeve-dividir" title="Dividir: quanto é dela"' +
+                    ' data-id="' + d.id + '" data-nome="' + escHtml(d.nome || '') + '"' +
+                    ' data-total="' + d.valor_total + '" data-parte="' + (d.parte || '') + '"><i class="bi bi-pie-chart"></i></button>') +
                 '<button class="item-del medeve-desvincular" title="Tirar desta pessoa (a despesa continua sua)"' +
                     ' data-tipo="' + (d.origem === 'recorrente' ? 'recorrente' : 'gasto') + '"' +
                     ' data-id="' + (d.origem === 'recorrente' ? d.recorrente_id : d.id) + '"' +
@@ -622,6 +653,73 @@ function renderMeDeve(respId, data) {
 
     $panel.html(rows + footer);
 }
+
+// ── Dividir despesa: quanto dela é da pessoa ───────────────────
+// Parcelado: a % vale para todas as parcelas; "total" aqui é o valor exibido
+// (a parcela do mês), só para calcular o "outro valor".
+$(document).on('click', '.medeve-dividir', function (e) {
+    e.stopPropagation();
+    var $b     = $(this);
+    var respId = $b.closest('.pessoa-card').data('id');
+    var nome   = $b.closest('.pessoa-card').find('.pessoa-nome').text();
+    var total  = parseFloat($b.data('total')) || 0;
+    var atual  = parseFloat($b.data('parte')) || 100;
+    var fmt    = function (v) { return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    var modo   = atual >= 100 ? 'tudo' : (Math.abs(atual - 50) < 0.001 ? 'metade' : 'outro');
+    Swal.fire({
+        title: 'Quanto é de ' + escHtml(nome) + '?',
+        html:
+            '<div class="text-start mb-2" style="font-size:.85rem;color:var(--cor-texto-off);">' + escHtml($b.data('nome')) + ' — ' + fmt(total) + '</div>' +
+            '<div class="d-flex gap-2 flex-wrap mb-2" id="swDivOpcoes">' +
+                '<button type="button" class="divisao-opcao" data-modo="tudo">Tudo</button>' +
+                '<button type="button" class="divisao-opcao" data-modo="metade">Metade</button>' +
+                '<button type="button" class="divisao-opcao" data-modo="outro">Outro valor</button>' +
+            '</div>' +
+            '<div class="input-group mb-2" id="swDivValorWrap" style="display:none;"><span class="input-group-text">dela</span>' +
+                '<input id="swDivValor" class="form-control" placeholder="R$ 0,00"></div>' +
+            '<div class="divisao-resumo text-start" id="swDivResumo"></div>',
+        showCancelButton: true, confirmButtonText: 'Salvar', cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#22C55E', cancelButtonColor: '#6B7280',
+        didOpen: function () {
+            var banc = bancInput(document.getElementById('swDivValor'), modo === 'outro' ? Math.round(total * atual) / 100 : '');
+            function resumo() {
+                var dela = Math.round((modo === 'metade' ? total / 2 : (modo === 'outro' ? banc.getValue() : total)) * 100) / 100;
+                $('#swDivResumo').html(modo === 'tudo' ? 'A despesa inteira é dela.' :
+                    'Dela: <strong>' + fmt(Math.min(dela, total)) + '</strong> · Sua parte: <strong>' + fmt(Math.max(total - dela, 0)) + '</strong>');
+            }
+            function set(m) {
+                modo = m;
+                $('#swDivOpcoes .divisao-opcao').removeClass('selecionado').filter('[data-modo="' + m + '"]').addClass('selecionado');
+                $('#swDivValorWrap').toggle(m === 'outro');
+                resumo();
+            }
+            $('#swDivOpcoes').on('click', '.divisao-opcao', function () { set($(this).data('modo')); });
+            $('#swDivValor').on('keyup input paste', function () { setTimeout(resumo, 0); });
+            Swal.getPopup()._banc = banc;
+            set(modo);
+        },
+        preConfirm: function () {
+            if (modo === 'tudo') return '';
+            if (modo === 'metade') return '50';
+            var v = Swal.getPopup()._banc.getValue();
+            if (!(v > 0 && v < total)) { Swal.showValidationMessage('Informe um valor menor que ' + fmt(total)); return false; }
+            return String(Math.round(v / total * 1000000) / 10000);
+        }
+    }).then(function (r) {
+        if (!r.isConfirmed) return;
+        $.ajax({
+            type: 'POST', url: App.ctrl.gastos,
+            data: { acao: 'definirParte', id: $b.data('id'), responsavel_parte: r.value }, dataType: 'json',
+            success: function (ok) {
+                if (!ok) { toastr.error('Não foi possível salvar.'); return; }
+                toastr.success('Divisão salva.');
+                carregaItensMeDeve(respId);
+                atualizaCabecalhoPessoa(respId);
+            },
+            error: function () { toastr.error('Erro ao salvar.'); }
+        });
+    });
+});
 
 // ── Tirar despesa da pessoa ────────────────────────────────────
 $(document).on('click', '.medeve-desvincular', function (e) {
@@ -646,7 +744,7 @@ $(document).on('click', '.medeve-desvincular', function (e) {
                 if (!ok) { toastr.error('Não foi possível alterar.'); return; }
                 toastr.success('Despesa retirada da pessoa.');
                 carregaItensMeDeve(respId);
-                atualizaPillMeDeve(respId);
+                atualizaCabecalhoPessoa(respId);
             },
             error: function () { toastr.error('Erro ao alterar.'); }
         });
@@ -665,7 +763,7 @@ $(document).on('click', '.medeve-check', function (e) {
         success: function (ok) {
             if (!ok) { toastr.error('Não foi possível atualizar.'); return; }
             carregaItensMeDeve(respId);
-            atualizaPillMeDeve(respId);
+            atualizaCabecalhoPessoa(respId);
         },
         error: function () { toastr.error('Erro ao salvar.'); }
     });
@@ -705,6 +803,30 @@ function atualizaPillMeDeve(respId) {
     });
 }
 
+// Atualiza só o cabeçalho de uma pessoa (me deve / devo a ela / abatido /
+// contador da aba). Recarregar a lista inteira fechava o card aberto.
+function atualizaCabecalhoPessoa(respId) {
+    $.ajax({
+        type: 'POST', url: App.ctrl.responsaveis,
+        data: { acao: 'contas.resumo', mes: mesSel, ano: anoSel }, dataType: 'json',
+        success: function (data) {
+            var p = (data || []).find(function (x) { return String(x.id) === String(respId); });
+            if (!p) return;
+            var fmt = function (v) { return 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2}); };
+            var meDeve = parseFloat(p.me_deve_aberto) || 0, euDevo = parseFloat(p.eu_devo) || 0, qtd = parseInt(p.qtd_aberto) || 0;
+            var $card = $('#card-' + respId);
+            $card.find('.bp-medeve').text(fmt(meDeve)).toggleClass('bp-zero', meDeve === 0);
+            $card.find('.bp-eudevo').text(fmt(euDevo)).toggleClass('bp-zero', euDevo === 0);
+            var $bal = $card.find('.pessoa-balances');
+            $bal.find('.bp-abater, .bp-abater-sep').remove();
+            $bal.append(pillAbater(meDeve, euDevo));
+            var $tab = $card.find('.pessoa-tab-btn[data-tab="devo"]');
+            $tab.find('.tab-badge').remove();
+            if (qtd > 0) $tab.append('<span class="tab-badge" style="background:rgba(239,68,68,0.18);color:#EF4444;">' + qtd + '</span>');
+        }
+    });
+}
+
 // ── Marcar pago / reabrir ───────────────────────────────────────
 $(document).on('click', '.item-check', function () {
     if ($(this).hasClass('medeve-check')) return; // "ela me deve" tem handler próprio
@@ -720,7 +842,7 @@ $(document).on('click', '.item-check', function () {
                     data: moment().format('YYYY-MM-DD'), valor_pago: String(row.data('valor')).replace('.', ','), responsavel: rId }
                 : { acao: 'desmarcarPago', id: row.data('id'), mes: mesSel, ano: anoSel },
             dataType: 'json',
-            success: function () { carregaItensEuDevo(rId); carregaContas(); },
+            success: function () { carregaItensEuDevo(rId); atualizaCabecalhoPessoa(rId); },
             error: function () { toastr.error('Erro ao atualizar a conta fixa.'); }
         });
         return;
@@ -731,14 +853,14 @@ $(document).on('click', '.item-check', function () {
     $.ajax({
         type: 'POST', url: App.ctrl.responsaveis,
         data: { acao: 'contas.pago', id: id, pago: isPago }, dataType: 'json',
-        success: function (ok) { if (ok) { carregaItensEuDevo(respId); carregaContas(); } }
+        success: function (ok) { if (ok) { carregaItensEuDevo(respId); atualizaCabecalhoPessoa(respId); } }
     });
 });
 
 // ── Remover item ────────────────────────────────────────────────
 $(document).on('click', '.item-del', function (e) {
     e.stopPropagation();
-    if ($(this).hasClass('medeve-desvincular') || !$(this).data('id')) return;
+    if ($(this).hasClass('medeve-desvincular') || $(this).hasClass('medeve-dividir') || !$(this).data('id')) return;
     var id     = $(this).data('id');
     var respId = $(this).closest('.pessoa-card').data('id');
     Swal.fire({
@@ -750,7 +872,7 @@ $(document).on('click', '.item-del', function (e) {
             $.ajax({
                 type: 'POST', url: App.ctrl.responsaveis,
                 data: { acao: 'contas.remover', id: id }, dataType: 'json',
-                success: function (ok) { if (ok) { carregaItensEuDevo(respId); carregaContas(); } }
+                success: function (ok) { if (ok) { carregaItensEuDevo(respId); atualizaCabecalhoPessoa(respId); } }
             });
         }
     });
@@ -863,7 +985,7 @@ $('#salvarItem').click(function () {
                     toastr.success('Item adicionado!');
                     $('#modalNovoItem').modal('hide');
                     carregaItensEuDevo(respId);
-                    carregaContas();
+                    atualizaCabecalhoPessoa(respId);
                 } else { toastr.error('Erro ao salvar!'); }
             }
         });
@@ -883,7 +1005,7 @@ function salvarParcelado(respId, desc, total, n, dataInicio) {
     function concluir() {
         $btn.prop('disabled', false);
         carregaItensEuDevo(respId);
-        carregaContas();
+        atualizaCabecalhoPessoa(respId);
     }
 
     // Uma parcela por vez: em paralelo elas eram gravadas fora de ordem, e uma

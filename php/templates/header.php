@@ -62,6 +62,8 @@ $conn = Database::getConnection();
         h.setAttribute('data-bs-theme', 'light');
       } else if (t === 'gatos') {
         h.classList.add('tema-gatos');
+      } else if (t === 'astronautas') {
+        h.classList.add('tema-astronautas');
       }
     })();
   </script>
@@ -366,17 +368,89 @@ $conn = Database::getConnection();
   window.setResponsavelModal = function (id) {
       $('#responsavel').val(id ? String(id) : '');
       renderResponsaveisMiniModal();
+      atualizaDivisao();
   };
 
   $(document).on('click', '.resp-chip', function () {
       $('.resp-chip').removeClass('selecionado');
       $(this).addClass('selecionado');
       $('#responsavel').val($(this).data('id'));
+      atualizaDivisao();
   });
+
+  // ── Despesa dividida ("Quanto é dela?") ──────────────────────────
+  // modo: tudo (100 %) | metade (50 %) | outro (valor em R$ → % do total).
+  // Gravado como % (responsavel_parte); vazio = tudo da pessoa.
+  var _divModo = 'tudo', _divValor = null;
+  function totalModal() {
+      var el = document.getElementById('valor');
+      return el && el._banc ? el._banc.getValue() : 0;
+  }
+  function parteDaPessoaValor() {
+      var total = totalModal();
+      if (_divModo === 'metade') return total / 2;
+      if (_divModo === 'outro')  return _divValor ? _divValor.getValue() : 0;
+      return total;
+  }
+  window.parteResponsavel = function () {
+      if (!$('#responsavel').val() || $('#recorrente').is(':checked')) return '';
+      if (_divModo === 'metade') return '50';
+      if (_divModo === 'outro') {
+          var total = totalModal(), v = parteDaPessoaValor();
+          if (total > 0 && v > 0 && v < total) return String(Math.round(v / total * 1000000) / 10000);
+      }
+      return '';
+  };
+  function fmt(v) { return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function atualizaResumoDivisao() {
+      // Mesmo arredondamento do servidor (centavos); a sua parte é o resto
+      var total = totalModal(), dela = Math.round(Math.min(parteDaPessoaValor(), total) * 100) / 100;
+      var $r = $('#divisaoResumo');
+      if (_divModo === 'tudo' || total <= 0) { $r.text(''); return; }
+      if (_divModo === 'outro' && (dela <= 0 || dela >= total)) {
+          $r.html('<span class="text-warning">Informe um valor menor que o total (' + fmt(total) + ').</span>');
+          return;
+      }
+      $r.html('Dela: <strong>' + fmt(dela) + '</strong> · Sua parte: <strong>' + fmt(total - dela) + '</strong>');
+  }
+  function atualizaDivisao() {
+      var id = $('#responsavel').val();
+      var mostra = !!id && !$('#recorrente').is(':checked');
+      var r = (window.responsaveisArray || []).find(function (x) { return String(x.id) === String(id); });
+      $('#divisaoNome').text(r ? r.nome : 'da pessoa');
+      $('#divisaoWrapper').toggle(mostra);
+      atualizaResumoDivisao();
+  }
+  function setModoDivisao(modo) {
+      _divModo = modo;
+      $('.divisao-opcao').removeClass('selecionado').filter('[data-modo="' + modo + '"]').addClass('selecionado');
+      $('#divisaoValorWrap').toggle(modo === 'outro');
+      if (modo === 'outro') {
+          if (!_divValor) _divValor = bancInput(document.getElementById('divisaoValor'));
+          setTimeout(function () { $('#divisaoValor').trigger('focus'); }, 30);
+      }
+      atualizaResumoDivisao();
+  }
+  // Edição: recebe a % gravada e escolhe o modo (50 → Metade; outro → valor em R$)
+  window.setParteModal = function (pct) {
+      pct = parseFloat(pct);
+      if (!pct || pct >= 100) { setModoDivisao('tudo'); }
+      else if (Math.abs(pct - 50) < 0.001) { setModoDivisao('metade'); }
+      else {
+          setModoDivisao('outro');
+          _divValor.setValue(Math.round(totalModal() * pct) / 100);
+      }
+      atualizaDivisao();
+  };
+  $(document).on('click', '.divisao-opcao', function () { setModoDivisao($(this).data('modo')); });
+  $(document).on('keyup paste input', '#valor, #divisaoValor', function () { setTimeout(atualizaResumoDivisao, 0); });
+  $(document).on('click', '.tipo-lanc-btn', function () { setTimeout(atualizaDivisao, 0); });
 
   // Sempre que o modal de lançamento abre: reset responsável + renderiza chips
   $(document).on('show.bs.modal', '#modalAdiciona', function () {
       $('#responsavel').val('');
+      setModoDivisao('tudo');
+      $('#divisaoWrapper').hide();
       if (window.responsaveisArray && window.responsaveisArray.length) {
           renderResponsaveisMiniModal();
       } else {
@@ -575,6 +649,12 @@ $navGrupos = [
             <span id="labelGatos">Gatos espaciais</span>
           </button>
         </li>
+        <li>
+          <button type="button" class="dropdown-item" id="btnTemaAstronautas">
+            <i class="bi bi-rocket-takeoff me-2" id="iconeAstronautas"></i>
+            <span id="labelAstronautas">Gatos astronautas</span>
+          </button>
+        </li>
         <li><hr class="dropdown-divider"></li>
         <li>
           <a class="dropdown-item text-danger" href="<?= BASE_URL ?>/logout.php">
@@ -601,12 +681,16 @@ $navGrupos = [
   var btnGatos   = document.getElementById('btnTemaGatos');
   var iconeGatos = document.getElementById('iconeGatos');
   var labelGatos = document.getElementById('labelGatos');
+  var btnFant    = document.getElementById('btnTemaAstronautas');
+  var iconeFant  = document.getElementById('iconeAstronautas');
+  var labelFant  = document.getElementById('labelAstronautas');
 
-  // Temas mutuamente exclusivos: 'dark' | 'light' | 'gatos'.
-  // 'gatos' usa um padrão azul-marinho escuro, então não combina com o modo claro.
+  // Temas mutuamente exclusivos: 'dark' | 'light' | 'gatos' | 'astronautas'.
+  // Os temas com padrão são escuros, então não combinam com o modo claro.
   function aplicaTema(tema) {
     html.classList.toggle('light-mode', tema === 'light');
     html.classList.toggle('tema-gatos', tema === 'gatos');
+    html.classList.toggle('tema-astronautas', tema === 'astronautas');
     html.setAttribute('data-bs-theme', tema === 'light' ? 'light' : 'dark');
 
     icone.className = tema === 'light' ? 'bi bi-moon-fill me-2' : 'bi bi-sun-fill me-2';
@@ -614,11 +698,15 @@ $navGrupos = [
 
     if (labelGatos) labelGatos.textContent = tema === 'gatos' ? 'Remover gatos' : 'Gatos espaciais';
     if (iconeGatos) iconeGatos.className = tema === 'gatos' ? 'bi bi-x-circle me-2' : 'bi bi-stars me-2';
+    if (labelFant) labelFant.textContent = tema === 'astronautas' ? 'Remover astronautas' : 'Gatos astronautas';
+    if (iconeFant) iconeFant.className = tema === 'astronautas' ? 'bi bi-x-circle me-2' : 'bi bi-rocket-takeoff me-2';
+    var cred = document.getElementById('creditoTema');
+    if (cred) cred.style.display = tema === 'astronautas' ? '' : 'none';
   }
 
   function temaAtual() {
     var t = localStorage.getItem('skyTheme');
-    return (t === 'light' || t === 'gatos') ? t : 'dark';
+    return (t === 'light' || t === 'gatos' || t === 'astronautas') ? t : 'dark';
   }
 
   function salva(tema) {
@@ -638,6 +726,13 @@ $navGrupos = [
     btnGatos.addEventListener('click', function (e) {
       e.stopPropagation();
       salva(temaAtual() === 'gatos' ? 'dark' : 'gatos');
+    });
+  }
+
+  if (btnFant) {
+    btnFant.addEventListener('click', function (e) {
+      e.stopPropagation();
+      salva(temaAtual() === 'astronautas' ? 'dark' : 'astronautas');
     });
   }
 })();
@@ -662,6 +757,130 @@ $navGrupos = [
     a.addEventListener('click', function () { set(false); });
   });
   window.addEventListener('resize', function () { if (window.innerWidth >= 992) set(false); });
+})();
+</script>
+<script>
+// ── Calculadora para campos de valor ─────────────────────────────
+// Botão .btn-calc[data-calc-alvo="#campo"] ao lado de um campo bancInput abre um
+// painel com teclado. A expressão é avaliada por um parser próprio (sem eval):
+// números no formato brasileiro (1.234,56), + − × ÷ e parênteses.
+(function () {
+  function calcula(expr) {
+    var s = String(expr).replace(/\s+/g, '').replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+    var i = 0;
+    function numero() {
+      var m = s.slice(i).match(/^[\d.]*,?\d*/);
+      var txt = m ? m[0] : '';
+      if (!txt || txt === ',' ) throw 0;
+      i += txt.length;
+      var v = parseFloat(txt.replace(/\./g, '').replace(',', '.'));
+      if (isNaN(v)) throw 0;
+      return v;
+    }
+    function fator() {
+      if (s[i] === '-') { i++; return -fator(); }
+      if (s[i] === '+') { i++; return fator(); }
+      if (s[i] === '(') { i++; var v = soma(); if (s[i] !== ')') throw 0; i++; return v; }
+      return numero();
+    }
+    function produto() {
+      var v = fator();
+      while (s[i] === '*' || s[i] === '/') {
+        var op = s[i++], d = fator();
+        if (op === '/') { if (d === 0) throw 0; v /= d; } else v *= d;
+      }
+      return v;
+    }
+    function soma() {
+      var v = produto();
+      while (s[i] === '+' || s[i] === '-') { var op = s[i++]; v = op === '+' ? v + produto() : v - produto(); }
+      return v;
+    }
+    if (!s) return null;
+    try { var r = soma(); return i === s.length && isFinite(r) ? Math.round(r * 100) / 100 : null; }
+    catch (e) { return null; }
+  }
+  window.calculaExpressao = calcula;
+
+  function brl(v) { return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  var teclas = [
+    ['C', 'limpa'], ['(', '('], [')', ')'], ['÷', '÷'],
+    ['7', '7'], ['8', '8'], ['9', '9'], ['×', '×'],
+    ['4', '4'], ['5', '5'], ['6', '6'], ['−', '−'],
+    ['1', '1'], ['2', '2'], ['3', '3'], ['+', '+'],
+    ['0', '0'], [',', ','], ['⌫', 'apaga'], ['=', 'igual']
+  ];
+
+  function monta(btn) {
+    if (btn._calc) return btn._calc;
+    var painel = document.createElement('div');
+    painel.className = 'dropdown-menu dropdown-menu-end calc-painel';
+    painel.innerHTML =
+      '<input type="text" class="form-control calc-expr" inputmode="decimal" autocomplete="off" placeholder="Ex: 120 / 3">' +
+      '<div class="calc-resultado"><span class="calc-res-label">=</span> <strong class="calc-res-valor">—</strong></div>' +
+      '<div class="calc-teclas">' + teclas.map(function (t) {
+        var cls = /^[÷×−+]$/.test(t[0]) ? ' calc-op' : (t[1] === 'igual' ? ' calc-igual' : (t[1] === 'limpa' || t[1] === 'apaga' ? ' calc-fn' : ''));
+        return '<button type="button" class="calc-tecla' + cls + '" data-t="' + t[1] + '">' + t[0] + '</button>';
+      }).join('') + '</div>' +
+      '<button type="button" class="btn btn-success w-100 calc-usar"><i class="bi bi-check-lg me-1"></i>Usar valor</button>';
+    btn.setAttribute('data-bs-toggle', 'dropdown');
+    btn.setAttribute('data-bs-auto-close', 'outside');
+    btn.insertAdjacentElement('afterend', painel);
+
+    var expr = painel.querySelector('.calc-expr');
+    var res  = painel.querySelector('.calc-res-valor');
+    function atualiza() {
+      var v = calcula(expr.value);
+      res.textContent = v === null ? '—' : 'R$ ' + brl(v);
+      res.classList.toggle('text-danger', v !== null && v < 0);
+      return v;
+    }
+    function usa() {
+      var v = atualiza();
+      if (v === null) { toastr.warning('Conta inválida.'); return; }
+      if (v <= 0) { toastr.warning('O resultado precisa ser maior que zero.'); return; }
+      var alvo = document.querySelector(btn.getAttribute('data-calc-alvo'));
+      if (alvo && alvo._banc) alvo._banc.setValue(v);
+      bootstrap.Dropdown.getOrCreateInstance(btn).hide();
+    }
+    painel.addEventListener('click', function (e) {
+      var t = e.target.closest('.calc-tecla');
+      if (t) {
+        var k = t.getAttribute('data-t');
+        if (k === 'limpa') expr.value = '';
+        else if (k === 'apaga') expr.value = expr.value.slice(0, -1);
+        else if (k === 'igual') { var v = atualiza(); if (v !== null) expr.value = brl(v).replace(/\./g, ''); }
+        else expr.value += k;
+        atualiza();
+        return;
+      }
+      if (e.target.closest('.calc-usar')) usa();
+    });
+    expr.addEventListener('input', atualiza);
+    expr.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); usa(); }
+    });
+    // Ao abrir: começa com o valor atual do campo
+    btn.addEventListener('shown.bs.dropdown', function () {
+      var alvo = document.querySelector(btn.getAttribute('data-calc-alvo'));
+      var atual = alvo && alvo._banc ? alvo._banc.getValue() : 0;
+      expr.value = atual > 0 ? brl(atual).replace(/\./g, '') : '';
+      atualiza();
+      if (window.matchMedia('(pointer: fine)').matches) { expr.focus(); expr.select(); }
+    });
+    btn._calc = painel;
+    return painel;
+  }
+
+  // Monta antes do 1º clique (toque ou foco pelo teclado); daí em diante o
+  // próprio Bootstrap abre/fecha pelo data-bs-toggle="dropdown".
+  function prepara(e) {
+    var b = e.target.closest && e.target.closest('.btn-calc');
+    if (b && !b._calc) monta(b);
+  }
+  document.addEventListener('pointerdown', prepara, true);
+  document.addEventListener('focusin', prepara, true);
 })();
 </script>
 <script>

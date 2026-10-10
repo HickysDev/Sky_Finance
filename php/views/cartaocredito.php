@@ -235,10 +235,10 @@ $mesAtual = date('n');
             limpaErrosModalCC();
         });
 
-        var _respEditCC = '';
+        var _respEditCC = '', _parteEditCC = '';
 
         $('#modalAdiciona').on('shown.bs.modal', function () {
-            if (_modoEditCC) { setResponsavelModal(_respEditCC); return; }
+            if (_modoEditCC) { setResponsavelModal(_respEditCC); setParteModal(_parteEditCC); return; }
             if (!_pendingRepetirCC) return;
             var d = _pendingRepetirCC;
             _pendingRepetirCC = null;
@@ -249,6 +249,7 @@ $mesAtual = date('n');
             var pad = function(n){ return String(n).padStart(2,'0'); };
             $('#data').val(hoje.getFullYear() + '-' + pad(hoje.getMonth()+1) + '-' + pad(hoje.getDate()));
             setCatSelecionadaCC(d.categoria);
+            setParteModal(d.parte);
             $('.cartao-mini-modal').removeClass('selecionado');
             $('.cartao-mini-modal[data-id="' + d.cartao + '"]').addClass('selecionado');
             $('#cartao').val(d.cartao);
@@ -484,6 +485,7 @@ $mesAtual = date('n');
                 cartao:       $('#cartao').val(),
                 data:         $('#data').val(),
                 responsavel:  $('#responsavel').val() || '',
+                responsavel_parte: parteResponsavel(),
             };
 
             if (isRecorrente) {
@@ -778,14 +780,14 @@ $mesAtual = date('n');
                                         data-categoria="${gasto.categoria_id || ''}"
                                         data-cartao="${idCartao}"
                                         data-data="${gasto.data_gasto || ''}"
-                                        data-responsavel="${gasto.responsavel_id || ''}"
+                                        data-responsavel="${gasto.responsavel_id || ''}" data-parte="${gasto.responsavel_parte || ''}"
                                         title="Editar"><i class="bi bi-pencil-fill" style="font-size:.75rem;"></i></button>
                                     <button class="btn btn-sm btn-outline-secondary btn-repetir-gasto-cc py-0 px-1 me-1"
                                         data-descricao="${descEsc}"
                                         data-valor="${gasto.valor_parcela}"
                                         data-categoria="${gasto.categoria_id || ''}"
                                         data-cartao="${idCartao}"
-                                        data-responsavel="${gasto.responsavel_id || ''}"
+                                        data-responsavel="${gasto.responsavel_id || ''}" data-parte="${gasto.responsavel_parte || ''}"
                                         title="Repetir no mês atual"><i class="bi bi-arrow-repeat" style="font-size:.75rem;"></i></button>`;
                                 } else {
                                     btnEditar = `<button class="btn btn-sm btn-outline-secondary btn-editar-simples py-0 px-1 me-1"
@@ -1176,7 +1178,8 @@ $mesAtual = date('n');
                 valor:     $(this).data('valor'),
                 categoria: $(this).data('categoria'),
                 cartao:    $(this).data('cartao'),
-                responsavel: $(this).data('responsavel')
+                responsavel: $(this).data('responsavel'),
+                parte:     $(this).data('parte')
             };
             bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdiciona')).show();
         });
@@ -1185,6 +1188,7 @@ $mesAtual = date('n');
             var $btn = $(this);
             _modoEditCC = true;
             _respEditCC = $btn.data('responsavel') || '';
+            _parteEditCC = $btn.data('parte') || '';
             $('#adicionarDespesa').hide();
             $('#editarDespesa').show();
             $('#gastoId').val($btn.data('id'));
@@ -1235,6 +1239,7 @@ $mesAtual = date('n');
                     cartao:    $('#cartao').val(),
                     data:      $('#data').val(),
                     responsavel: $('#responsavel').val() || '',
+                    responsavel_parte: parteResponsavel(),
                 },
                 dataType: 'json',
                 success: function () {

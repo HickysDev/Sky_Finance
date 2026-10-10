@@ -57,6 +57,34 @@ class ContasPessoaModel {
         return $stmt->execute([':id' => $id]);
     }
 
+    /**
+     * "Devo a ela" ainda não pago de meses ANTERIORES ao mês visto (a partir do
+     * marco inicial). Aparece em todos os meses seguintes até ser marcado pago.
+     */
+    public static function pendentesAnteriores(int $responsavelId, int $mes, int $ano): array {
+        $conn   = Database::getConnection();
+        $inicio = sprintf('%04d-%02d-01', $ano, $mes);
+        $marco  = ConfigModel::getMesInicio();
+        $stmt = $conn->prepare("
+            SELECT cp.*, cat.nome AS categoria, cat.cor AS cat_cor, cat.icone AS cat_icone
+            FROM contas_pessoa cp
+            LEFT JOIN categorias cat ON cat.id = cp.categoria_id
+            WHERE cp.responsavel_id = :rid AND cp.usuario_id = @uid
+              AND cp.pago = 'N' AND cp.data < :inicio
+              " . ($marco ? "AND cp.data >= :marco" : "") . "
+            ORDER BY cp.data ASC
+        ");
+        $p = [':rid' => $responsavelId, ':inicio' => $inicio];
+        if ($marco) $p[':marco'] = $marco;
+        $stmt->execute($p);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as &$r) {
+            $r['valor']    = (float) $r['valor'];
+            $r['atrasado'] = true;
+        }
+        return $rows;
+    }
+
     public static function resumo(int $mes, int $ano): array {
         if (ConfigModel::antesDoMarco($mes, $ano)) return [];
         $conn = Database::getConnection();
@@ -96,6 +124,14 @@ class ContasPessoaModel {
             $r['eu_devo']         = (float) $r['eu_devo'];
             $r['eu_paguei']       = (float) $r['eu_paguei'];
             $r['qtd_aberto']      = (int)   $r['qtd_aberto'];
+
+            // Pendências de meses anteriores continuam devidas neste mês
+            $pend     = self::pendentesAnteriores((int) $r['id'], $mes, $ano);
+            $atrasado = array_sum(array_column($pend, 'valor'));
+            $qtdAtr   = count($pend);
+            $r['eu_devo_atrasado'] = $atrasado;
+            $r['eu_devo']         += $atrasado;
+            $r['qtd_aberto']      += $qtdAtr;
 
             // Contas fixas que eu pago por meio dela (dinheiro vai para ela)
             foreach (ContasFixasModel::daPessoa((int) $r['id'], $mes, $ano) as $cf) {
@@ -138,7 +174,7 @@ class ContasPessoaModel {
 
         // Não-crédito: filtra por data_gasto; recebimento manual
         $stmt = $conn->prepare("
-            SELECT g.id, g.descricao AS nome, g.valor, g.data_gasto AS data,
+            SELECT g.id, g.descricao AS nome, ROUND(g.valor * COALESCE(g.responsavel_parte, 100) / 100, 2) AS valor, g.valor AS valor_total, g.responsavel_parte AS parte, g.data_gasto AS data,
                    g.metodo_pagamento AS metodo, cc.nome_cartao, g.cartao_id,
                    cat.nome AS categoria, cat.cor AS cat_cor, 'avulso' AS origem,
                    'manual' AS forma, 'gasto' AS alvo, g.recebido_em
@@ -154,7 +190,7 @@ class ContasPessoaModel {
 
         // Crédito não parcelado: filtra por dataVencimento; quitado pela fatura
         $stmtCred = $conn->prepare("
-            SELECT g.id, g.descricao AS nome, g.valor, g.dataVencimento AS data,
+            SELECT g.id, g.descricao AS nome, ROUND(g.valor * COALESCE(g.responsavel_parte, 100) / 100, 2) AS valor, g.valor AS valor_total, g.responsavel_parte AS parte, g.dataVencimento AS data,
                    g.metodo_pagamento AS metodo, cc.nome_cartao, g.cartao_id,
                    cat.nome AS categoria, cat.cor AS cat_cor, 'avulso' AS origem,
                    'fatura' AS forma, NULL AS alvo, " . $faturaPaga('g.cartao_id', 'g.dataVencimento') . " AS recebido_em
@@ -170,7 +206,7 @@ class ContasPessoaModel {
 
         // Crédito parcelado: filtra por data_vencimento da parcela; quitado pela fatura
         $stmtParc = $conn->prepare("
-            SELECT g.id, g.descricao AS nome, p.valor_parcela AS valor, p.data_vencimento AS data,
+            SELECT g.id, g.descricao AS nome, ROUND(p.valor_parcela * COALESCE(g.responsavel_parte, 100) / 100, 2) AS valor, p.valor_parcela AS valor_total, g.responsavel_parte AS parte, p.data_vencimento AS data,
                    g.metodo_pagamento AS metodo, cc.nome_cartao, g.cartao_id,
                    cat.nome AS categoria, cat.cor AS cat_cor, 'avulso' AS origem,
                    'fatura' AS forma, NULL AS alvo, " . $faturaPaga('g.cartao_id', 'p.data_vencimento') . " AS recebido_em
@@ -207,6 +243,8 @@ class ContasPessoaModel {
         usort($todos, function($a, $b) { return strcmp($b['data'], $a['data']); });
         foreach ($todos as &$d) {
             $d['valor']    = (float) $d['valor'];
+            $d['valor_total'] = isset($d['valor_total']) ? (float) $d['valor_total'] : $d['valor'];
+            $d['parte']       = isset($d['parte']) && $d['parte'] !== null ? (float) $d['parte'] : null;
             $d['recebido'] = !empty($d['recebido_em']);
         }
         return $todos;

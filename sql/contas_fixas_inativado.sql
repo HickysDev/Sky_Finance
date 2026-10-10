@@ -67,3 +67,30 @@ ALTER TABLE `contas_fixas`
   ADD COLUMN IF NOT EXISTS `responsavel_id` INT NULL DEFAULT NULL AFTER `cor`;
 ALTER TABLE `contas_fixas_pagamentos`
   ADD COLUMN IF NOT EXISTS `responsavel_id` INT NULL DEFAULT NULL AFTER `pulado`;
+
+-- ------------------------------------------------------------
+-- Despesa dividida com uma pessoa: % da despesa que é dela (NULL = 100%).
+-- O total gasto continua com o valor inteiro (eu paguei); o "ela me deve"
+-- cobra só a parte dela. Em parcelado vale para cada parcela.
+-- ------------------------------------------------------------
+ALTER TABLE `gastos`
+  ADD COLUMN IF NOT EXISTS `responsavel_parte` DECIMAL(7,4) NULL DEFAULT NULL AFTER `responsavel_id`;
+
+-- ------------------------------------------------------------
+-- Lista de desejos: categoria (as mesmas categorias das despesas).
+-- ------------------------------------------------------------
+ALTER TABLE `lista_desejos`
+  ADD COLUMN IF NOT EXISTS `categoria_id` INT NULL DEFAULT NULL AFTER `prioridade`;
+
+-- ------------------------------------------------------------
+-- Lista de desejos: despesa lançada ao "comprar" (para poder reverter).
+-- ------------------------------------------------------------
+ALTER TABLE `lista_desejos`
+  ADD COLUMN IF NOT EXISTS `gasto_id` INT NULL DEFAULT NULL AFTER `comprado`;
+
+-- ------------------------------------------------------------
+-- Cofrinho: valor que já existia ("saldo inicial"). Entra no saldo do
+-- cofrinho mas não conta como "guardado" em nenhum mês.
+-- ------------------------------------------------------------
+ALTER TABLE `cofrinho_aportes`
+  ADD COLUMN IF NOT EXISTS `saldo_inicial` CHAR(1) NOT NULL DEFAULT 'N' AFTER `observacao`;

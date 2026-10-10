@@ -196,6 +196,7 @@ CREATE TABLE IF NOT EXISTS `renda_mensal` (
 -- Bancos criados antes das colunas novas (CREATE TABLE IF NOT EXISTS não as adiciona).
 ALTER TABLE `renda_mensal` ADD COLUMN IF NOT EXISTS `inativado_em` DATE NULL DEFAULT NULL AFTER `ativo`;
 ALTER TABLE `gastos` ADD COLUMN IF NOT EXISTS `recebido_em` DATE NULL DEFAULT NULL AFTER `responsavel_id`;
+ALTER TABLE `gastos` ADD COLUMN IF NOT EXISTS `responsavel_parte` DECIMAL(7,4) NULL DEFAULT NULL AFTER `responsavel_id`;
 ALTER TABLE `gastos_recorrentes_lancamentos` ADD COLUMN IF NOT EXISTS `recebido_em` DATE NULL DEFAULT NULL AFTER `usuario_id`;
 ALTER TABLE `responsaveis` ADD COLUMN IF NOT EXISTS `arquivado_em` DATE NULL DEFAULT NULL;
 
@@ -339,12 +340,15 @@ CREATE TABLE IF NOT EXISTS `lista_desejos` (
   `imagem`     VARCHAR(1000) NULL DEFAULT NULL,
   `valor`      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   `prioridade` ENUM('alta','media','baixa') NOT NULL DEFAULT 'media',
+  `categoria_id` INT         NULL DEFAULT NULL,
   `comprado`   CHAR(1)       NOT NULL DEFAULT 'N',
   `created_at` TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `usuario_id` (`usuario_id`),
   CONSTRAINT `lista_desejos_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+ALTER TABLE `lista_desejos` ADD COLUMN IF NOT EXISTS `categoria_id` INT NULL DEFAULT NULL AFTER `prioridade`;
+ALTER TABLE `lista_desejos` ADD COLUMN IF NOT EXISTS `gasto_id` INT NULL DEFAULT NULL AFTER `comprado`;
 
 -- ------------------------------------------------------------
 
@@ -353,3 +357,6 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ============================================================
 --  Pronto! Acesse o sistema e crie o primeiro usuário no login.
 -- ============================================================
+
+-- Cofrinho: valor que já existia (fora das contas do mês)
+ALTER TABLE `cofrinho_aportes` ADD COLUMN IF NOT EXISTS `saldo_inicial` CHAR(1) NOT NULL DEFAULT 'N' AFTER `observacao`;
