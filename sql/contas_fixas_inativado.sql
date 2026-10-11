@@ -94,3 +94,10 @@ ALTER TABLE `lista_desejos`
 -- ------------------------------------------------------------
 ALTER TABLE `cofrinho_aportes`
   ADD COLUMN IF NOT EXISTS `saldo_inicial` CHAR(1) NOT NULL DEFAULT 'N' AFTER `observacao`;
+
+-- ------------------------------------------------------------
+-- Tema visual por usuário (antes ficava no navegador e passava de uma
+-- conta para outra). NULL = padrão (escuro).
+-- ------------------------------------------------------------
+ALTER TABLE `usuarios`
+  ADD COLUMN IF NOT EXISTS `tema` VARCHAR(20) NULL DEFAULT NULL;

@@ -26,6 +26,16 @@ switch ($acao) {
         echo json_encode($stmt->fetch(PDO::FETCH_ASSOC));
         break;
 
+    case 'salvar_tema':
+        // Tema visual da conta logada (dark | light | gatos | astronautas)
+        $tema = $_POST['tema'] ?? '';
+        if (!in_array($tema, ['dark', 'light', 'gatos', 'astronautas'], true)) {
+            http_response_code(400); echo json_encode(['erro' => 'Tema inválido']); break;
+        }
+        $stmt = $conn->prepare("UPDATE usuarios SET tema = ? WHERE id = ?");
+        echo json_encode(['ok' => $stmt->execute([$tema === 'dark' ? null : $tema, $meuId])]);
+        break;
+
     case 'salvar_marco':
         // 'YYYY-MM' para definir, vazio para limpar
         $marco = trim($_POST['marco'] ?? '');

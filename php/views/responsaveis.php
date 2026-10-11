@@ -396,7 +396,7 @@ function carregaContas() {
                 $('#listaContas').html(
                     '<div class="painel text-center py-5">' +
                     '<i class="bi bi-people" style="font-size:3rem;color:var(--cor-borda);"></i>' +
-                    '<p class="mt-3 mb-1" style="color:var(--cor-texto-off);">Nenhuma pessoa cadastrada.</p>' +
+                    '<p class="mt-3 mb-1" style="color:var(--cor-texto-off);">Nenhuma pessoa cadastrada. Use “Gerenciar” para adicionar quem divide gastos com você.</p>' +
                     '<a href="gerenciamento.php" class="btn btn-sm btn-outline-primary mt-2">Cadastrar no Gerenciar</a>' +
                     '</div>');
                 return;
@@ -511,7 +511,7 @@ function renderEuDevo(respId, data) {
     var totalAberto = 0, totalPago = 0, rows = '';
 
     if (!data || !data.length) {
-        rows = '<div class="empty-panel"><i class="bi bi-inbox me-2"></i>Nenhum item registrado.</div>';
+        rows = '<div class="empty-panel"><i class="bi bi-inbox me-2"></i>Nada que você deva a ela neste mês. Use “Adicionar item” para registrar.</div>';
     } else {
         $.each(data, function (_, item) {
             var p = item.pago === 'S';

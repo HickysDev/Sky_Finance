@@ -126,7 +126,7 @@ $mesAtual = date('n');
                 <div id="listaRecentes"></div>
                 <div id="recentesVazio" style="display:none;" class="text-center py-4">
                     <i class="bi bi-inbox" style="font-size:2.5rem;color:var(--cor-borda);"></i>
-                    <p class="mt-2 mb-0" style="color:var(--cor-texto-off);">Nenhuma despesa neste mês</p>
+                    <p class="mt-2 mb-0" style="color:var(--cor-texto-off);">Nenhuma despesa neste mês. Lance pelo Crédito ou pelo À Vista.</p>
                 </div>
             </div>
         </div>
@@ -153,7 +153,7 @@ $mesAtual = date('n');
                     </div>
                 </div>
                 <div class="progress" style="height:14px;background:var(--cor-input);border-radius:20px;">
-                    <div id="barraProgresso" class="progress-bar" role="progressbar"
+                    <div id="barraProgresso" class="progress-bar" role="progressbar" aria-label="Quanto da renda já foi gasto"
                          style="border-radius:20px;transition:width 0.8s ease;"></div>
                 </div>
                 <div class="d-flex justify-content-between mt-2" style="font-size:0.8rem;">
@@ -207,7 +207,7 @@ $mesAtual = date('n');
                 </div>
                 <div id="emptyCofDash" style="display:none;" class="text-center py-4">
                     <i class="bi bi-piggy-bank" style="font-size:2rem;color:var(--cor-borda);"></i>
-                    <p class="mt-2 mb-0" style="color:var(--cor-texto-off);">Nenhum cofrinho criado ainda.</p>
+                    <p class="mt-2 mb-0" style="color:var(--cor-texto-off);">Nenhum cofrinho ainda. Crie um em Finanças para guardar dinheiro com uma meta.</p>
                 </div>
                 <div id="listaCofDash"></div>
                 <div id="totalCofDash" style="display:none;border-top:1px solid var(--cor-borda);" class="d-flex justify-content-between align-items-center mt-3 pt-2">
@@ -845,7 +845,7 @@ $(document).ready(function () {
 
             html +=
                 '<div class="fdc-card" style="--fdc:' + cor + ';">' +
-                    '<div class="fdc-header collapsed" data-bs-toggle="collapse" data-bs-target="#' + collapseId + '" aria-expanded="false">' +
+                    '<div class="fdc-header collapsed" role="button" tabindex="0" data-bs-toggle="collapse" data-bs-target="#' + collapseId + '" aria-expanded="false">' +
                         '<div class="d-flex align-items-center gap-2">' +
                             '<i class="bi bi-credit-card-fill" style="color:' + cor + ';font-size:1rem;"></i>' +
                             '<span class="fdc-nome">' + escHtml(nome) + '</span>' +
@@ -921,7 +921,7 @@ $(document).ready(function () {
         $.each(cartoes, function (_, c) { lista.push(c); });
 
         if (!lista.length) {
-            $('#arFaturas').html('<div class="ar-empty">Nenhum cartão cadastrado.</div>');
+            $('#arFaturas').html('<div class="ar-empty">Nenhum cartão cadastrado. Cadastre em Config. → Cartões.</div>');
             fatResults = [];
             fatDone = true;
             $('#arLoader').hide();
@@ -1196,7 +1196,7 @@ $(document).ready(function () {
     font-size: 0.82rem; font-weight: 500; line-height: 1.2;
 }
 .kpi-valor {
-    font-family: "Bebas Neue", sans-serif;
+    font-family: var(--fonte-display);
     font-size: 1.75rem; line-height: 1;
     margin-bottom: 0.15rem; letter-spacing: 0.02em;
 }
@@ -1219,7 +1219,7 @@ $(document).ready(function () {
 }
 .kpi-sm-label { font-size: 0.72rem; font-weight: 600; color: var(--cor-texto-sec); line-height: 1.2; }
 .kpi-sm-valor {
-    font-family: "Bebas Neue", sans-serif;
+    font-family: var(--fonte-display);
     font-size: 1.2rem; line-height: 1;
     margin-bottom: 0.08rem; letter-spacing: 0.02em;
 }
@@ -1302,7 +1302,7 @@ $(document).ready(function () {
 }
 .fdc-header:hover { background: rgba(255,255,255,0.04); }
 .fdc-nome  { font-weight: 600; font-size: 0.9rem; }
-.fdc-total { font-family: "Bebas Neue", sans-serif; font-size: 1.1rem; letter-spacing: 0.03em; }
+.fdc-total { font-family: var(--fonte-display); font-size: 1.1rem; letter-spacing: 0.03em; }
 .fdc-caret { color: var(--cor-texto-off); font-size: 0.8rem; transition: transform 0.2s ease; }
 .fdc-body  { border-top: 1px solid var(--cor-borda); padding: 4px 0; }
 

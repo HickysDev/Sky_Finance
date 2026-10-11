@@ -360,3 +360,6 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- Cofrinho: valor que já existia (fora das contas do mês)
 ALTER TABLE `cofrinho_aportes` ADD COLUMN IF NOT EXISTS `saldo_inicial` CHAR(1) NOT NULL DEFAULT 'N' AFTER `observacao`;
+
+-- Tema visual por usuário
+ALTER TABLE `usuarios` ADD COLUMN IF NOT EXISTS `tema` VARCHAR(20) NULL DEFAULT NULL;

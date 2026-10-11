@@ -103,7 +103,7 @@ $tipoDespesa = 'recorrente';
             </div>
             <div id="emptyRecorrentes" style="display:none;" class="text-center py-5">
                 <i class="bi bi-arrow-clockwise" style="font-size:2.5rem;color:var(--cor-borda);"></i>
-                <p class="mt-2 mb-0" style="color:var(--cor-texto-off);">Nenhum gasto recorrente cadastrado.</p>
+                <p class="mt-2 mb-0" style="color:var(--cor-texto-off);">Nenhum recorrente ainda. Use “Novo” para cadastrar assinaturas e gastos que se repetem.</p>
             </div>
         </div>
     </div>
@@ -728,7 +728,7 @@ function buscaCartoes() {
         success: function (data) {
             window.cartoesArray = data;
             if (!data || Object.keys(data).length === 0) {
-                $('#listagemCartoes').html('<div class="col-12 text-center py-4" style="color:var(--cor-texto-off);">Nenhum cartão cadastrado.</div>');
+                $('#listagemCartoes').html('<div class="col-12 text-center py-4" style="color:var(--cor-texto-off);">Nenhum cartão cadastrado. Cadastre em Config. → Cartões.</div>');
                 return;
             }
             let html = '';
@@ -881,7 +881,7 @@ function buscaCategorias() {
         data: { acao: 'busca' }, dataType: 'json',
         success: function (data) {
             if (!data || !data.length) {
-                $('#listaCatGrid').html('<div class="col-12 text-center py-4" style="color:var(--cor-texto-off);">Nenhuma categoria cadastrada.</div>');
+                $('#listaCatGrid').html('<div class="col-12 text-center py-4" style="color:var(--cor-texto-off);">Nenhuma categoria ainda. Use “Nova” para criar a primeira.</div>');
                 popularCatSelect([]);
                 return;
             }
@@ -1849,7 +1849,7 @@ $('#btnTrocarSenha').click(function () {
 .crt-action-btn.crt-action-del:hover { background: rgba(239,68,68,0.2); color: #EF4444; }
 
 .crt-card-nome {
-    font-family: "Bebas Neue", sans-serif;
+    font-family: var(--fonte-display);
     font-size: 1.25rem;
     letter-spacing: 1px;
     color: var(--cor-texto);

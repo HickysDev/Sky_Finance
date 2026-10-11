@@ -1,0 +1,778 @@
+/* ╔══════════════════════════════════════════════════════════════════╗
+   ║  SKY FINANCE — UI 2.0 (repaginação)                              ║
+   ║  Camada carregada DEPOIS do style.css. Remover o <link> do       ║
+   ║  header volta ao visual anterior.                                ║
+   ║                                                                  ║
+   ║  Princípios                                                      ║
+   ║  • Mesma paleta; cor só com significado (pago, gasto, alerta).   ║
+   ║  • Superfícies calmas: sólidas, borda fina, sem sombra pesada.   ║
+   ║  • Uma ousadia só: os valores — grandes, pesados, tabulares.     ║
+   ║  • Raios com hierarquia: painel 14 · controle 8 · chip 999.      ║
+   ║  • Temas (claro, gatos, astronautas) continuam valendo por cima: ║
+   ║    as regras deles são mais específicas que :root.               ║
+   ╚══════════════════════════════════════════════════════════════════╝ */
+
+/* ─── 1. TOKENS ─────────────────────────────────────────────────── */
+:root {
+  --fonte-ui:      "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --fonte-display: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Paleta original, superfícies sólidas */
+  --cor-bg:          #1E1E2F;
+  --cor-painel:      #26273A;
+  --cor-painel-2:    #2D2F45;   /* elevado: dropdown, cabeçalho de tabela */
+  --cor-input:       #222336;
+  --cor-borda:       #363852;
+  --cor-borda-forte: #4A4D6B;
+  --cor-texto:       #F0F0F5;
+  --cor-texto-sec:   #A6ABC0;
+  --cor-texto-off:   #737891;
+  --cor-azul:        #3B82F6;
+  --cor-azul-hover:  #2563EB;
+  --cor-sucesso:     #22C55E;
+  --cor-perigo:      #EF4444;
+  --cor-alerta:      #F59E0B;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --sombra-sm: none;
+  --sombra-md: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --sombra-lg: 0 16px 40px rgba(0, 0, 0, 0.40);
+  --foco: 0 0 0 3px rgba(59, 130, 246, 0.35);
+
+  --sidebar-w: 248px;
+
+  /* Bootstrap 5.3 */
+  --bs-body-font-family: var(--fonte-ui);
+  --bs-body-bg: var(--cor-bg);
+  --bs-border-color: var(--cor-borda);
+  --bs-primary: #3B82F6;
+  --bs-primary-rgb: 59, 130, 246;
+  --bs-link-color: #60A5FA;
+  --bs-link-color-rgb: 96, 165, 250;
+  --bs-link-hover-color: #93C5FD;
+}
+html.light-mode {
+  --cor-painel-2:    #F1F5F9;
+  --cor-borda-forte: #CBD5E1;
+}
+
+/* ─── 2. BASE E TIPOGRAFIA ──────────────────────────────────────── */
+html body {
+  font-family: var(--fonte-ui);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.005em;
+}
+/* Números sempre alinhados (valores, datas, tabelas) */
+html body { font-variant-numeric: tabular-nums; }
+
+html .titulo {
+  font-family: var(--fonte-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+/* Título da página: grande, peso alto, sem caixa-alta */
+html .fs-titulo-pag {
+  font-size: clamp(1.6rem, 1.2rem + 1.2vw, 2.15rem) !important;
+  letter-spacing: -0.03em;
+}
+html .fs-secao-titulo, html h6.titulo {
+  font-size: 1.02rem !important;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+html .titulo-pagina {
+  border-bottom: 1px solid var(--cor-borda);
+  padding-bottom: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+/* Fundo calmo no tema padrão: sem as manchas animadas, só um brilho fixo */
+html:not(.tema-gatos):not(.tema-astronautas):not(.light-mode) .aurora-blob { display: none; }
+html:not(.tema-gatos):not(.tema-astronautas):not(.light-mode) .aurora {
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(59, 130, 246, 0.10), transparent 60%),
+    radial-gradient(900px 400px at -10% 110%, rgba(99, 102, 241, 0.06), transparent 60%);
+}
+
+/* Foco visível para teclado */
+html :focus-visible { outline: none; box-shadow: var(--foco) !important; border-radius: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  html *, html *::before, html *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* ─── 3. LAYOUT: BARRA LATERAL (≥ 1200px) ───────────────────────── */
+.nav-grupo { display: none; }
+
+@media (min-width: 1200px) {
+  html body { padding-left: var(--sidebar-w); }
+
+  html .navbar-sky {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-w);
+    min-height: 100vh;
+    flex-direction: column; align-items: stretch;
+    gap: 0;
+    padding: 1.25rem .85rem 1rem;
+    background: #1A1A2A;
+    border-bottom: none;
+    border-right: 1px solid var(--cor-borda);
+    box-shadow: none;
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    z-index: 1030;
+  }
+  html.light-mode .navbar-sky { background: #FFFFFF !important; border-right: 1px solid var(--cor-borda) !important; }
+  html.tema-gatos .navbar-sky { background: #1C1E32; }
+
+  html .navbar-brand-sky { padding: 0 .5rem 1.25rem; margin: 0; }
+  html .navbar-brand-sky span { font-weight: 800; letter-spacing: -0.02em; font-size: 1.1rem; }
+  html .brand-logo { height: 36px; }
+
+  html .nav-drawer {
+    flex: 1; flex-direction: column; align-items: stretch;
+    overflow-y: auto; min-height: 0;
+    background: transparent !important;   /* o fundo da gaveta é só do celular */
+  }
+  html .nav-sky { flex-direction: column; align-items: stretch; gap: 2px; flex: none; }
+  html .nav-sep { display: none; }
+  html .nav-grupo {
+    display: block;
+    padding: 1rem .75rem .35rem;
+    font-size: .74rem; font-weight: 600;
+    color: var(--cor-texto-off);
+    letter-spacing: 0;
+  }
+  html .nav-sky li:first-child.nav-grupo { padding-top: 0; }
+
+  html .nav-sky .nav-link-sky {
+    flex-direction: row; justify-content: flex-start; gap: .75rem;
+    padding: .55rem .75rem;
+    font-size: .9rem; font-weight: 600; letter-spacing: -0.005em;
+    color: var(--cor-texto-sec);
+    border-radius: 8px;
+  }
+  html .nav-sky .nav-link-sky .nav-icon { font-size: 1.05rem; width: 1.2rem; text-align: center; }
+  html .nav-sky .nav-link-sky:hover { background: rgba(255, 255, 255, 0.05); color: var(--cor-texto); }
+  html .nav-sky .nav-link-sky.ativo {
+    background: rgba(59, 130, 246, 0.14);
+    color: #fff;
+  }
+  html .nav-sky .nav-link-sky.ativo .nav-icon { color: var(--cor-azul); }
+  /* Trilho azul à esquerda do item ativo */
+  html .nav-sky .nav-link-sky.ativo::after {
+    left: -.85rem; top: 8px; bottom: 8px; width: 3px; height: auto;
+    border-radius: 0 3px 3px 0;
+  }
+  html.light-mode .nav-link-sky.ativo { background: rgba(59, 130, 246, 0.12) !important; color: var(--cor-azul) !important; }
+
+  /* Avatar no rodapé da barra */
+  html .nav-user-dropdown {
+    margin: auto 0 0;
+    padding-top: .9rem;
+    border-top: 1px solid var(--cor-borda);
+  }
+  html .nav-user-dropdown .nav-avatar-toggle { width: 38px; height: 38px; }
+  html .nav-user-menu { margin-bottom: .5rem !important; }
+
+  /* Sem largura máxima: o conteúdo usa a tela toda (ultrawide incluso) */
+  html .corpo-site { margin: 28px 40px 40px; max-width: none; }
+  html .navbar-toggler-sky { display: none; }
+}
+
+/* ─── 4. PAINÉIS E CARDS ────────────────────────────────────────── */
+html .painel {
+  background: var(--cor-painel);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+html:not(.tema-gatos):not(.tema-astronautas) .painel { background: var(--cor-painel); }
+
+/* KPIs: o valor é o protagonista */
+html .kpi-card, html .kpi-sm {
+  background: var(--cor-painel);
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--kpi-accent, var(--cor-azul));
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+}
+html .kpi-card:hover, html .kpi-sm:hover { transform: none; box-shadow: none; border-color: var(--cor-borda-forte); border-left-color: var(--kpi-accent, var(--cor-azul)); }
+html .kpi-valor {
+  font-family: var(--fonte-display);
+  font-weight: 800;
+  font-size: clamp(1.5rem, 1.15rem + 1vw, 2rem);
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+html .kpi-label, html .kpi-sm-label { font-weight: 600; letter-spacing: -0.005em; }
+html .kpi-sub { font-size: .76rem; }
+html .kpi-extra-valor { font-weight: 800; letter-spacing: -0.02em; }
+
+/* ─── 5. BOTÕES ─────────────────────────────────────────────────── */
+html .btn {
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  border-radius: var(--radius-sm);
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+html .btn-sm { border-radius: 7px; }
+html .btn-primary { box-shadow: 0 1px 0 rgba(255,255,255,.08) inset; }
+html .btn-success { background: #16A34A; border-color: #16A34A; }
+html .btn-success:hover { background: #15803D; border-color: #15803D; }
+html .btn-outline-secondary { color: var(--cor-texto-sec); border-color: var(--cor-borda-forte); }
+html .btn-outline-secondary:hover { background: rgba(255,255,255,.06); color: var(--cor-texto); border-color: var(--cor-borda-forte); }
+html.light-mode .btn-outline-secondary:hover { background: rgba(0,0,0,.04); }
+
+/* Setas de mês/ano: viram botões discretos em vez de quadrados azuis */
+html .botao {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  font-size: 1.15rem !important;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  background: var(--cor-painel);
+  color: var(--cor-texto-sec) !important;
+  opacity: 1;
+}
+html .botao::before { content: none; }
+html .botao:hover { color: #fff !important; border-color: var(--cor-azul); background: rgba(59,130,246,.14); }
+/* Os ícones "-square-fill" ficam só com a seta dentro do botão */
+html .bi-arrow-left-square-fill.botao::before { content: "\f284"; }   /* bi-chevron-left */
+html .bi-arrow-right-square-fill.botao::before { content: "\f285"; }  /* bi-chevron-right */
+
+/* ─── 6. FORMULÁRIOS ────────────────────────────────────────────── */
+html .form-control, html .form-select {
+  background-color: var(--cor-input);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--radius-sm);
+  color: var(--cor-texto);
+  font-weight: 500;
+}
+html .form-control::placeholder { color: var(--cor-texto-off); font-weight: 400; }
+html .form-control:focus, html .form-select:focus {
+  border-color: var(--cor-azul) !important;
+  box-shadow: var(--foco) !important;
+  background-color: var(--cor-input);
+  color: var(--cor-texto);
+}
+html .input-group-text {
+  background: var(--cor-painel-2);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-sec);
+}
+html .form-label { font-weight: 600; font-size: .84rem; color: var(--cor-texto-sec); margin-bottom: .4rem; }
+html .form-check-input:checked { background-color: var(--cor-azul); border-color: var(--cor-azul); }
+
+/* ─── 7. TABELAS ────────────────────────────────────────────────── */
+html .table {
+  --bs-table-bg: transparent;
+  --bs-table-hover-bg: rgba(59, 130, 246, 0.06);
+  --bs-table-hover-color: var(--cor-texto);
+  margin-bottom: 0;
+}
+html .table tr td {
+  background-color: transparent !important;
+  border-color: var(--cor-borda);
+  font-size: .9rem;
+  padding-top: .7rem; padding-bottom: .7rem;
+}
+html .table tr th {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--cor-texto-off);
+  background: transparent;
+  border-bottom: 1px solid var(--cor-borda-forte);
+  padding-top: .6rem; padding-bottom: .6rem;
+}
+html .bg-secundary { background: transparent !important; }
+html .linha-selecionada td { background: rgba(59,130,246,.14) !important; }
+
+/* DataTables 2: busca no padrão dos campos */
+html div.dt-container .dt-search input,
+html div.dt-container .dt-input {
+  background: var(--cor-input);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--radius-sm);
+  color: var(--cor-texto);
+  padding: .35rem .65rem;
+}
+html div.dt-container .dt-search label { color: var(--cor-texto-off); font-size: .82rem; font-weight: 600; }
+
+/* ─── 8. MODAIS, MENUS, AVISOS ──────────────────────────────────── */
+html .modal-content {
+  background: var(--cor-painel) !important;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  border: 1px solid var(--cor-borda) !important;
+  border-radius: 16px;
+  box-shadow: var(--sombra-lg);
+}
+html .modal-header {
+  background: transparent;
+  border-bottom: 1px solid var(--cor-borda);
+  padding: 1rem 1.25rem;
+}
+html .modal-title { font-weight: 800; letter-spacing: -0.02em; font-size: 1.1rem; }
+html .modal-footer { border-top: 1px solid var(--cor-borda); padding: .85rem 1.25rem; }
+html .modal-header .btn-close { background-color: transparent; filter: invert(1) grayscale(1) brightness(1.6); opacity: .6; }
+html.light-mode .modal-header .btn-close { filter: none; }
+html .modal-backdrop.show { opacity: .6; }
+/* Cabeçalhos de modal com cor fixa antiga no HTML */
+html:not(.tema-gatos):not(.tema-astronautas) .modal-header[style*="#2C2C44"] { background: transparent !important; }
+
+html .dropdown-menu {
+  background: var(--cor-painel-2);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  box-shadow: var(--sombra-md);
+  padding: .35rem;
+}
+html .dropdown-item { border-radius: 7px; font-weight: 500; }
+html .dropdown-item:hover, html .dropdown-item:focus { background: rgba(59,130,246,.12); }
+
+/* SweetAlert2 no estilo do sistema */
+html .swal2-popup {
+  background: var(--cor-painel) !important;
+  color: var(--cor-texto) !important;
+  border: 1px solid var(--cor-borda);
+  border-radius: 16px !important;
+  font-family: var(--fonte-ui);
+}
+html .swal2-title { font-weight: 800 !important; letter-spacing: -0.02em; color: var(--cor-texto) !important; font-size: 1.3rem !important; }
+html .swal2-html-container { color: var(--cor-texto-sec) !important; }
+html .swal2-styled { border-radius: 8px !important; font-weight: 600 !important; }
+html .swal2-input, html .swal2-select, html .swal2-textarea {
+  background: var(--cor-input) !important; color: var(--cor-texto) !important; border: 1px solid var(--cor-borda) !important;
+}
+
+/* Notyf (avisos) */
+html .notyf__toast { border-radius: 12px; box-shadow: var(--sombra-md); font-family: var(--fonte-ui); font-weight: 600; max-width: 420px; }
+html .notyf__wrapper { padding: 14px 6px 14px 4px; }
+html .notyf__icon i { font-size: 1.15rem; }
+html .notyf__icon--success, html .notyf__icon--error { display: none; }
+
+/* ─── 9. CHIPS E SELETORES ──────────────────────────────────────── */
+html .cartao-mini {
+  border-radius: 12px;
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-painel);
+  box-shadow: none;
+}
+html .cartao-mini.selecionado { border-color: var(--cartao-cor, var(--cor-azul)); box-shadow: 0 0 0 1px var(--cartao-cor, var(--cor-azul)) inset; }
+html .resp-chip, html .divisao-opcao, html .vit-chip { font-weight: 600; }
+html .badge { font-weight: 600; letter-spacing: 0; }
+
+/* ─── 10. RESPONSIVO ────────────────────────────────────────────── */
+@media (max-width: 1199.98px) {
+  html .corpo-site { margin: 22px 24px 32px; }
+}
+@media (max-width: 767.98px) {
+  html .corpo-site { margin: 16px 14px 28px; }
+  html .titulo-pagina { margin-bottom: 1.25rem; }
+  html .botao { width: 40px; height: 40px; }
+}
+
+/* ─── 11. AJUSTES FINOS ─────────────────────────────────────────── */
+/* Nome do usuário no rodapé da barra lateral */
+.nav-user-nome { display: none; }
+@media (min-width: 1200px) {
+  html .nav-user-dropdown { display: flex; align-items: center; gap: .65rem; }
+  html .nav-user-nome {
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+    flex: 1; min-width: 0;
+    background: transparent; border: none; padding: .35rem .4rem; border-radius: 8px;
+    color: var(--cor-texto); font-weight: 700; font-size: .9rem; text-align: left;
+  }
+  html .nav-user-nome span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  html .nav-user-nome i { color: var(--cor-texto-off); }
+  html .nav-user-nome:hover { background: rgba(255,255,255,.05); }
+}
+
+/* Valores dos cards pequenos com o mesmo peso dos grandes */
+html .kpi-sm-valor {
+  font-family: var(--fonte-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-size: 1.2rem;
+}
+
+/* Rótulos em frase, não em CAIXA ALTA */
+html .navbar-brand-sky .brand-sub,
+html .ar-subtitulo, html .crt-label, html .vit-cat, html .vit-prio,
+html .balance-pill .bp-label, html .ft-item label,
+html [style*="text-transform:uppercase"], html [style*="text-transform: uppercase"] {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+html .ar-subtitulo { font-size: .8rem; }
+html .balance-pill .bp-label, html .ft-item label { font-size: .72rem; }
+
+/* Barra do topo fixa ao rolar (celular/tablet). O sticky precisa estar no
+   <header>: dentro dele a barra não tinha espaço para "grudar". */
+@media (max-width: 1199.98px) {
+  html body > header { position: sticky; top: 0; z-index: 1030; }
+}
+
+/* Telas muito largas: listas de uma coluna viram duas (não esticam de ponta a ponta) */
+@media (min-width: 1800px) {
+  html #listaContas:has(> .pessoa-card) {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: start;
+  }
+  html #listaContas:has(> .pessoa-card) > .pessoa-card { margin-bottom: 0; }
+  html #listaContas > .d-flex.flex-column:has(> .cfi-row) {
+    display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem !important;
+  }
+}
+
+/* ═══ 12. MOVIMENTO COMO RESPOSTA ════════════════════════════════════
+   Só reage a ações (clicar, abrir, trocar de mês). Nada se mexe sozinho.
+   Tudo some com prefers-reduced-motion (regra no topo do arquivo). */
+:root {
+  --ease-saida: cubic-bezier(.2, .8, .2, 1);   /* rápido no começo, assenta no fim */
+}
+
+/* 1. Botões afundam ao clicar */
+html .btn:not(:disabled):active,
+html .botao:active,
+html .ar-btn:active,
+html .vit-acao:active,
+html .cartao-mini:active,
+html .resp-chip:active,
+html .divisao-opcao:active,
+html .sim-cartao-chip:active { transform: scale(.97); }
+html .btn, html .botao, html .ar-btn, html .cartao-mini, html .resp-chip, html .divisao-opcao {
+  transition: transform .12s var(--ease-saida), background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+
+/* 2. Pulso no check clicado (classe posta pelo ui.js no clique) */
+@keyframes sky-pulso {
+  0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(34,197,94,.55); }
+  45%  { transform: scale(1.18); }
+  100% { transform: scale(1);   box-shadow: 0 0 0 10px rgba(34,197,94,0); }
+}
+html .sky-pulso { animation: sky-pulso .42s var(--ease-saida); }
+
+/* 3. Modais entram com escala */
+html .modal.fade .modal-dialog { transform: translateY(10px) scale(.97); transition: transform .24s var(--ease-saida), opacity .2s ease; }
+html .modal.show .modal-dialog { transform: none; }
+
+/* 4. Menus suspensos deslizam */
+/* translate (e não transform): o Popper posiciona o menu com transform; animar
+   transform sobrescrevia a posição e o menu "pulava" no fim da animação */
+@keyframes sky-menu { from { opacity: 0; translate: 0 -4px; } to { opacity: 1; translate: 0 0; } }
+html .dropdown-menu.show { animation: sky-menu .16s var(--ease-saida); }
+
+/* 5. Card de pessoa: conteúdo desliza ao abrir; chevron gira suave; abas */
+@keyframes sky-abre { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+html .pessoa-card.aberto .pessoa-body { animation: sky-abre .22s var(--ease-saida); }
+html .pessoa-chevron { transition: transform .22s var(--ease-saida); }
+html .pessoa-tab-btn { transition: color .15s ease, border-color .2s ease, background-color .15s ease; }
+html .pessoa-tab-panel.active, html .pessoa-tab-panel.ativo { animation: sky-abre .18s var(--ease-saida); }
+
+/* 6. Valor que acabou de mudar (contagem feita pelo ui.js) */
+html .sky-contando { transition: color .3s ease; }
+
+/* Seleção de cards (vitrine, cartões) acompanha o clique */
+html .vit-card, html .cartao-mini { transition: transform .18s var(--ease-saida), border-color .15s ease, box-shadow .18s ease; }
+
+/* ═══ 13. UX / ACESSIBILIDADE (auditoria axe + heurísticas) ═══════════════
+   Contraste WCAG 1.4.3: texto pequeno ≥ 4,5:1. A paleta continua a mesma
+   para fundos, bordas e valores grandes (≥ 3:1); só o TEXTO pequeno em
+   cor usa um tom mais claro da mesma cor. */
+:root {
+  --cor-texto-off: #9399B0;          /* era #737891 (3,4:1) → 5,1:1 no painel */
+  --texto-vermelho: #F87171;
+  --texto-azul:     #60A5FA;
+  --texto-roxo:     #A78BFA;
+  --texto-verde:    #4ADE80;
+  --texto-cinza:    #A6ABC0;
+}
+html.light-mode { --cor-texto-off: #5B6478; }
+
+/* Cores fixas escritas no HTML/JS (style="color:#..."): tom de texto legível */
+html:not(.light-mode) [style*="color:#EF4444" i]:not(.kpi-valor):not(.kpi-sm-valor):not(.kpi-extra-valor):not(.titulo), html:not(.light-mode) [style*="color: #EF4444" i]:not(.kpi-valor):not(.kpi-sm-valor):not(.kpi-extra-valor):not(.titulo),
+html:not(.light-mode) [style*="color:var(--cor-perigo)" i]:not(.kpi-valor):not(.kpi-sm-valor):not(.kpi-extra-valor):not(.titulo), html:not(.light-mode) .text-danger,
+html:not(.light-mode) .bp-eudevo { color: var(--texto-vermelho) !important; }
+html:not(.light-mode) [style*="color:#3B82F6" i]:not(.kpi-valor):not(.kpi-sm-valor):not(.kpi-extra-valor):not(.titulo), html:not(.light-mode) [style*="color: #3B82F6" i]:not(.kpi-valor):not(.kpi-sm-valor):not(.kpi-extra-valor):not(.titulo),
+html:not(.light-mode) [style*="color:var(--cor-azul)" i]:not(.kpi-valor):not(.kpi-sm-valor):not(.kpi-extra-valor):not(.titulo), html:not(.light-mode) .text-primary { color: var(--texto-azul) !important; }
+html:not(.light-mode) [style*="color:#8B5CF6" i]:not(.kpi-valor):not(.kpi-sm-valor):not(.kpi-extra-valor):not(.titulo), html:not(.light-mode) [style*="color: #8B5CF6" i]:not(.kpi-valor):not(.kpi-sm-valor):not(.kpi-extra-valor):not(.titulo) { color: var(--texto-roxo) !important; }
+html:not(.light-mode) [style*="color:#6B7280" i]:not(.kpi-valor):not(.kpi-sm-valor):not(.kpi-extra-valor):not(.titulo), html:not(.light-mode) [style*="color: #6B7280" i]:not(.kpi-valor):not(.kpi-sm-valor):not(.kpi-extra-valor):not(.titulo) { color: var(--texto-cinza) !important; }
+html:not(.light-mode) .text-success { color: var(--texto-verde) !important; }
+/* Valores grandes (.kpi-*, .titulo) ficam fora: em tamanho grande a cor
+   original da paleta já passa (3:1) e mantém a identidade. */
+
+/* Branco sobre verde: verde um pouco mais escuro para 4,5:1 */
+html .btn-success { background: #15803D; border-color: #15803D; }
+html .btn-success:hover { background: #166534; border-color: #166534; }
+/* Só fundos sólidos (com ";"), não os translúcidos "#10B98122" dos badges de categoria */
+html:not(.light-mode) [style*="background:#10B981;" i] { background: #047857 !important; }
+html [style*="background:#8B5CF6;" i] { background: #7C3AED !important; }   /* badge "Recorrente": branco 5,7:1 */
+html .nav-grupo { color: #9399B0; }
+html.light-mode .nav-grupo { color: #5B6478; }
+
+/* Área de toque mínima de 24×24 (WCAG 2.5.8) nos botões de ícone pequenos */
+html .item-del, html .checkout-remover, html .medeve-desvincular, html .medeve-dividir,
+html .item-check, html .medeve-check { min-width: 24px; min-height: 24px; }
+
+/* Botão aguardando o servidor (status do sistema + sem clique duplo) */
+html .btn.is-carregando { position: relative; color: transparent !important; pointer-events: none; }
+html .btn.is-carregando > * { visibility: hidden; }
+html .btn.is-carregando::after {
+  content: ""; position: absolute; inset: 0; margin: auto;
+  width: 1rem; height: 1rem; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.85); border-right-color: transparent;
+  animation: sky-gira .7s linear infinite;
+}
+@keyframes sky-gira { to { transform: rotate(360deg); } }
+
+/* Foco visível também nos "botões" feitos com <div> */
+html [role="button"]:focus-visible { box-shadow: var(--foco) !important; outline: none; }
+
+/* Restantes da auditoria: tons de texto legíveis para as outras cores fixas */
+html:not(.light-mode) [style*="color:#F97316" i]:not(.kpi-valor):not(.kpi-sm-valor):not(.titulo) { color: #FB923C !important; }
+html:not(.light-mode) [style*="color:#EC4899" i]:not(.kpi-valor):not(.kpi-sm-valor):not(.titulo) { color: #F472B6 !important; }
+html:not(.light-mode) .fs-fatura-val[style*="color:#EF4444" i] { color: var(--texto-vermelho) !important; }
+html:not(.light-mode) .btn-outline-primary { color: var(--texto-azul); border-color: #3B82F6; }
+html:not(.light-mode) .btn-outline-danger  { color: var(--texto-vermelho); border-color: #EF4444; }
+html:not(.light-mode) .btn-outline-danger:hover, html:not(.light-mode) .btn-outline-primary:hover { color: #fff; }
+html:not(.light-mode) .resp-chip.selecionado { color: var(--texto-azul); }
+/* Cores aplicadas pelo jQuery (.css('color', ...)) chegam no formato rgb() */
+html:not(.light-mode) [style*="color: rgb(239, 68, 68)"]:not(.kpi-valor):not(.kpi-sm-valor):not(.titulo) { color: var(--texto-vermelho) !important; }
+html:not(.light-mode) [style*="color: rgb(59, 130, 246)"]:not(.kpi-valor):not(.kpi-sm-valor):not(.titulo) { color: var(--texto-azul) !important; }
+html:not(.light-mode) [style*="color: rgb(245, 158, 11)"]:not(.kpi-valor):not(.kpi-sm-valor):not(.titulo) { color: #FBBF24 !important; }
+/* Botões de escolha ativos (tipo de lançamento, forma, parcelas): azul mais fundo para o branco */
+html .tipo-lanc-btn.active, html .metodo-btn.active, html .compra-forma.active, html .compra-parc.active {
+  background: #2563EB; border-color: #2563EB; color: #fff;
+}
+html:not(.light-mode) .resumo-cf.aberto { color: var(--texto-azul); }
+/* Botões azuis com texto branco: fundo #2563EB (mesma família; 5,2:1) */
+html .btn-primary { background-color: #2563EB !important; border-color: #2563EB !important; }
+html .btn-primary:hover, html .btn-primary:focus { background-color: #1D4ED8 !important; border-color: #1D4ED8 !important; }
+html .renda-aplic-btn.active, html .item-tipo-btn.active, html .sim-tipo-btn.active { background: #2563EB !important; border-color: #2563EB !important; color: #fff !important; }
+/* Pontuais */
+html:not(.light-mode) #dashTotalGuardado { color: var(--texto-azul) !important; }
+html:not(.light-mode) .fs-fatura-nome[style*="color:#EF4444" i] { color: var(--texto-vermelho) !important; }
+html .ar-item-pulado .ar-item-nome, html .ar-item-pulado .ar-item-val { opacity: .8; }
+html .gtab-btn.active { background: #2563EB !important; border-color: #2563EB !important; color: #fff !important; }
+/* Conta pulada: o risco já indica o estado; o texto continua legível */
+html .ar-item-pulado .ar-item-nome, html .ar-item-pulado .ar-item-val { opacity: 1; color: var(--cor-texto-off); }
+
+/* ── Tema claro: as cores da paleta foram pensadas para fundo escuro.
+   Sobre branco, todo TEXTO com cor própria (inclusive as cores de categoria
+   escolhidas pelo usuário) usa a mesma cor ~40% mais escura: o matiz é o
+   mesmo, mas passa de 4,5:1. Texto branco (badges sólidos) fica de fora. */
+/* (o ajuste de cada cor é feito pelo ui.js: escurece só o necessário para 4,5:1) */
+html.light-mode .text-success { color: #15803D !important; }
+html.light-mode .text-danger  { color: #B91C1C !important; }
+html.light-mode .text-primary { color: #1D4ED8 !important; }
+html.light-mode .nav-sky .nav-link-sky:not(.ativo) { color: #475569 !important; }
+html.light-mode .nav-sky .nav-link-sky .nav-label { color: inherit; }
+html.light-mode [style*="background:#10B981;" i] { background: #047857 !important; }
+html.light-mode .nav-sky .nav-link-sky.ativo, html.light-mode .nav-sky .nav-link-sky.ativo .nav-icon { color: #1D4ED8 !important; }
+/* Tema claro: cores fixas por classe com tom de texto legível */
+html.light-mode .btn-outline-primary { color: #1D4ED8; border-color: #3B82F6; }
+html.light-mode .btn-outline-primary:hover { color: #fff; background: #2563EB; }
+html.light-mode .btn-outline-danger { color: #B91C1C; }
+html.light-mode .btn-outline-success { color: #15803D; }
+html.light-mode .ar-btn-pago { color: #15803D; }
+html.light-mode .ar-btn-pagar { color: #B91C1C; }
+html.light-mode { --bs-link-color: #1D4ED8; --bs-link-color-rgb: 29, 78, 216; --bs-link-hover-color: #1E40AF; }
+html.light-mode .btn-link { color: #1D4ED8; }
+html.light-mode .ar-btn-pago, html.light-mode .resumo-cf.pago, html.light-mode .cfi-badge.pago { color: #166534 !important; }
+html.light-mode .ar-btn-pagar, html.light-mode .resumo-cf.vencido, html.light-mode .cfi-badge.vencido { color: #991B1B !important; }
+html.light-mode .resumo-cf.aberto, html.light-mode .cfi-badge.aberto { color: #1E40AF !important; }
+html.light-mode .btn-primary { background-color: #2563EB !important; border-color: #2563EB !important; color: #fff !important; }
+html.light-mode .btn-primary:hover { background-color: #1D4ED8 !important; border-color: #1D4ED8 !important; }
+html.light-mode .bp-zero { opacity: 1 !important; color: #6B7280 !important; }
+html.light-mode .resp-chip.selecionado { color: #1D4ED8 !important; }
+html.light-mode #catPreviewNome { color: #1E293B !important; }
+html.light-mode #btnTodosMeses, html.light-mode #btnTodosAnos { color: #1D4ED8 !important; }
+
+/* ─── 14. DATATABLES (busca e ordenação no padrão do sistema) ─── */
+html div.dt-container .dt-search { position: relative; margin-bottom: .75rem; }
+html div.dt-container .dt-search label { display: none; }
+html div.dt-container .dt-search input {
+  width: 280px; max-width: 100%;
+  padding: .45rem .75rem .45rem 2.1rem;
+  border-radius: 999px;
+  background: var(--cor-input) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%239399B0' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242.656a5 5 0 1 1 0-10 5 5 0 0 1 0 10'/%3E%3C/svg%3E") no-repeat .8rem center;
+}
+html div.dt-container .dt-search input:focus { border-color: var(--cor-azul); box-shadow: var(--foco); outline: none; }
+/* Setas de ordenação discretas; a coluna ordenada fica destacada */
+html table.dataTable thead th .dt-column-order { opacity: .45; }
+html table.dataTable thead th.dt-ordering-asc .dt-column-order,
+html table.dataTable thead th.dt-ordering-desc .dt-column-order { opacity: 1; color: var(--texto-azul); }
+html table.dataTable thead th.dt-ordering-asc, html table.dataTable thead th.dt-ordering-desc { color: var(--cor-texto-sec); }
+@media (max-width: 639.98px) { html div.dt-container .dt-search input { width: 100% !important; } }
+
+
+/* ─── 15. SELETOR DE TEMA (menu do avatar) ───────────────────────── */
+html .nav-user-menu { min-width: 270px; }
+.tema-secao { padding: .35rem .5rem .5rem; }
+.tema-secao-titulo { font-size: .78rem; font-weight: 700; color: var(--cor-texto-off); padding: 0 .25rem .45rem; }
+.tema-opcoes { display: grid; grid-template-columns: repeat(2, 1fr); gap: .45rem; }
+.tema-opcao {
+  display: flex; flex-direction: column; gap: .35rem; align-items: stretch;
+  padding: .35rem; border: 1px solid var(--cor-borda); border-radius: 10px;
+  background: transparent; color: var(--cor-texto-sec); text-align: left;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.tema-opcao:hover { border-color: var(--cor-borda-forte); background: rgba(255,255,255,.04); }
+.tema-opcao.ativo { border-color: var(--cor-azul); background: rgba(59,130,246,.10); color: var(--cor-texto); }
+.tema-amostra {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  height: 46px; border-radius: 7px; font-size: 1rem; overflow: hidden;
+  border: 1px solid rgba(255,255,255,.08);
+}
+/* Cada miniatura usa as cores/estampa reais do tema */
+.tema-amostra-dark  { background: #1E1E2F; color: #93C5FD; }
+.tema-amostra-dark::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: 7px; height: 9px; border-radius: 3px; background: #26273A; border: 1px solid #363852; }
+.tema-amostra-light { background: #F1F5F9; color: #D97706; border-color: #CBD5E1; }
+.tema-amostra-light::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: 7px; height: 9px; border-radius: 3px; background: #fff; border: 1px solid #CBD5E1; }
+.tema-amostra-gatos { background: #0A0E27 url("../src/img/temas/gatos-espaciais.jpg") center / 120px; }
+.tema-amostra-astronautas { background: #2A1B3C url("../src/img/temas/gatos-astronautas.jpg") center / 110px; }
+.tema-amostra i { position: relative; z-index: 1; margin-bottom: 10px; }
+/* ✓ no tema ativo */
+.tema-opcao.ativo .tema-amostra::before {
+  content: "\f633"; font-family: "bootstrap-icons"; position: absolute; top: 4px; right: 4px; z-index: 2;
+  width: 18px; height: 18px; border-radius: 50%; background: var(--cor-azul); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: .7rem;
+}
+.tema-nome { font-size: .78rem; font-weight: 600; line-height: 1.2; padding: 0 .15rem .1rem; }
+html.light-mode .tema-opcao:hover { background: rgba(0,0,0,.03); }
+html.light-mode .nav-user-menu .dropdown-item.text-danger { color: #B91C1C !important; }
+/* Menu que abre para cima entra deslizando para cima (sem "vai e volta") */
+@keyframes sky-menu-sobe { from { opacity: 0; translate: 0 4px; } to { opacity: 1; translate: 0 0; } }
+html .dropup .dropdown-menu.show { animation-name: sky-menu-sobe; }
+
+/* ═══ 16. SISTEMA DE BOTÕES ══════════════════════════════════════════════
+   Hierarquia por FUNÇÃO (não por cor):
+   • Principal  — azul sólido; uma ação de destaque por tela/modal.
+   • Secundário — superfície + borda; cancelar, fechar, navegar.
+   • Linha      — ícone neutro; a cor do significado aparece no hover/foco.
+   • Destrutivo — vermelho só onde apaga algo; sólido só na confirmação.
+   Verde fica reservado a "pago / deu certo" (estado), não a "adicionar".
+   Botões do Bootstrap usados no HTML são mapeados para esses papéis, sem
+   precisar reescrever as ~100 marcações. */
+:root {
+  --btn-pri:        #2563EB;   /* 5,2:1 com branco */
+  --btn-pri-hover:  #1D4ED8;
+  --btn-pri-active: #1E40AF;
+  --btn-sec-bg:     #2D2F45;
+  --btn-sec-borda:  #44475F;
+}
+html.light-mode { --btn-sec-bg: #FFFFFF; --btn-sec-borda: #CBD5E1; }
+
+/* Principal: btn-primary, btn-success ("Adicionar", "Salvar", "Novo"…) e btn-warning ("Salvar" simples) */
+html .btn-primary, html .btn-success, html .btn-warning {
+  background: var(--btn-pri) !important;
+  border: 1px solid var(--btn-pri) !important;
+  color: #fff !important;
+  font-weight: 700;
+  box-shadow: 0 1px 0 rgba(255,255,255,.10) inset, 0 1px 2px rgba(0,0,0,.25);
+}
+html .btn-primary:hover, html .btn-success:hover, html .btn-warning:hover,
+html .btn-primary:focus-visible, html .btn-success:focus-visible, html .btn-warning:focus-visible {
+  background: var(--btn-pri-hover) !important; border-color: var(--btn-pri-hover) !important; color: #fff !important;
+}
+html .btn-primary:active, html .btn-success:active, html .btn-warning:active { background: var(--btn-pri-active) !important; }
+html .btn-primary i, html .btn-success i, html .btn-warning i { color: inherit !important; }
+
+/* Secundário: contornados neutros/azuis/ciano com texto */
+html .btn-outline-secondary, html .btn-secondary, html .btn-outline-primary, html .btn-outline-info,
+html .btn-gerenciar {
+  background: var(--btn-sec-bg) !important;
+  border: 1px solid var(--btn-sec-borda) !important;
+  color: var(--cor-texto) !important;
+  font-weight: 600;
+}
+html .btn-outline-secondary:hover, html .btn-secondary:hover, html .btn-outline-primary:hover,
+html .btn-outline-info:hover, html .btn-gerenciar:hover {
+  background: var(--btn-sec-borda) !important; border-color: var(--cor-borda-forte) !important; color: #fff !important;
+}
+html.light-mode .btn-outline-secondary:hover, html.light-mode .btn-secondary:hover,
+html.light-mode .btn-outline-primary:hover, html.light-mode .btn-outline-info:hover,
+html.light-mode .btn-gerenciar:hover { background: #F1F5F9 !important; color: #0F172A !important; }
+html .btn-outline-secondary i, html .btn-outline-primary i, html .btn-outline-info i, html .btn-gerenciar i { color: var(--cor-texto-sec) !important; }
+/* Escolha ativa num grupo (tipo de lançamento, forma, aba): principal */
+html .btn-outline-secondary.active, html .tipo-lanc-btn.active, html .metodo-btn.active,
+html .sim-tipo-btn.active, html .renda-aplic-btn.active, html .gtab-btn.active {
+  background: var(--btn-pri) !important; border-color: var(--btn-pri) !important; color: #fff !important;
+}
+html .btn-outline-secondary.active i { color: #fff !important; }
+
+/* Destrutivo com texto ("Remover", "Retirar"): vermelho só no texto e na borda */
+html .btn-outline-danger {
+  background: transparent !important;
+  border: 1px solid rgba(239,68,68,.45) !important;
+  color: var(--texto-vermelho, #F87171) !important;
+  font-weight: 600;
+}
+html .btn-outline-danger:hover { background: rgba(239,68,68,.12) !important; border-color: #EF4444 !important; }
+html.light-mode .btn-outline-danger { color: #B91C1C !important; }
+/* Sólido vermelho só na confirmação de exclusão */
+html .btn-danger { background: #DC2626 !important; border-color: #DC2626 !important; color: #fff !important; font-weight: 700; }
+html .btn-danger:hover { background: #B91C1C !important; border-color: #B91C1C !important; }
+
+/* "Pagar" (contas fixas): leva ao estado pago → verde contornado, mesmo vencida */
+html .cfi-btn-pagar {
+  background: rgba(34,197,94,.10) !important;
+  border: 1px solid rgba(34,197,94,.55) !important;
+  color: var(--texto-verde, #4ADE80) !important;
+  font-weight: 700;
+}
+html .cfi-btn-pagar:hover { background: #15803D !important; border-color: #15803D !important; color: #fff !important; }
+html.light-mode .cfi-btn-pagar { color: #166534 !important; }
+
+/* Ações de linha (só ícone: px-2 / py-0): neutras; a cor aparece no hover */
+html .btn-sm.px-2:not(.btn-primary):not(.btn-success):not(.btn-danger):not(.btn-warning),
+html .btn-sm.py-0.px-1 {
+  background: transparent !important;
+  border: 1px solid var(--cor-borda) !important;
+  color: var(--cor-texto-sec) !important;
+  min-width: 32px; min-height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+html .btn-sm.py-0.px-1 { min-width: 28px; min-height: 28px; }
+html .btn-sm.px-2 i, html .btn-sm.py-0.px-1 i { color: inherit !important; }
+/* Significado no hover/foco, pela classe original do botão */
+html .btn-sm.btn-outline-warning.px-2:hover, html .btn-outline-secondary.btn-sm.py-0.px-1:hover,
+html .btn-sm.px-2[title*="Editar" i]:hover { color: var(--texto-azul, #60A5FA) !important; border-color: #3B82F6 !important; background: rgba(59,130,246,.12) !important; }
+html .btn-sm.btn-outline-danger.px-2:hover, html .btn-sm.btn-outline-danger.py-0.px-1:hover {
+  color: var(--texto-vermelho, #F87171) !important; border-color: #EF4444 !important; background: rgba(239,68,68,.12) !important; }
+html .btn-sm.btn-outline-success.px-2:hover { color: var(--texto-verde, #4ADE80) !important; border-color: #22C55E !important; background: rgba(34,197,94,.12) !important; }
+html .btn-sm.px-2[title*="Desativar" i]:hover, html .btn-sm.px-2[title*="Pausar" i]:hover {
+  color: #FBBF24 !important; border-color: #F59E0B !important; background: rgba(245,158,11,.12) !important; }
+
+/* Botões de ação da vitrine/linhas que já tinham estilo próprio seguem a mesma lógica */
+html .vit-acao, html .item-del { color: var(--cor-texto-sec); }
+
+/* SweetAlert: confirmações comuns em azul principal; exclusões em vermelho escuro */
+html .swal2-styled.swal2-confirm[style*="34, 197, 94"], html .swal2-styled.swal2-confirm[style*="59, 130, 246"],
+html .swal2-styled.swal2-confirm[style*="48, 133, 214"] { background-color: var(--btn-pri) !important; }
+html .swal2-styled.swal2-confirm[style*="239, 68, 68"] { background-color: #DC2626 !important; }
+html .swal2-styled.swal2-cancel { background: var(--btn-sec-bg) !important; border: 1px solid var(--btn-sec-borda) !important; color: var(--cor-texto) !important; }
+/* Ações de linha detectadas pelo ui.js (botão só com ícone): neutras; cor no hover */
+html .btn.btn-acao-icone {
+  background: transparent !important;
+  border: 1px solid var(--cor-borda) !important;
+  color: var(--cor-texto-sec) !important;
+  min-width: 32px; min-height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+html .btn.btn-acao-icone i { color: inherit !important; }
+html .btn.btn-acao-icone:hover { color: var(--cor-texto) !important; border-color: var(--cor-borda-forte) !important; background: rgba(255,255,255,.05) !important; }
+html .btn.btn-acao-icone.btn-outline-warning:hover, html .btn.btn-acao-icone[title*="Editar" i]:hover {
+  color: var(--texto-azul, #60A5FA) !important; border-color: #3B82F6 !important; background: rgba(59,130,246,.12) !important; }
+html .btn.btn-acao-icone.btn-outline-danger:hover {
+  color: var(--texto-vermelho, #F87171) !important; border-color: #EF4444 !important; background: rgba(239,68,68,.12) !important; }
+html .btn.btn-acao-icone.btn-outline-success:hover {
+  color: var(--texto-verde, #4ADE80) !important; border-color: #22C55E !important; background: rgba(34,197,94,.12) !important; }
+html.light-mode .btn.btn-acao-icone:hover { background: #F1F5F9 !important; }

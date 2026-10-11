@@ -14,7 +14,16 @@ $conn = Database::getConnection();
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sky Finance</title>
+  <?php
+    // Título da aba = tela atual (heurística "reconhecer em vez de lembrar":
+    // com várias abas abertas dá para saber qual é qual)
+    $__titulos = ['index.php' => 'Dashboard', 'cartaocredito.php' => 'Crédito', 'debito.php' => 'À Vista',
+      'contas_fixas.php' => 'Contas fixas', 'financas.php' => 'Finanças', 'resumo_anual.php' => 'Resumo anual',
+      'responsaveis.php' => 'Pessoas', 'simulador.php' => 'Simulador', 'lista_desejos.php' => 'Lista de desejos',
+      'gerenciamento.php' => 'Configurações', 'backup.php' => 'Backup'];
+    $__tela = $__titulos[basename(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH))] ?? '';
+  ?>
+  <title><?= $__tela ? htmlspecialchars($__tela) . ' · Sky Finance' : 'Sky Finance' ?></title>
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" sizes="32x32" href="<?= BASE_URL ?>/src/img/favicon-32.png" />
@@ -22,8 +31,7 @@ $conn = Database::getConnection();
   <link rel="apple-touch-icon" sizes="180x180" href="<?= BASE_URL ?>/src/img/favicon-180.png" />
 
   <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
 
   <!-- DataTables CSS -->
   <link href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css" rel="stylesheet" />
@@ -31,8 +39,8 @@ $conn = Database::getConnection();
   <!-- Tippy.js CSS -->
   <link href="https://unpkg.com/tippy.js@6.3.1/dist/tippy.css" rel="stylesheet" />
 
-  <!-- Toastr CSS -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+  <!-- Notyf (avisos) — substitui o toastr; o adaptador abaixo mantém a API toastr.* -->
+  <link href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css" rel="stylesheet" />
 
   <!-- SweetAlert2 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
@@ -43,7 +51,7 @@ $conn = Database::getConnection();
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <!-- Bootstrap Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet" />
@@ -51,11 +59,24 @@ $conn = Database::getConnection();
   <!-- Custom CSS -->
   <!-- ?v= muda quando o arquivo muda: sem isso o navegador segue com o CSS antigo em cache -->
   <link rel="stylesheet" href="<?= BASE_URL ?>/styles/style.css?v=<?= @filemtime(BASE_PATH . '/styles/style.css') ?>" />
+  <!-- Repaginação (camada de design por cima do style.css) -->
+  <link rel="stylesheet" href="<?= BASE_URL ?>/styles/ui.css?v=<?= @filemtime(BASE_PATH . '/styles/ui.css') ?>" />
 
+  <?php
+    // Tema da CONTA (não do navegador): cada usuário tem o seu.
+    $temaUsuario = 'dark';
+    try {
+      $sTema = $conn->prepare("SELECT tema FROM usuarios WHERE id = ?");
+      $sTema->execute([(int) ($_SESSION['usuario_id'] ?? 0)]);
+      $t = $sTema->fetchColumn();
+      if (in_array($t, ['light', 'gatos', 'astronautas'], true)) $temaUsuario = $t;
+    } catch (Exception $e) {}
+  ?>
   <!-- Tema: aplica antes do render para evitar flash -->
   <script>
+    window.__skyTema = <?= json_encode($temaUsuario) ?>;
     (function () {
-      var t = localStorage.getItem('skyTheme');
+      var t = window.__skyTema;
       var h = document.documentElement;
       if (t === 'light') {
         h.classList.add('light-mode');
@@ -73,9 +94,11 @@ $conn = Database::getConnection();
 
   <!-- Projeção de faturas (compartilhado entre Simulador e Lista de Desejos) -->
   <script src="<?= BASE_URL ?>/src/js/faturas.js?v=<?= @filemtime(BASE_PATH . '/src/js/faturas.js') ?>"></script>
+  <!-- Movimento como resposta a ações (pulso no clique, contagem dos valores) -->
+  <script src="<?= BASE_URL ?>/src/js/ui.js?v=<?= @filemtime(BASE_PATH . '/src/js/ui.js') ?>"></script>
 
   <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <!-- DataTables JS -->
   <script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
@@ -90,8 +113,33 @@ $conn = Database::getConnection();
   <!-- Moment.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
 
-  <!-- Toastr JS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+  <!-- Notyf JS + adaptador "toastr": o sistema chama toastr.success/error/warning/info
+       em ~180 lugares; o adaptador direciona para o Notyf sem mexer nessas chamadas. -->
+  <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+  <script>
+  (function () {
+    var notyf = null;
+    function n() {
+      if (notyf) return notyf;
+      notyf = new Notyf({
+        duration: 4200,
+        ripple: false,
+        dismissible: true,
+        position: { x: 'right', y: 'bottom' },
+        types: [
+          { type: 'success', background: '#16A34A', icon: { className: 'bi bi-check-circle-fill', tagName: 'i', color: '#fff' } },
+          { type: 'error',   background: '#DC2626', icon: { className: 'bi bi-x-octagon-fill', tagName: 'i', color: '#fff' }, duration: 6000 },
+          { type: 'warning', background: '#D97706', icon: { className: 'bi bi-exclamation-triangle-fill', tagName: 'i', color: '#fff' } },
+          { type: 'info',    background: '#2563EB', icon: { className: 'bi bi-info-circle-fill', tagName: 'i', color: '#fff' } }
+        ]
+      });
+      return notyf;
+    }
+    function abre(tipo) { return function (msg) { return n().open({ type: tipo, message: String(msg == null ? '' : msg) }); }; }
+    window.toastr = { success: abre('success'), error: abre('error'), warning: abre('warning'), info: abre('info'),
+                      clear: function () { if (notyf) notyf.dismissAll(); }, options: {} };
+  })();
+  </script>
 
   <!-- SweetAlert2 JS -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -300,6 +348,9 @@ $conn = Database::getConnection();
       // Expõe a API no próprio elemento para reset genérico ao fechar modais
       el._banc = api;
       el.classList.add('js-banc');
+      // Celular abre o teclado numérico (os dígitos entram pelos centavos)
+      el.setAttribute('inputmode', 'numeric');
+      el.setAttribute('autocomplete', 'off');
       return api;
   };
   </script>
@@ -564,7 +615,7 @@ $navGrupos = [
   <nav class="navbar-sky">
     <!-- Logo -->
     <a class="navbar-brand-sky" href="<?= BASE_URL ?>/index.php">
-      <img src="<?= BASE_URL ?>/src/img/logo.png" alt="Sky Finance" class="brand-logo">
+      <img src="<?= BASE_URL ?>/src/img/logo.png" alt="" class="brand-logo">
       <span>Sky Finance</span>
     </a>
 
@@ -578,7 +629,9 @@ $navGrupos = [
       </div>
       <ul class="nav-sky">
 
+        <?php $navRotulos = ['principal' => 'Visão geral', 'despesas' => 'Despesas', 'gestao' => 'Planejamento']; ?>
         <?php foreach ($navGrupos as $grupo => $links): ?>
+          <li class="nav-grupo" aria-hidden="true"><?= $navRotulos[$grupo] ?? '' ?></li>
 
           <?php foreach ($links as $link):
             $matchQ  = $link['match_q'] ?? '';
@@ -627,6 +680,12 @@ $navGrupos = [
           <span><?= strtoupper(substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?></span>
         <?php endif; ?>
       </button>
+      <!-- Nome ao lado do avatar (só na barra lateral); clicar abre o mesmo menu -->
+      <button type="button" class="nav-user-nome"
+              onclick="event.stopPropagation(); bootstrap.Dropdown.getOrCreateInstance(document.getElementById('navUserDropdown')).toggle();">
+        <span><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></span>
+        <i class="bi bi-three-dots-vertical"></i>
+      </button>
       <ul class="dropdown-menu dropdown-menu-end nav-user-menu">
         <li class="nav-user-menu-header">
           <strong><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></strong>
@@ -637,23 +696,26 @@ $navGrupos = [
             <i class="bi bi-person-gear me-2"></i>Minha conta
           </a>
         </li>
-        <li>
-          <button type="button" class="dropdown-item" id="btnToggleTheme">
-            <i class="bi bi-sun-fill me-2" id="iconeTheme"></i>
-            <span id="labelTheme">Modo claro</span>
-          </button>
-        </li>
-        <li>
-          <button type="button" class="dropdown-item" id="btnTemaGatos">
-            <i class="bi bi-stars me-2" id="iconeGatos"></i>
-            <span id="labelGatos">Gatos espaciais</span>
-          </button>
-        </li>
-        <li>
-          <button type="button" class="dropdown-item" id="btnTemaAstronautas">
-            <i class="bi bi-rocket-takeoff me-2" id="iconeAstronautas"></i>
-            <span id="labelAstronautas">Gatos astronautas</span>
-          </button>
+        <li class="tema-secao">
+          <div class="tema-secao-titulo" id="temaSecaoTitulo">Aparência</div>
+          <div class="tema-opcoes" role="radiogroup" aria-labelledby="temaSecaoTitulo">
+            <button type="button" class="tema-opcao" role="radio" data-tema="dark" aria-checked="false">
+              <span class="tema-amostra tema-amostra-dark"><i class="bi bi-moon-stars-fill"></i></span>
+              <span class="tema-nome">Escuro</span>
+            </button>
+            <button type="button" class="tema-opcao" role="radio" data-tema="light" aria-checked="false">
+              <span class="tema-amostra tema-amostra-light"><i class="bi bi-sun-fill"></i></span>
+              <span class="tema-nome">Claro</span>
+            </button>
+            <button type="button" class="tema-opcao" role="radio" data-tema="gatos" aria-checked="false">
+              <span class="tema-amostra tema-amostra-gatos"></span>
+              <span class="tema-nome">Gatos espaciais</span>
+            </button>
+            <button type="button" class="tema-opcao" role="radio" data-tema="astronautas" aria-checked="false">
+              <span class="tema-amostra tema-amostra-astronautas"></span>
+              <span class="tema-nome">Gatos astronautas</span>
+            </button>
+          </div>
         </li>
         <li><hr class="dropdown-divider"></li>
         <li>
@@ -675,15 +737,7 @@ $navGrupos = [
 <script>
 (function () {
   var html       = document.documentElement;
-  var btn        = document.getElementById('btnToggleTheme');
-  var icone      = document.getElementById('iconeTheme');
-  var label      = document.getElementById('labelTheme');
-  var btnGatos   = document.getElementById('btnTemaGatos');
-  var iconeGatos = document.getElementById('iconeGatos');
-  var labelGatos = document.getElementById('labelGatos');
-  var btnFant    = document.getElementById('btnTemaAstronautas');
-  var iconeFant  = document.getElementById('iconeAstronautas');
-  var labelFant  = document.getElementById('labelAstronautas');
+  var opcoes     = document.querySelectorAll('.tema-opcao');
 
   // Temas mutuamente exclusivos: 'dark' | 'light' | 'gatos' | 'astronautas'.
   // Os temas com padrão são escuros, então não combinam com o modo claro.
@@ -693,48 +747,42 @@ $navGrupos = [
     html.classList.toggle('tema-astronautas', tema === 'astronautas');
     html.setAttribute('data-bs-theme', tema === 'light' ? 'light' : 'dark');
 
-    icone.className = tema === 'light' ? 'bi bi-moon-fill me-2' : 'bi bi-sun-fill me-2';
-    if (label) label.textContent = tema === 'light' ? 'Modo escuro' : 'Modo claro';
-
-    if (labelGatos) labelGatos.textContent = tema === 'gatos' ? 'Remover gatos' : 'Gatos espaciais';
-    if (iconeGatos) iconeGatos.className = tema === 'gatos' ? 'bi bi-x-circle me-2' : 'bi bi-stars me-2';
-    if (labelFant) labelFant.textContent = tema === 'astronautas' ? 'Remover astronautas' : 'Gatos astronautas';
-    if (iconeFant) iconeFant.className = tema === 'astronautas' ? 'bi bi-x-circle me-2' : 'bi bi-rocket-takeoff me-2';
+    // Miniatura do tema ativo fica marcada (✓ + borda)
+    opcoes.forEach(function (o) {
+      var ativo = o.getAttribute('data-tema') === tema;
+      o.classList.toggle('ativo', ativo);
+      o.setAttribute('aria-checked', ativo ? 'true' : 'false');
+    });
     var cred = document.getElementById('creditoTema');
     if (cred) cred.style.display = tema === 'astronautas' ? '' : 'none';
   }
 
   function temaAtual() {
-    var t = localStorage.getItem('skyTheme');
+    var t = window.__skyTema;
     return (t === 'light' || t === 'gatos' || t === 'astronautas') ? t : 'dark';
   }
 
+  // Salva na conta do usuário (servidor), não no navegador
   function salva(tema) {
+    window.__skyTema = tema;
     aplicaTema(tema);
-    localStorage.setItem('skyTheme', tema);
+    try { localStorage.removeItem('skyTheme'); } catch (e) {}   // chave antiga, compartilhada entre contas
+    if (window.jQuery && window.App) {
+      jQuery.post(App.ctrl.usuarios, { acao: 'salvar_tema', tema: tema })
+        .fail(function () { toastr.error('Não foi possível salvar o tema na sua conta. Tente de novo.'); });
+    }
   }
 
   aplicaTema(temaAtual());
 
-  btn.addEventListener('click', function (e) {
-    e.stopPropagation(); // não fecha o dropdown ao clicar
-    // Sair do tema gatos pelo botão de claro/escuro leva ao claro.
-    salva(temaAtual() === 'light' ? 'dark' : 'light');
+  // Clicar numa miniatura aplica na hora; o menu continua aberto para comparar
+  opcoes.forEach(function (o) {
+    o.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var tema = o.getAttribute('data-tema');
+      if (tema !== temaAtual()) salva(tema);
+    });
   });
-
-  if (btnGatos) {
-    btnGatos.addEventListener('click', function (e) {
-      e.stopPropagation();
-      salva(temaAtual() === 'gatos' ? 'dark' : 'gatos');
-    });
-  }
-
-  if (btnFant) {
-    btnFant.addEventListener('click', function (e) {
-      e.stopPropagation();
-      salva(temaAtual() === 'astronautas' ? 'dark' : 'astronautas');
-    });
-  }
 })();
 </script>
 

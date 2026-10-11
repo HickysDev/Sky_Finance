@@ -54,7 +54,7 @@ $conn = Database::getConnection();
 
             <div id="emptyRendas" style="display:none;" class="text-center py-4">
                 <i class="bi bi-wallet2" style="font-size:2rem;color:var(--cor-borda);"></i>
-                <p class="mt-2 mb-0" style="color:var(--cor-texto-off);">Nenhuma fonte de renda cadastrada.</p>
+                <p class="mt-2 mb-0" style="color:var(--cor-texto-off);">Nenhuma renda cadastrada. Adicione o salário ou outra entrada para o saldo do mês ficar certo.</p>
             </div>
 
             <div id="itensRendas"></div>
@@ -141,7 +141,7 @@ $conn = Database::getConnection();
 
             <div id="emptyCof" style="display:none;" class="text-center py-4">
                 <i class="bi bi-piggy-bank" style="font-size:2.5rem;color:var(--cor-borda);"></i>
-                <p class="mt-2 mb-0" style="color:var(--cor-texto-off);">Nenhum cofrinho criado ainda.</p>
+                <p class="mt-2 mb-0" style="color:var(--cor-texto-off);">Nenhum cofrinho ainda. Crie um em Finanças para guardar dinheiro com uma meta.</p>
             </div>
 
             <div class="row g-3" id="gridCof"></div>
@@ -472,7 +472,7 @@ $conn = Database::getConnection();
                 </div>
                 <div id="emptyHist" style="display:none;" class="text-center py-4">
                     <i class="bi bi-inbox" style="font-size:2rem;color:var(--cor-borda);"></i>
-                    <p class="mt-2 mb-0" style="color:var(--cor-texto-off);">Nenhum depósito ainda.</p>
+                    <p class="mt-2 mb-0" style="color:var(--cor-texto-off);">Nenhum depósito ainda. Use “Guardar” para registrar o primeiro.</p>
                 </div>
                 <div id="listaHist" style="display:none;">
                     <table class="table table-hover mb-0" style="font-size:0.85rem;">

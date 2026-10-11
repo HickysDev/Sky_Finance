@@ -353,7 +353,7 @@ function carregaCartoesSim() {
             simCartoesMap = data || {};
             var keys = Object.keys(simCartoesMap);
             if (!keys.length) {
-                $('#simCartoesWrap').html('<span style="color:var(--cor-texto-off);font-size:0.82rem;">Nenhum cartão cadastrado.</span>');
+                $('#simCartoesWrap').html('<span style="color:var(--cor-texto-off);font-size:0.82rem;">Nenhum cartão cadastrado. Cadastre em Config. → Cartões.</span>');
                 return;
             }
             var html = '';

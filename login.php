@@ -128,12 +128,13 @@ if (empty($_SESSION['csrf_token'])) {
   <link rel="icon" type="image/png" sizes="32x32" href="src/img/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="src/img/favicon-16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="src/img/favicon-180.png">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="styles/style.css?v=<?= @filemtime(__DIR__ . '/styles/style.css') ?>" rel="stylesheet">
   <style>
     html, body { height: 100%; }
+    body { font-family: "Manrope", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 
     .login-wrap {
       min-height: 100vh;
@@ -143,9 +144,8 @@ if (empty($_SESSION['csrf_token'])) {
 
     .login-card {
       width: 100%; max-width: 400px;
-      background: rgba(43,44,59,0.6);
-      backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-      border: 1px solid rgba(255,255,255,0.09);
+      background: #26273A;
+      border: 1px solid #363852;
       border-radius: 18px;
       padding: 2.5rem 2rem;
       box-shadow: 0 8px 40px rgba(0,0,0,0.45);
@@ -156,8 +156,8 @@ if (empty($_SESSION['csrf_token'])) {
       align-items: center; gap: 8px; margin-bottom: 1.75rem;
     }
     .login-logo img   { height: 52px; }
-    .login-logo span  { font-family:"Bebas Neue",sans-serif; font-size:1.6rem; letter-spacing:2px; color:#F0F0F5; line-height:1; }
-    .login-logo small { font-size:0.72rem; color:#6B7280; letter-spacing:.1em; text-transform:uppercase; }
+    .login-logo span  { font-family:"Manrope",sans-serif; font-weight:800; font-size:1.55rem; letter-spacing:-0.02em; color:#F0F0F5; line-height:1; }
+    .login-logo small { font-size:0.8rem; color:#8A8FA6; }
 
     /* Abas */
     .login-tabs {
@@ -195,11 +195,11 @@ if (empty($_SESSION['csrf_token'])) {
 
     .btn-login {
       width: 100%; padding: 0.7rem;
-      background: #3B82F6; border: none; border-radius: 10px;
+      background: #2563EB; border: none; border-radius: 10px;   /* 5,2:1 com texto branco */
       color: #fff; font-weight: 600; font-size: 0.95rem;
       transition: background 0.2s, transform 0.1s; margin-top: 0.5rem;
     }
-    .btn-login:hover  { background: #2563EB; }
+    .btn-login:hover  { background: #1D4ED8; }
     .btn-login:active { transform: scale(0.98); }
 
     .login-erro {
@@ -212,8 +212,9 @@ if (empty($_SESSION['csrf_token'])) {
     .password-wrap { position: relative; }
     .toggle-senha {
       position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-      background: none; border: none; color: #6B7280;
+      background: none; border: none; color: #9399B0;
       cursor: pointer; font-size: 1rem; padding: 0; transition: color 0.2s;
+      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; right: 4px;
     }
     .toggle-senha:hover { color: #9CA3AF; }
 
@@ -230,12 +231,12 @@ if (empty($_SESSION['csrf_token'])) {
   <div class="aurora-blob aurora-blob-4"></div>
 </div>
 
-<div class="login-wrap">
+<div class="login-wrap" role="main">
   <div class="login-card">
 
     <div class="login-logo">
-      <img src="src/img/logo.png" alt="Sky Finance">
-      <span>Sky Finance</span>
+      <img src="src/img/logo.png" alt="">
+      <span role="heading" aria-level="1">Sky Finance</span>
       <small>Gestão Financeira Pessoal</small>
     </div>
 
@@ -274,7 +275,7 @@ if (empty($_SESSION['csrf_token'])) {
           <div class="password-wrap">
             <input type="password" id="senha" name="senha" class="form-control login-input"
                    placeholder="••••••••" required style="padding-right:2.5rem!important;">
-            <button type="button" class="toggle-senha" data-alvo="senha" data-icone="olhoLogin">
+            <button type="button" class="toggle-senha" aria-label="Mostrar ou ocultar a senha" data-alvo="senha" data-icone="olhoLogin">
               <i class="bi bi-eye" id="olhoLogin"></i>
             </button>
           </div>
@@ -309,7 +310,7 @@ if (empty($_SESSION['csrf_token'])) {
           <div class="password-wrap">
             <input type="password" id="reg_senha" name="reg_senha" class="form-control login-input"
                    placeholder="••••••••" required style="padding-right:2.5rem!important;">
-            <button type="button" class="toggle-senha" data-alvo="reg_senha" data-icone="olhoCad">
+            <button type="button" class="toggle-senha" aria-label="Mostrar ou ocultar a senha" data-alvo="reg_senha" data-icone="olhoCad">
               <i class="bi bi-eye" id="olhoCad"></i>
             </button>
           </div>

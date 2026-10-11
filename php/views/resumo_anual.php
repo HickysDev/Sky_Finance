@@ -448,7 +448,7 @@ $(document).ready(function () {
 }
 .kpi-label { color: var(--cor-texto-sec); font-size: 0.78rem; font-weight: 500; line-height: 1.2; }
 .kpi-valor {
-    font-family: "Bebas Neue", sans-serif;
+    font-family: var(--fonte-display);
     font-size: 1.55rem; line-height: 1;
     margin-bottom: 0.15rem; letter-spacing: 0.02em;
 }

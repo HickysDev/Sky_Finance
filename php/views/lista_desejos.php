@@ -108,7 +108,7 @@ require_once __DIR__ . '/../templates/header.php';
             </div>
             <div class="flex-grow-1">
               <input type="text" class="form-control form-control-sm mb-2" id="desejoUrlManual" placeholder="Colar URL da imagem">
-              <input type="file" class="form-control form-control-sm" id="desejoArquivo" accept="image/jpeg,image/png,image/webp,image/gif">
+              <input type="file" class="form-control form-control-sm" id="desejoArquivo" aria-label="Enviar arquivo de imagem" accept="image/jpeg,image/png,image/webp,image/gif">
               <div class="form-text">Se o link não trouxer imagem, cole uma URL ou envie um arquivo (até 5 MB).</div>
             </div>
           </div>
@@ -1003,7 +1003,7 @@ $(document).ready(function () {
   function renderCartoesCompra() {
     var ids = Object.keys(simCartoes || {});
     if (!ids.length) {
-      $('#compraCartoes').html('<span style="color:var(--cor-texto-off);font-size:.82rem;">Nenhum cartão cadastrado.</span>');
+      $('#compraCartoes').html('<span style="color:var(--cor-texto-off);font-size:.82rem;">Nenhum cartão cadastrado. Cadastre em Config. → Cartões.</span>');
       _compra.cartao = '';
       return;
     }

@@ -64,7 +64,7 @@ $mesAtual = date('n');
                         <th>Categoria</th>
                         <th>Método</th>
                         <th>Data</th>
-                        <th></th>
+                        <th><span class="visually-hidden">Ações</span></th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -85,7 +85,7 @@ $mesAtual = date('n');
 
         <div id="estadoVazio" style="display:none;" class="text-center py-5">
             <i class="bi bi-inbox" style="font-size:3rem;color:#3F3F46;"></i>
-            <p class="mt-3" style="color:#6B7280;">Nenhum gasto encontrado para este mês.</p>
+            <p class="mt-3" style="color:#6B7280;">Nenhuma compra à vista neste mês. Use “Adicionar Despesa” para lançar a primeira.</p>
         </div>
 
     </div>
@@ -547,9 +547,9 @@ $mesAtual = date('n');
                         order: [[4, 'asc']],
                         columnDefs: [{ orderable: false, targets: 5 }],
                         language: {
-                            search: 'Pesquisar:',
-                            zeroRecords: 'Nenhum registro encontrado',
-                            emptyTable: 'Nenhum dado disponível'
+                            search: '', searchPlaceholder: 'Buscar nesta lista…',
+                            zeroRecords: 'Nada encontrado com essa busca. Tente outro termo.',
+                            emptyTable: 'Nenhuma despesa neste mês.'
                         }
                     });
                 },

@@ -158,7 +158,7 @@ html.light-mode ::-webkit-scrollbar-thumb { background: #94A3B8; }
 
 /* ─── 2. RESET & BASE ───────────────────────────── */
 *, *::before, *::after {
-  font-family: "Roboto", sans-serif;
+  font-family: var(--fonte-ui);
   box-sizing: border-box;
 }
 
@@ -333,7 +333,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .titulo {
-  font-family: "Bebas Neue", sans-serif;
+  font-family: var(--fonte-display);
   font-weight: 400;
   font-style: normal;
   margin-bottom: 0;
@@ -388,7 +388,7 @@ h1, h2, h3, h4, h5 {
   gap: 8px;
   text-decoration: none;
   color: var(--cor-texto) !important;
-  font-family: "Bebas Neue", sans-serif;
+  font-family: var(--fonte-display);
   font-size: 1.1rem;
   letter-spacing: 1.5px;
   line-height: 1;
@@ -414,7 +414,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .navbar-brand-sky .brand-sub {
-  font-family: "Roboto", sans-serif;
+  font-family: var(--fonte-ui);
   font-size: 0.62rem;
   font-weight: 500;
   color: var(--cor-texto-off);
